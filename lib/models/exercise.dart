@@ -79,10 +79,19 @@ class Exercise extends Equatable {
 
 /// An exercise together with the sets performed in one workout.
 class ExerciseLog extends Equatable {
-  const ExerciseLog({required this.exercise, required this.sets});
+  const ExerciseLog({
+    required this.exercise,
+    required this.sets,
+    this.previousBest,
+    this.restSeconds = 120,
+    this.previousSets = const [],
+  });
 
   final Exercise exercise;
   final List<WorkoutSet> sets;
+  final String? previousBest;
+  final int restSeconds;
+  final List<WorkoutSet> previousSets;
 
   int get totalSets => sets.length;
 
@@ -95,10 +104,39 @@ class ExerciseLog extends Equatable {
   double get volume =>
       sets.where((s) => s.completed).fold(0.0, (sum, s) => sum + s.volume);
 
-  ExerciseLog copyWith({Exercise? exercise, List<WorkoutSet>? sets}) {
+  /// Display string like "4 sets × 6–8 reps"
+  String get setScheme {
+    if (sets.isEmpty) return '0';
+    final first = sets.first;
+    final last = sets.last;
+    if (first.reps == last.reps && first.weightKg == last.weightKg) {
+      return '${first.reps} reps';
+    }
+    return '${first.reps}–${last.reps} reps';
+  }
+
+  /// Heaviest weight in the scheme
+  String get heaviestWeight {
+    if (sets.isEmpty) return '0';
+    return sets
+        .map((s) => s.weightKg.toInt())
+        .reduce((a, b) => a > b ? a : b)
+        .toString();
+  }
+
+  ExerciseLog copyWith({
+    Exercise? exercise,
+    List<WorkoutSet>? sets,
+    String? previousBest,
+    int? restSeconds,
+    List<WorkoutSet>? previousSets,
+  }) {
     return ExerciseLog(
       exercise: exercise ?? this.exercise,
       sets: sets ?? this.sets,
+      previousBest: previousBest ?? this.previousBest,
+      restSeconds: restSeconds ?? this.restSeconds,
+      previousSets: previousSets ?? this.previousSets,
     );
   }
 
@@ -108,14 +146,30 @@ class ExerciseLog extends Equatable {
       sets: (json['sets'] as List<dynamic>)
           .map((s) => WorkoutSet.fromJson(s as Map<String, dynamic>))
           .toList(),
+      previousBest: json['previousBest'] as String?,
+      restSeconds: (json['restSeconds'] as num?)?.toInt() ?? 120,
+      previousSets:
+          (json['previousSets'] as List<dynamic>?)
+              ?.map((s) => WorkoutSet.fromJson(s as Map<String, dynamic>))
+              .toList() ??
+          [],
     );
   }
 
   Map<String, dynamic> toJson() => {
     'exercise': exercise.toJson(),
     'sets': sets.map((s) => s.toJson()).toList(),
+    'previousBest': previousBest,
+    'restSeconds': restSeconds,
+    'previousSets': previousSets.map((s) => s.toJson()).toList(),
   };
 
   @override
-  List<Object?> get props => [exercise, sets];
+  List<Object?> get props => [
+    exercise,
+    sets,
+    previousBest,
+    restSeconds,
+    previousSets,
+  ];
 }

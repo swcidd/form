@@ -4,7 +4,9 @@ import 'package:provider/provider.dart';
 import 'navigation/app_tab.dart';
 import 'providers/workout_provider.dart';
 import 'screens/app_shell.dart';
-import 'screens/workout_details_screen.dart';
+import 'screens/set_logging_screen.dart';
+import 'screens/workout_detail_screen.dart';
+import 'screens/workout_summary_screen.dart';
 import 'theme/app_theme.dart';
 
 void main() {
@@ -39,7 +41,7 @@ class PlusOneApp extends StatelessWidget {
     for (final tab in AppTab.values) tab.routeName: (_) => AppShell(tab: tab),
   };
 
-  /// Resolves the parameterised workout route. Null for anything unrecognised,
+  /// Resolves the parameterised workout routes. Null for anything unrecognised,
   /// so Flutter raises its own "unknown route" error instead of this
   /// substituting the wrong screen.
   static Route<dynamic>? routeFor(RouteSettings settings) {
@@ -47,12 +49,26 @@ class PlusOneApp extends StatelessWidget {
     if (name == null) return null;
 
     final segments = name.split('/').where((s) => s.isNotEmpty).toList();
-    if (segments.isNotEmpty &&
-        '/${segments.first}' == WorkoutDetailsScreen.routeName) {
-      return MaterialPageRoute<void>(
-        builder: (_) => WorkoutDetailsScreen(route: settings),
-        settings: settings,
-      );
+    if (segments.isEmpty) return null;
+
+    final routePrefix = '/${segments.first}';
+
+    switch (routePrefix) {
+      case WorkoutDetailScreen.routeName:
+        return MaterialPageRoute<void>(
+          builder: (_) => WorkoutDetailScreen(route: settings),
+          settings: settings,
+        );
+      case SetLoggingScreen.routeName:
+        return MaterialPageRoute<void>(
+          builder: (_) => SetLoggingScreen(route: settings),
+          settings: settings,
+        );
+      case WorkoutSummaryScreen.routeName:
+        return MaterialPageRoute<void>(
+          builder: (_) => WorkoutSummaryScreen(route: settings),
+          settings: settings,
+        );
     }
 
     return null;
