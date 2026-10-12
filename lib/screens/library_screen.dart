@@ -2,16 +2,33 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
+import '../exercise_library.dart';
 
-/// Library screen: search, filters, current program, and workout lists.
-class LibraryScreen extends StatelessWidget {
+/// Library screen: search, filters, current program, workout lists, + exercise catalog.
+class LibraryScreen extends StatefulWidget {
   const LibraryScreen({super.key});
 
   static const String routeName = '/library';
 
   @override
+  State<LibraryScreen> createState() => _LibraryScreenState();
+}
+
+class _LibraryScreenState extends State<LibraryScreen> {
+  late Future<List<LibraryExercise>> _exercisesFuture;
+  String _selectedTab = 'All';
+
+  @override
+  void initState() {
+    super.initState();
+    _exercisesFuture = ExerciseLibrary.loadAll();
+  }
+
+  // --------------------------------------------------------------- UI
+  @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final text = context.text;
 
     return Scaffold(
       backgroundColor: scheme.surface,
@@ -28,7 +45,14 @@ class LibraryScreen extends StatelessWidget {
                   const SizedBox(height: 24),
                   _SearchBar(),
                   const SizedBox(height: 16),
-                  _FilterChips(),
+                  _ExerciseFilterChips(
+                    selected: _selectedTab,
+                    onSelected: (tab) {
+                      setState(() => _selectedTab = tab);
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  _ExerciseGrid(filter: _selectedTab),
                   const SizedBox(height: 24),
                   _CurrentProgramCard(),
                   const SizedBox(height: 24),
@@ -48,14 +72,9 @@ class LibraryScreen extends StatelessWidget {
       ),
     );
   }
-}
 
-/// iOS-style status bar.
-class _StatusBar extends StatelessWidget {
-  const _StatusBar();
-
-  @override
-  Widget build(BuildContext context) {
+  // --------------------------------------------------------------- status bar
+  Widget _StatusBar() {
     final scheme = Theme.of(context).colorScheme;
 
     return SliverToBoxAdapter(
@@ -95,12 +114,9 @@ class _StatusBar extends StatelessWidget {
       ),
     );
   }
-}
 
-/// Page header with title and plus button.
-class _PageHeader extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
+  // --------------------------------------------------------------- page header
+  Widget _PageHeader() {
     final scheme = Theme.of(context).colorScheme;
     final text = context.text;
 
@@ -129,12 +145,9 @@ class _PageHeader extends StatelessWidget {
       ],
     );
   }
-}
 
-/// Search input.
-class _SearchBar extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
+  // --------------------------------------------------------------- search bar
+  Widget _SearchBar() {
     final scheme = Theme.of(context).colorScheme;
 
     return Container(
@@ -165,56 +178,177 @@ class _SearchBar extends StatelessWidget {
       ),
     );
   }
-}
 
-/// Filter chips: My workouts (active), Discover, Saved.
-class _FilterChips extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
+  // --------------------------------------------------------------- exercise filter chips
+  Widget _ExerciseFilterChips({
+    required String selected,
+    required ValueChanged<String> onSelected,
+  }) {
     final scheme = Theme.of(context).colorScheme;
-    final text = context.text;
 
-    const filters = [
-      ('My workouts', true),
-      ('Discover', false),
-      ('Saved', false),
-    ];
+    const chips = ['All', 'Strength', 'Stretching', 'Strongman'];
 
-    return Row(
-      children: filters.map((f) {
-        final isActive = f.$2;
-        return Padding(
-          padding: const EdgeInsets.only(right: 8),
-          child: Container(
-            height: 34,
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            decoration: BoxDecoration(
-              color: isActive ? scheme.onSurface : scheme.surface,
-              border: Border.all(
-                color: isActive ? scheme.onSurface : scheme.outline,
-              ),
-              borderRadius: BorderRadius.circular(100),
-            ),
-            child: Center(
-              child: Text(
-                f.$1,
-                style: text.labelCaps.copyWith(
-                  color: isActive ? scheme.surface : scheme.onSurfaceVariant,
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: chips.map((label) {
+          final isSelected = label == selected;
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: ChoiceChip(
+              label: Text(
+                label,
+                style: TextStyle(
+                  color: isSelected ? scheme.surface : scheme.onSurfaceVariant,
                   fontWeight: FontWeight.w600,
                 ),
               ),
+              selected: isSelected,
+              selectedColor: AppColors.lime,
+              onSelected: (bool selected) => onSelected(label),
             ),
-          ),
-        );
-      }).toList(),
+          );
+        }).toList(),
+      ),
     );
   }
-}
 
-/// Current program hero card with photograph, progress, and CTA.
-class _CurrentProgramCard extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
+  // --------------------------------------------------------------- exercise grid
+  Widget _ExerciseGrid({required String filter}) {
+    return FutureBuilder<List<LibraryExercise>>(
+      future: ExerciseLibrary.loadAll(),
+      builder: (context, snapshot) {
+        final exercises = snapshot.data ?? const [];
+        final filtered = _applyFilter(exercises, filter);
+
+        if (filtered.isEmpty) {
+          return const Center(child: Text('No exercises found.'));
+        }
+
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 0.65,
+          ),
+          itemCount: filtered.length,
+          itemBuilder: (context, index) {
+            final ex = filtered[index];
+            return _ExerciseCard(exercise: ex);
+          },
+        );
+      },
+    );
+  }
+
+  List<LibraryExercise> _applyFilter(
+    List<LibraryExercise> exercises,
+    String filter,
+  ) {
+    if (filter == 'All') return exercises;
+    return exercises
+        .where(
+          (ex) =>
+              ex.primaryMuscle.toLowerCase().contains(filter.toLowerCase()) ||
+              (ex.secondaryMuscle?.toLowerCase().contains(
+                    filter.toLowerCase(),
+                  ) ??
+                  false),
+        )
+        .toList();
+  }
+
+  // --------------------------------------------------------------- exercise card
+  Widget _ExerciseCard({required LibraryExercise exercise}) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Image / icon placeholder
+          Container(
+            width: double.infinity,
+            height: 80,
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: exercise.images.isNotEmpty
+                ? Image.asset(
+                    exercise.images.first,
+                    width: double.infinity,
+                    height: 80,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) =>
+                        const Icon(Icons.fitness_center, size: 30),
+                  )
+                : Icon(
+                    Icons.fitness_center,
+                    size: 30,
+                    color: scheme.onSurfaceVariant,
+                  ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            exercise.name,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w600,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            exercise.primaryMuscle,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+          ),
+          if (exercise.tips != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              exercise.tips!,
+              style: Theme.of(context).textTheme.bodyExtraSmall?.copyWith(
+                color: scheme.onSurfaceVariant,
+                fontSize: 10,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+          const Spacer(),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                exercise.level,
+                style: Theme.of(
+                  context,
+                ).textTheme.labelSmall?.copyWith(color: AppColors.lime),
+              ),
+              IconButton(
+                icon: const Icon(Icons.remove_circle_outline, size: 18),
+                onPressed: () {},
+                tooltip: 'Save workout',
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --------------------------------------------------------------- current program card
+  Widget _CurrentProgramCard() {
     final scheme = Theme.of(context).colorScheme;
     final text = context.text;
 
@@ -241,10 +375,7 @@ class _CurrentProgramCard extends StatelessWidget {
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [
-                  Color(0x00121512),
-                  Color(0x73121512), // 45% opacity
-                ],
+                colors: [Color(0x00121512), Color(0x73121512)],
               ),
             ),
           ),
@@ -319,25 +450,15 @@ class _CurrentProgramCard extends StatelessWidget {
       ],
     );
   }
-}
 
-/// Section header with label.
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
+  // --------------------------------------------------------------- section header
+  Widget _SectionHeader({required String label}) {
     final text = context.text;
     return Text(label, style: text.labelCaps);
   }
-}
 
-/// My workouts list.
-class _WorkoutList extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
+  // --------------------------------------------------------------- my workouts list
+  Widget _WorkoutList() {
     final workouts = [
       ('Foundation / 08', 'Week 04 of 08', 'Strength', '4 days/week', true),
       (
