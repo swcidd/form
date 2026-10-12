@@ -1,102 +1,119 @@
 import 'package:flutter/material.dart';
 
-/// Deep Blue Sea palette.
+/// Plus One (FORM) palette — extracted from the Figma design system.
 ///
-/// Regal Navy carries every filled control, Prussian Blue anchors body text,
-/// Powder Blue handles borders and muted surfaces, and Mint Cream is the
-/// page. That split is what stops a five-colour palette from turning into
-/// blue soup: exactly one hue does the work of an action, and the rest is
-/// tint, text or canvas.
+/// Ground: cream / warm cream / white
+/// Ink: near-black greens (not pure black)
+/// Sage ramp: light → mid, for chips, rules, secondary text
+/// Accents: lime #D5FC61 (signature), rust #C94C32, peach #F8EAE3
 ///
-/// https://coolors.co/134074-13315c-0b2545-8da9c4-eef4ed
+/// https://www.figma.com/design/3aDilw2SiRynw2gWFn0ZNk/Plus-One-Design
 abstract final class AppColors {
   // --- Palette --------------------------------------------------------------
-  static const Color regalNavy = Color(0xFF134074);
-  static const Color oxfordNavy = Color(0xFF13315C);
-  static const Color prussianBlue = Color(0xFF0B2545);
-  static const Color powderBlue = Color(0xFF8DA9C4);
-  static const Color mintCream = Color(0xFFEEF4ED);
 
-  // --- Derived neutrals -----------------------------------------------------
-  // A five-colour palette has no greys, so every surface step, divider and
-  // secondary label below is interpolated between two palette colours rather
-  // than pulled off a grey ramp. Interpolation keeps the hue locked to the
-  // brand; a neutral grey would introduce a second, unrelated colour cast.
+  // Ground
+  static const Color cream = Color(0xFFFAFAF7);
+  static const Color warmCream = Color(0xFFF2F1E9);
+  static const Color white = Color(0xFFFFFFFF);
 
-  /// Secondary label on the light canvas. Powder Blue mixed toward Oxford
-  /// Navy until it clears 4.5:1 against Mint Cream.
-  static const Color lightOnSurfaceVariant = Color(0xFF4E6E92);
+  // Ink (near-black greens)
+  static const Color ink = Color(0xFF121512);
+  static const Color inkSoft = Color(0xFF202723);
+  static const Color inkMuted = Color(0xFF20251F);
+  static const Color inkSubtle = Color(0xFF353C31);
 
-  /// Borders and outlined controls. A step darker so a button edge is
-  /// unmistakably an edge rather than a hint.
-  static const Color lightOutline = Color(0xFF405D82);
+  // Sage ramp (light → mid)
+  static const Color sage0 = Color(0xFFE7E9E3);
+  static const Color sage50 = Color(0xFFE6EAD8);
+  static const Color sage100 = Color(0xFFD8DCD0);
+  static const Color sage300 = Color(0xFF9DA697);
+  static const Color sage500 = Color(0xFF727972);
+  static const Color sage600 = Color(0xFF677060);
 
-  /// Card borders and dividers. Deliberately faint: cards already separate
-  /// by fill, so a loud outline would double-draw every boundary.
-  static const Color lightOutlineVariant = Color(0xFFC7D6DD);
+  // Accents
+  static const Color lime = Color(0xFFD5FC61); // signature
+  static const Color rust = Color(0xFFC94C32);
+  static const Color peach = Color(0xFFF8EAE3);
 
-  /// Light surface ramp, tinted from Mint Cream toward white so cards read as
-  /// lifted off the canvas instead of cut out of it.
-  static const Color lightSurfaceLowest = Color(0xFFF9FCF9);
-  static const Color lightSurfaceLow = Color(0xFFF1F6F3);
-  static const Color lightSurface = Color(0xFFE9F0EE);
-  static const Color lightSurfaceHigh = Color(0xFFE1E9EA);
-  static const Color lightSurfaceHighest = Color(0xFFD9E2E6);
+  // --- Semantic aliases -----------------------------------------------------
 
-  /// Dark mode secondary label: Powder Blue on Prussian Blue lands at 6.3:1.
-  static const Color darkOnSurfaceVariant = powderBlue;
+  /// Page background (light mode only for now).
+  static const Color canvas = cream;
 
-  static const Color darkOutline = powderBlue;
-  static const Color darkOutlineVariant = Color(0xFF2E4A75);
+  /// Primary text on canvas.
+  static const Color onCanvas = ink;
 
-  /// Dark surface ramp, tinted up from Prussian Blue. The top step lands on
-  /// Regal Navy, which ties the raised surfaces back to the palette.
-  static const Color darkSurfaceLowest = Color(0xFF0F2A4E);
-  static const Color darkSurfaceLow = Color(0xFF132F57);
-  static const Color darkSurface = Color(0xFF17345F);
-  static const Color darkSurfaceHigh = Color(0xFF1B3A6A);
-  static const Color darkSurfaceHighest = Color(0xFF204174);
+  /// Secondary text on canvas.
+  static const Color onCanvasSecondary = sage600;
 
-  /// A lifted navy used where dark mode needs a container that separates
-  /// from the Prussian Blue page without going pale.
-  static const Color darkContainer = Color(0xFF204174);
+  /// Tertiary / label text on canvas — use at ≥11px only (fails AA at 10px).
+  static const Color onCanvasTertiary = sage300;
 
-  static const Color darkInverseSurface = Color(0xFFDCE7F1);
-  static const Color darkInverseOnSurface = prussianBlue;
+  /// Card / elevated surface.
+  static const Color surface = white;
 
-  // --- Error ----------------------------------------------------------------
-  // Kept on the standard Material scale rather than recoloured. Red for
-  // destructive is a learned convention, and rehuing it to fit the palette
-  // would make "delete" less obvious, not prettier.
-  static const Color error = Color(0xFFBA1A1A);
-  static const Color errorContainer = Color(0xFFFFDAD6);
-  static const Color onErrorContainer = Color(0xFF93000A);
+  /// Hairline divider on light.
+  static const Color hairline = sage100;
+
+  /// Primary action / link.
+  static const Color action = ink;
+
+  /// Accent interactive (lime on dark, rust on light for CTAs).
+  static const Color accent = lime;
+
+  /// Destructive / error.
+  static const Color destructive = rust;
+  static const Color destructiveBg = peach;
+
+  // --- Dark mode (placeholder — not designed in Figma yet) ------------------
+  // These mirror light for now; replace when dark frames are available.
+  static const Color canvasDark = ink;
+  static const Color onCanvasDark = cream;
+  static const Color onCanvasSecondaryDark = sage300;
+  static const Color onCanvasTertiaryDark = sage500;
+  static const Color surfaceDark = inkMuted;
+  static const Color hairlineDark = inkSubtle;
+  static const Color actionDark = lime;
+  static const Color accentDark = lime;
+  static const Color destructiveDark = rust;
+  static const Color destructiveBgDark = Color(0xFF3D1A12);
 }
 
-/// Corner radius scale. Mirrors the Tailwind radius tokens in the
-/// wireframes so a card is never rounded differently on two screens.
+/// Corner radius scale — square per Figma (no rounded corners emitted).
 abstract final class AppRadius {
-  /// Tags and inline annotations.
+  static const double none = 0;
   static const double xs = 4;
-
-  /// Buttons and inputs.
   static const double sm = 8;
-
-  /// Cards and panels.
   static const double md = 12;
+  static const double lg = 16;
 
   static const BorderRadius card = BorderRadius.all(Radius.circular(md));
   static const BorderRadius control = BorderRadius.all(Radius.circular(sm));
-  static const BorderRadius tag = BorderRadius.all(Radius.circular(xs));
   static const BorderRadius pill = BorderRadius.all(Radius.circular(999));
+  static const BorderRadius sharp = BorderRadius.zero;
+  static const BorderRadius tag = BorderRadius.all(Radius.circular(xs));
 }
 
-/// 4pt spacing grid. `gutter` is the screen inset used by every screen.
+/// 4pt spacing grid — 24px gutter matches Figma.
 abstract final class AppSpacing {
-  static const double xs = 4;
-  static const double sm = 8;
-  static const double gutter = 12;
-  static const double md = 16;
-  static const double lg = 24;
-  static const double xl = 32;
+  static const double xs = 2;
+  static const double sm = 4;
+  static const double md = 8;
+  static const double lg = 12;
+  static const double gutter = 24;
+  static const double xl = 24;
+  static const double xxl = 32;
+
+  static const EdgeInsets page = EdgeInsets.all(gutter);
+  static const EdgeInsets pageHorizontal = EdgeInsets.symmetric(
+    horizontal: gutter,
+  );
+  static const EdgeInsets card = EdgeInsets.all(md);
+  static const EdgeInsets cardTight = EdgeInsets.all(sm);
+}
+
+/// Hairline and icon stroke weights.
+abstract final class AppStroke {
+  static const double hairline = 1;
+  static const double icon = 1.8;
 }

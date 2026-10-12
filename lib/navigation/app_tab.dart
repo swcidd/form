@@ -1,51 +1,50 @@
-import 'package:flutter/material.dart';
-
 /// The four root destinations, in tab-bar order.
 ///
-/// Modelled as an enum rather than four callbacks so the bar, the route table
-/// and any in-app cross-reference all resolve a destination the same way. A
-/// destination reachable by tap but not by route would leave the detail screens
-/// unable to send the user back where they came from.
+/// Matches the Figma design:
+/// - Home (activity/house icon)
+/// - Progress (chart icon)
+/// - Workout (dumbbell, center raised action, NOT a destination)
+/// - Profile (user-round icon)
 ///
-/// Kept free of widget imports so a screen can reference a destination without
-/// depending on the shell that hosts it.
+/// Modelled as an enum so the bar, the route table and any in-app
+/// cross-reference all resolve a destination the same way.
 enum AppTab {
   home(
     routeName: '/',
     label: 'Home',
-    icon: Icons.space_dashboard_outlined,
-    selectedIcon: Icons.space_dashboard_rounded,
+    iconAssetPath: 'assets/icons/activity.svg',
+    selectedIconAssetPath: 'assets/icons/activity.svg',
   ),
-  calendar(
-    routeName: '/calendar',
-    label: 'Calendar',
-    icon: Icons.calendar_today_outlined,
-    selectedIcon: Icons.calendar_today_rounded,
+  progress(
+    routeName: '/progress',
+    label: 'Progress',
+    iconAssetPath: 'assets/icons/chart-no-axes-combined.svg',
+    selectedIconAssetPath: 'assets/icons/chart-no-axes-combined.svg',
   ),
-  library(
-    routeName: '/library',
-    label: 'Library',
-    icon: Icons.menu_book_outlined,
-    selectedIcon: Icons.menu_book_rounded,
+  workout(
+    routeName: '/workout',
+    label: 'Workout',
+    iconAssetPath: 'assets/icons/dumbbell.svg',
+    selectedIconAssetPath: 'assets/icons/dumbbell.svg',
   ),
   profile(
     routeName: '/profile',
     label: 'Profile',
-    icon: Icons.person_outline_rounded,
-    selectedIcon: Icons.person_rounded,
+    iconAssetPath: 'assets/icons/user-round.svg',
+    selectedIconAssetPath: 'assets/icons/user-round.svg',
   );
 
   const AppTab({
     required this.routeName,
     required this.label,
-    required this.icon,
-    required this.selectedIcon,
+    required this.iconAssetPath,
+    required this.selectedIconAssetPath,
   });
 
   final String routeName;
   final String label;
-  final IconData icon;
-  final IconData selectedIcon;
+  final String iconAssetPath;
+  final String selectedIconAssetPath;
 
   /// Resolves a route name to its tab, falling back to [AppTab.home].
   ///

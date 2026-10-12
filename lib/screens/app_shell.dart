@@ -3,11 +3,13 @@ import 'package:provider/provider.dart';
 
 import '../navigation/app_tab.dart';
 import '../providers/workout_provider.dart';
-import '../widgets/bottom_nav_bar.dart';
+import '../widgets/app_nav_bar.dart';
 import '../widgets/brand_app_bar.dart';
 import '../widgets/empty_state.dart';
+import '../widgets/new_workout_dialog.dart';
 import 'home_screen.dart';
-import 'workout_details_screen.dart';
+import 'progress_screen.dart';
+import 'workout_detail_screen.dart';
 
 /// Hosts the four tabs and owns which one is visible.
 ///
@@ -36,28 +38,22 @@ class _AppShellState extends State<AppShell> {
     setState(() => _active = tab);
   }
 
-  /// The bar's action: go to whatever the lifter would train next.
-  ///
-  /// Opens today's plan when there is one, and falls back to the most recent
-  /// session rather than doing nothing, so the button is never a dead control.
-  /// Building a session from scratch needs a form, which is the next screen -
-  /// until then the button takes the user somewhere real.
-  void _startWorkout() {
+  /// Called when the Workout tab is selected. Opens the pre-workout screen.
+  Future<void> _onWorkoutSelected() async {
     final provider = context.read<WorkoutProvider>();
     final target = provider.focusWorkout ?? provider.workouts.lastOrNull;
+    final navigator = Navigator.of(context);
 
-    if (target == null) {
-      // An account with no sessions has nothing to open. Sending the user to the
-      // tab where they would build one is better than a button that does
-      // nothing, and better than pushing a detail screen for a workout that does
-      // not exist.
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Log your first workout to get started.')),
-      );
+    if (target != null) {
+      navigator.pushNamed(WorkoutDetailScreen.routeFor(target.id));
       return;
     }
 
-    Navigator.of(context).pushNamed(WorkoutDetailsScreen.routeFor(target.id));
+    final created = await NewWorkoutDialog.show(context);
+    if (created == null) return;
+
+    final stored = provider.addWorkout(created);
+    navigator.pushNamed(WorkoutDetailScreen.routeFor(stored.id));
   }
 
   @override
@@ -70,10 +66,10 @@ class _AppShellState extends State<AppShell> {
             _LazyTab(tab: tab, active: _active, select: _select),
         ],
       ),
-      bottomNavigationBar: AppBottomNav(
+      bottomNavigationBar: AppNavBar(
         selected: _active,
         onSelected: _select,
-        onWorkoutPressed: _startWorkout,
+        onWorkoutPressed: _onWorkoutSelected,
       ),
     );
   }
@@ -121,10 +117,26 @@ class _LazyTabState extends State<_LazyTab> {
   Widget _body(AppTab tab) {
     return switch (tab) {
       AppTab.home => HomeScreen(onSelectTab: widget.select),
-      AppTab.calendar => const PlaceholderTabScreen(tab: AppTab.calendar),
-      AppTab.library => const PlaceholderTabScreen(tab: AppTab.library),
+      AppTab.progress => const ProgressScreen(),
+      AppTab.workout => const WorkoutTabScreen(),
       AppTab.profile => const PlaceholderTabScreen(tab: AppTab.profile),
     };
+  }
+}
+
+/// Workout tab - shows the pre-workout screen or creates a new workout.
+class WorkoutTabScreen extends StatelessWidget {
+  const WorkoutTabScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    // Trigger the workout action when this tab becomes visible
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final shell = context.findAncestorStateOfType<_AppShellState>();
+      shell?._onWorkoutSelected();
+    });
+
+    return const SizedBox.shrink();
   }
 }
 
@@ -146,7 +158,7 @@ class PlaceholderTabScreen extends StatelessWidget {
     return Scaffold(
       appBar: const BrandAppBar(),
       body: EmptyState(
-        icon: tab.icon,
+        icon: Icons.fitness_center_outlined,
         title: '${tab.label} is next',
         message: _messageFor(tab),
       ),
@@ -154,13 +166,11 @@ class PlaceholderTabScreen extends StatelessWidget {
   }
 
   static String _messageFor(AppTab tab) => switch (tab) {
-    AppTab.calendar =>
-      'A month grid with the sessions you have logged, and the day you select '
-          'opened from the dashboard.',
-    AppTab.library =>
-      'The exercise catalogue, searchable and filterable by muscle group.',
+    AppTab.progress =>
+      'Your strength progress, personal records and volume trends.',
     AppTab.profile =>
       'Your training totals, personal records and the settings behind them.',
     AppTab.home => 'The dashboard.',
+    AppTab.workout => 'Your workout session.',
   };
 }

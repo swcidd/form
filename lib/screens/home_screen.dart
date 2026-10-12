@@ -13,7 +13,7 @@ import '../widgets/section_header.dart';
 import '../navigation/app_tab.dart';
 import '../widgets/stat_tile.dart';
 import '../widgets/workout_card.dart';
-import 'workout_details_screen.dart';
+import 'workout_detail_screen.dart';
 
 /// The dashboard: what to train now, how the week is going, and what was
 /// logged recently.
@@ -65,7 +65,7 @@ class HomeScreen extends StatelessWidget {
                 dense: true,
                 onTap: () => Navigator.of(
                   context,
-                ).pushNamed(WorkoutDetailsScreen.routeFor(workout.id)),
+                ).pushNamed(WorkoutDetailScreen.routeFor(workout.id)),
               ),
             ),
           ),
@@ -182,7 +182,7 @@ class _FocusCard extends StatelessWidget {
               child: ElevatedButton(
                 onPressed: () => Navigator.of(
                   context,
-                ).pushNamed(WorkoutDetailsScreen.routeFor(session.id)),
+                ).pushNamed(WorkoutDetailScreen.routeFor(session.id)),
                 style: ElevatedButton.styleFrom(
                   minimumSize: const Size.fromHeight(48),
                 ),

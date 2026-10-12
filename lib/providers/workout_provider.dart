@@ -166,12 +166,20 @@ class WorkoutProvider extends ChangeNotifier {
 
   // --- Writes ----------------------------------------------------------------
 
-  /// Adds a workout, assigning an id when the caller did not pick one.
-  void addWorkout(Workout workout) {
+  /// Adds a workout, assigning an id when the caller did not pick one, and
+  /// returns the stored copy.
+  ///
+  /// Returns the workout rather than nothing so a caller that created it can
+  /// navigate to it afterwards. The id is assigned here, so the caller has no
+  /// way to know it beforehand, and looking the workout up again afterwards
+  /// would have to guess at which one is new.
+  Workout addWorkout(Workout workout) {
     final id = workout.id.isEmpty ? 'w${_nextId++}' : workout.id;
-    _workouts.add(workout.id.isEmpty ? workout.copyWith(id: id) : workout);
+    final stored = workout.id.isEmpty ? workout.copyWith(id: id) : workout;
+    _workouts.add(stored);
     _sort();
     notifyListeners();
+    return stored;
   }
 
   /// Replaces the workout with the same id. Returns false when nothing

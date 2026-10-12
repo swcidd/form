@@ -19,6 +19,7 @@ class Workout extends Equatable {
     required this.logs,
     this.startTime = '',
     this.place = '',
+    this.hasNewPR = false,
   });
 
   final String id;
@@ -39,8 +40,14 @@ class Workout extends Equatable {
   final List<String> targetMuscleGroups;
   final List<String> equipment;
   final List<ExerciseLog> logs;
+  final bool hasNewPR;
 
   int get totalSets => logs.fold(0, (sum, log) => sum + log.totalSets);
+
+  int get totalReps => logs.fold(
+    0,
+    (sum, log) => sum + log.sets.fold(0, (s, set) => s + set.reps),
+  );
 
   int get completedSets => logs.fold(0, (sum, log) => sum + log.completedSets);
 
@@ -65,6 +72,7 @@ class Workout extends Equatable {
     List<String>? targetMuscleGroups,
     List<String>? equipment,
     List<ExerciseLog>? logs,
+    bool? hasNewPR,
   }) {
     return Workout(
       id: id ?? this.id,
@@ -78,6 +86,7 @@ class Workout extends Equatable {
       targetMuscleGroups: targetMuscleGroups ?? this.targetMuscleGroups,
       equipment: equipment ?? this.equipment,
       logs: logs ?? this.logs,
+      hasNewPR: hasNewPR ?? this.hasNewPR,
     );
   }
 
@@ -98,6 +107,7 @@ class Workout extends Equatable {
       logs: (json['logs'] as List<dynamic>)
           .map((l) => ExerciseLog.fromJson(l as Map<String, dynamic>))
           .toList(),
+      hasNewPR: json['hasNewPR'] as bool? ?? false,
     );
   }
 
@@ -113,6 +123,7 @@ class Workout extends Equatable {
     'targetMuscleGroups': targetMuscleGroups,
     'equipment': equipment,
     'logs': logs.map((l) => l.toJson()).toList(),
+    'hasNewPR': hasNewPR,
   };
 
   @override
@@ -128,5 +139,6 @@ class Workout extends Equatable {
     targetMuscleGroups,
     equipment,
     logs,
+    hasNewPR,
   ];
 }

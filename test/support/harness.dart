@@ -13,6 +13,10 @@ import 'fixtures.dart';
 /// The app with nothing in it - what a new account sees on first launch.
 Widget emptyApp() => PlusOneApp(provider: WorkoutProvider());
 
+/// An empty account whose provider the test holds a reference to, so it can
+/// assert on what the UI did to the store.
+Widget emptyAppWith(WorkoutProvider provider) => PlusOneApp(provider: provider);
+
 /// The app with the seeded sessions behind it, for tests that assert on a
 /// populated screen.
 ///
