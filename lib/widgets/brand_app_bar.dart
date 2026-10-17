@@ -37,7 +37,7 @@ class BrandAppBar extends StatelessWidget implements PreferredSizeWidget {
               borderRadius: AppRadius.tag,
             ),
             child: Text(
-              '+1',
+              'F',
               style: textTheme.labelMedium?.copyWith(
                 color: scheme.onPrimary,
                 fontWeight: FontWeight.w700,
@@ -53,7 +53,7 @@ class BrandAppBar extends StatelessWidget implements PreferredSizeWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Plus One',
+                  'FORM',
                   style: textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),

@@ -1,6 +1,6 @@
 {
-    "name": "plus_one",
-    "short_name": "plus_one",
+    "name": "FORM",
+    "short_name": "FORM",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

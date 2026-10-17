@@ -74,7 +74,7 @@ void main() {
       await tester.pumpWidget(emptyApp());
       await tester.pumpAndSettle();
 
-      expect(find.text('Plus One'), findsOneWidget);
+      expect(find.text('FORM'), findsOneWidget);
       expect(find.text('Workout Tracker'), findsOneWidget);
 
       // No session, so the card has to say so rather than inviting the user to
@@ -139,7 +139,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Heart rate, steps, sleep and calories belong to a general fitness app.
-      // +1 tracks strength training, so their absence is the point: it is what
+      // FORM tracks strength training, so their absence is the point: it is what
       // separates this from every other dashboard wearing the same layout.
       for (final removed in [
         'HEART RATE',
@@ -273,20 +273,21 @@ void main() {
       expect(find.text('Start'), findsOneWidget);
     });
 
-    testWidgets('tapping Workout tab with planned session opens pre-workout screen', (
-      tester,
-    ) async {
-      await tester.pumpWidget(seededApp());
-      await tester.pumpAndSettle();
+    testWidgets(
+      'tapping Workout tab with planned session opens pre-workout screen',
+      (tester) async {
+        await tester.pumpWidget(seededApp());
+        await tester.pumpAndSettle();
 
-      await _tapDestination(tester, 'Workout');
-      await tester.pumpAndSettle();
+        await _tapDestination(tester, 'Workout');
+        await tester.pumpAndSettle();
 
-      // A planned session is a better answer than a form: opening the form
-      // would offer to create a second session for a day that already has one.
-      expect(find.byType(NewWorkoutDialog), findsNothing);
-      expect(find.text('THE LINEUP'), findsOneWidget);
-    });
+        // A planned session is a better answer than a form: opening the form
+        // would offer to create a second session for a day that already has one.
+        expect(find.byType(NewWorkoutDialog), findsNothing);
+        expect(find.text('THE LINEUP'), findsOneWidget);
+      },
+    );
 
     testWidgets('starting creates the workout and opens it', (tester) async {
       final provider = WorkoutProvider();

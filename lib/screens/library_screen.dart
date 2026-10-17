@@ -28,39 +28,38 @@ class _LibraryScreenState extends State<LibraryScreen> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final text = context.text;
 
     return Scaffold(
       backgroundColor: scheme.surface,
       body: CustomScrollView(
         slivers: [
-          _StatusBar(),
+          _statusBar(),
           SliverToBoxAdapter(
             child: Padding(
               padding: AppSpacing.pageHorizontal,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _PageHeader(),
+                  _pageHeader(),
                   const SizedBox(height: 24),
-                  _SearchBar(),
+                  _searchBar(),
                   const SizedBox(height: 16),
-                  _ExerciseFilterChips(
+                  _exerciseFilterChips(
                     selected: _selectedTab,
                     onSelected: (tab) {
                       setState(() => _selectedTab = tab);
                     },
                   ),
                   const SizedBox(height: 16),
-                  _ExerciseGrid(filter: _selectedTab),
+                  _exerciseGrid(future: _exercisesFuture, filter: _selectedTab),
                   const SizedBox(height: 24),
-                  _CurrentProgramCard(),
+                  _currentProgramCard(),
                   const SizedBox(height: 24),
-                  _SectionHeader(label: 'My Workouts'),
+                  _sectionHeader(label: 'My Workouts'),
                   const SizedBox(height: 12),
-                  _WorkoutList(),
+                  _workoutList(),
                   const SizedBox(height: 24),
-                  _SectionHeader(label: 'Saved'),
+                  _sectionHeader(label: 'Saved'),
                   const SizedBox(height: 12),
                   _SavedList(),
                   const SizedBox(height: 32),
@@ -74,7 +73,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   // --------------------------------------------------------------- status bar
-  Widget _StatusBar() {
+  Widget _statusBar() {
     final scheme = Theme.of(context).colorScheme;
 
     return SliverToBoxAdapter(
@@ -116,7 +115,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   // --------------------------------------------------------------- page header
-  Widget _PageHeader() {
+  Widget _pageHeader() {
     final scheme = Theme.of(context).colorScheme;
     final text = context.text;
 
@@ -147,7 +146,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   // --------------------------------------------------------------- search bar
-  Widget _SearchBar() {
+  Widget _searchBar() {
     final scheme = Theme.of(context).colorScheme;
 
     return Container(
@@ -180,7 +179,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   // --------------------------------------------------------------- exercise filter chips
-  Widget _ExerciseFilterChips({
+  Widget _exerciseFilterChips({
     required String selected,
     required ValueChanged<String> onSelected,
   }) {
@@ -214,10 +213,33 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   // --------------------------------------------------------------- exercise grid
-  Widget _ExerciseGrid({required String filter}) {
+  Widget _exerciseGrid({
+    required Future<List<LibraryExercise>> future,
+    required String filter,
+  }) {
     return FutureBuilder<List<LibraryExercise>>(
-      future: ExerciseLibrary.loadAll(),
+      future: future,
       builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 32),
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
+        if (snapshot.hasError) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 32),
+              child: Text(
+                'Could not load the exercise library.',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ),
+          );
+        }
+
         final exercises = snapshot.data ?? const [];
         final filtered = _applyFilter(exercises, filter);
 
@@ -237,7 +259,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
           itemCount: filtered.length,
           itemBuilder: (context, index) {
             final ex = filtered[index];
-            return _ExerciseCard(exercise: ex);
+            return _exerciseCard(exercise: ex);
           },
         );
       },
@@ -249,20 +271,20 @@ class _LibraryScreenState extends State<LibraryScreen> {
     String filter,
   ) {
     if (filter == 'All') return exercises;
+    // The chips name categories ("Strength"), so match on the category and
+    // keep a muscle fallback for names that read like muscle groups.
+    final needle = filter.toLowerCase();
     return exercises
         .where(
           (ex) =>
-              ex.primaryMuscle.toLowerCase().contains(filter.toLowerCase()) ||
-              (ex.secondaryMuscle?.toLowerCase().contains(
-                    filter.toLowerCase(),
-                  ) ??
-                  false),
+              ex.category.toLowerCase() == needle ||
+              ex.primaryMuscle.toLowerCase().contains(needle),
         )
         .toList();
   }
 
   // --------------------------------------------------------------- exercise card
-  Widget _ExerciseCard({required LibraryExercise exercise}) {
+  Widget _exerciseCard({required LibraryExercise exercise}) {
     final scheme = Theme.of(context).colorScheme;
 
     return Container(
@@ -289,7 +311,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                     width: double.infinity,
                     height: 80,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) =>
+                    errorBuilder: (_, _, _) =>
                         const Icon(Icons.fitness_center, size: 30),
                   )
                 : Icon(
@@ -317,7 +339,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
             const SizedBox(height: 4),
             Text(
               exercise.tips!,
-              style: Theme.of(context).textTheme.bodyExtraSmall?.copyWith(
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: scheme.onSurfaceVariant,
                 fontSize: 10,
               ),
@@ -348,7 +370,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   // --------------------------------------------------------------- current program card
-  Widget _CurrentProgramCard() {
+  Widget _currentProgramCard() {
     final scheme = Theme.of(context).colorScheme;
     final text = context.text;
 
@@ -362,7 +384,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
             height: 188,
             width: double.infinity,
             fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) =>
+            errorBuilder: (_, _, _) =>
                 Container(height: 188, color: scheme.surfaceContainerHighest),
           ),
         ),
@@ -452,13 +474,13 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   // --------------------------------------------------------------- section header
-  Widget _SectionHeader({required String label}) {
+  Widget _sectionHeader({required String label}) {
     final text = context.text;
     return Text(label, style: text.labelCaps);
   }
 
   // --------------------------------------------------------------- my workouts list
-  Widget _WorkoutList() {
+  Widget _workoutList() {
     final workouts = [
       ('Foundation / 08', 'Week 04 of 08', 'Strength', '4 days/week', true),
       (
