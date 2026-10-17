@@ -196,7 +196,7 @@ void main() {
       final bar = find.byType(AppNavBar);
       expect(bar, findsOneWidget);
 
-      for (final label in ['Home', 'Progress', 'Profile']) {
+      for (final label in ['Home', 'Progress', 'Library', 'Profile']) {
         expect(
           find.descendant(of: bar, matching: find.text(label)),
           findsOneWidget,
@@ -218,6 +218,31 @@ void main() {
 
       await _tapDestination(tester, 'Profile');
       expect(find.text('Profile is next'), findsOneWidget);
+    });
+
+    testWidgets('the Library destination opens the exercise library', (
+      tester,
+    ) async {
+      await tester.pumpWidget(seededApp());
+      await tester.pumpAndSettle();
+
+      // Not _tapDestination: the catalog loads through real asset I/O, so the
+      // test has to grant real time before the fake clock can settle the
+      // FutureBuilder's spinner into the grid.
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AppNavBar),
+          matching: find.text('Library'),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 300)),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('THE TRAINING LIBRARY'), findsOneWidget);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
     });
 
     testWidgets('the dashboard avatar opens the profile tab', (tester) async {
@@ -363,7 +388,7 @@ void main() {
       final dest = tester.widget<NavigationBar>(
         find.descendant(of: bar, matching: find.byType(NavigationBar)),
       );
-      expect(dest.destinations, hasLength(4));
+      expect(dest.destinations, hasLength(5));
 
       expect(find.text('Workout'), findsOneWidget);
     });
