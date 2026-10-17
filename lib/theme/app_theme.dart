@@ -159,7 +159,7 @@ abstract final class AppTheme {
     );
   }
 
-  /// Plus One light: cream canvas, ink text, sage secondary.
+  /// FORM light: cream canvas, ink text, sage secondary.
   /// Surface containers are white; hairlines are sage100.
   /// Primary actions are ink; lime is the signature accent.
   static const ColorScheme _lightScheme = ColorScheme(
@@ -197,7 +197,7 @@ abstract final class AppTheme {
     surfaceContainerHighest: AppColors.sage50,
   );
 
-  /// Plus One dark: ink canvas, cream text. Placeholder until dark frames exist.
+  /// FORM dark: ink canvas, cream text. Placeholder until dark frames exist.
   /// Mirrors light semantic roles with inverted values.
   static const ColorScheme _darkScheme = ColorScheme(
     brightness: Brightness.dark,

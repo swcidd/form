@@ -1,6 +1,6 @@
 <div align="center">
 
-# +1 <sub>(Plus One)</sub>
+# FORM
 
 **A fitness tracker that maps every rep, every set, every session.**
 
@@ -15,9 +15,9 @@
 
 ---
 
-## Why +1?
+## Why FORM?
 
-Tracking your lifts shouldn't feel like homework. Most apps either bury your numbers under five layers of menus or lock them behind a subscription. +1 does one thing and does it well: **it remembers what you lifted so you can see yourself getting stronger.**
+Tracking your lifts shouldn't feel like homework. Most apps either bury your numbers under five layers of menus or lock them behind a subscription. FORM does one thing and does it well: **it remembers what you lifted so you can see yourself getting stronger.**
 
 - ✍️ **Log in seconds** — exercises, sets, reps, and weight in a few taps.
 - 📈 **Watch the line go up** — every lift charted against your previous sessions.
@@ -85,8 +85,8 @@ Architecture follows a clean separation: `models/` holds plain data classes, `se
 ### Run it
 
 ```bash
-git clone https://github.com/swcidd/plus_one.git
-cd plus_one
+git clone https://github.com/swcidd/form.git
+cd form
 flutter pub get
 flutter run
 ```

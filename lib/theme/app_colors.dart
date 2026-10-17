@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Plus One (FORM) palette — extracted from the Figma design system.
+/// FORM palette — extracted from the Figma design system.
 ///
 /// Ground: cream / warm cream / white
 /// Ink: near-black greens (not pure black)
