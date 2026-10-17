@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
+import '../data/workout_repository.dart';
 import '../models/exercise.dart';
 import '../models/metric.dart';
 import '../models/profile_stats.dart';
@@ -16,12 +19,20 @@ import '../models/workout.dart';
 /// screen is expected to render that honestly rather than the provider
 /// inventing sample content behind the user's back. Tests pass fixtures in
 /// through the constructor instead of relying on a default they cannot see.
+///
+/// With a [repository] the memory copy becomes a cache: [load] fills it from
+/// the store before the first frame and every mutation that touches a workout
+/// writes it back, so a restart shows the same account. Without one - the
+/// default in tests and in an injected app - nothing is read or written and
+/// the constructor fixtures are the whole world. Weekly goal and metrics stay
+/// in memory either way; the schema has no column for them yet.
 class WorkoutProvider extends ChangeNotifier {
   WorkoutProvider({
     DateTime? today,
     List<Workout>? workouts,
     List<Metric>? metrics,
     ProfileStats? profile,
+    this.repository,
   }) : _today = _dayOnly(today ?? DateTime.now()),
        // Copies are deliberate: callers often hand over const or
        // unmodifiable fixtures, and this class has to stay free to reorder
@@ -36,11 +47,84 @@ class WorkoutProvider extends ChangeNotifier {
   final List<Workout> _workouts;
   final List<Metric> _metrics;
   ProfileStats _profile;
+
+  /// The durable copy, or null when this provider is memory-only.
+  final WorkoutRepository? repository;
   int _nextId = 0;
   int _weeklyGoal = 4;
 
   static DateTime _dayOnly(DateTime date) =>
       DateTime(date.year, date.month, date.day);
+
+  // --- Persistence -----------------------------------------------------------
+
+  /// Fills the in-memory copy from the store.
+  ///
+  /// A no-op without a repository, so an injected provider stays exactly the
+  /// fixtures the caller passed. Failures are logged and swallowed: a device
+  /// that cannot open its database should still show a working, empty app
+  /// rather than crash on launch.
+  Future<void> load() async {
+    final store = repository;
+    if (store == null) return;
+
+    try {
+      final stored = await store.loadWorkouts();
+      final profile = await store.loadProfile();
+
+      _workouts
+        ..clear()
+        ..addAll(stored);
+      _sort();
+      if (profile != null) _profile = profile;
+      _advanceNextId();
+    } catch (error) {
+      debugPrint('Could not read the store, starting empty: $error');
+    }
+
+    notifyListeners();
+  }
+
+  /// Moves the id counter past anything the store already handed out, so a
+  /// session added after a restart cannot reuse an id the calendar is showing.
+  void _advanceNextId() {
+    for (final workout in _workouts) {
+      final match = RegExp(r'^w(\d+)$').firstMatch(workout.id);
+      if (match == null) continue;
+      final value = int.parse(match.group(1)!);
+      if (value >= _nextId) _nextId = value + 1;
+    }
+  }
+
+  /// Writes one workout through, deliberately not awaited.
+  ///
+  /// The UI has already been told the mutation happened; blocking the tap on a
+  /// disk round trip would make set ticks stutter for no visible gain. A failed
+  /// write is logged rather than thrown, because there is no recovery the user
+  /// could act on mid-session.
+  Future<void> _persistWorkout(Workout workout) async {
+    try {
+      await repository?.replaceWorkout(workout);
+    } catch (error) {
+      debugPrint('Could not save ${workout.id}: $error');
+    }
+  }
+
+  Future<void> _persistDelete(String id) async {
+    try {
+      await repository?.deleteWorkout(id);
+    } catch (error) {
+      debugPrint('Could not delete $id: $error');
+    }
+  }
+
+  Future<void> _persistProfile(ProfileStats profile) async {
+    try {
+      await repository?.saveProfile(profile);
+    } catch (error) {
+      debugPrint('Could not save the profile: $error');
+    }
+  }
 
   // --- Reads -----------------------------------------------------------------
 
@@ -98,9 +182,9 @@ class WorkoutProvider extends ChangeNotifier {
     return streak;
   }
 
-  bool _hasCompletedOn(DateTime date) => workoutsOn(
-    date,
-  ).any((workout) => workout.status == WorkoutStatus.completed);
+  bool _hasCompletedOn(DateTime date) =>
+      workoutsOn(date)
+          .any((workout) => workout.status == WorkoutStatus.completed);
 
   int get workoutsThisMonth => _workouts
       .where((w) => w.date.month == _today.month && w.date.year == _today.year)
@@ -139,8 +223,17 @@ class WorkoutProvider extends ChangeNotifier {
   /// rather than advice — the value is editable from the profile screen.
   int get weeklyGoal => _weeklyGoal;
 
+  /// Accepted range for [setWeeklyGoal], exposed so the control that edits it
+  /// cannot offer a step this store will refuse.
+  static const int weeklyGoalMin = 1;
+  static const int weeklyGoalMax = 14;
+
   bool setWeeklyGoal(int value) {
-    if (value < 1 || value > 14 || value == _weeklyGoal) return false;
+    if (value < weeklyGoalMin ||
+        value > weeklyGoalMax ||
+        value == _weeklyGoal) {
+      return false;
+    }
     _weeklyGoal = value;
     notifyListeners();
     return true;
@@ -178,6 +271,7 @@ class WorkoutProvider extends ChangeNotifier {
     final stored = workout.id.isEmpty ? workout.copyWith(id: id) : workout;
     _workouts.add(stored);
     _sort();
+    unawaited(_persistWorkout(stored));
     notifyListeners();
     return stored;
   }
@@ -190,6 +284,7 @@ class WorkoutProvider extends ChangeNotifier {
     if (index == -1) return false;
     _workouts[index] = workout;
     _sort();
+    unawaited(_persistWorkout(workout));
     notifyListeners();
     return true;
   }
@@ -198,7 +293,10 @@ class WorkoutProvider extends ChangeNotifier {
     final before = _workouts.length;
     _workouts.removeWhere((w) => w.id == id);
     final deleted = _workouts.length != before;
-    if (deleted) notifyListeners();
+    if (deleted) {
+      unawaited(_persistDelete(id));
+      notifyListeners();
+    }
     return deleted;
   }
 
@@ -356,6 +454,7 @@ class WorkoutProvider extends ChangeNotifier {
 
   void updateProfile(ProfileStats profile) {
     _profile = profile;
+    unawaited(_persistProfile(profile));
     notifyListeners();
   }
 

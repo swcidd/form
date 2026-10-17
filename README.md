@@ -1,6 +1,6 @@
 <div align="center">
 
-# +1 <sub>(Plus One)</sub>
+# FORM
 
 **A fitness tracker that maps every rep, every set, every session.**
 
@@ -15,9 +15,9 @@
 
 ---
 
-## Why +1?
+## Why FORM?
 
-Tracking your lifts shouldn't feel like homework. Most apps either bury your numbers under five layers of menus or lock them behind a subscription. +1 does one thing and does it well: **it remembers what you lifted so you can see yourself getting stronger.**
+Tracking your lifts shouldn't feel like homework. Most apps either bury your numbers under five layers of menus or lock them behind a subscription. FORM does one thing and does it well: **it remembers what you lifted so you can see yourself getting stronger.**
 
 - ✍️ **Log in seconds** — exercises, sets, reps, and weight in a few taps.
 - 📈 **Watch the line go up** — every lift charted against your previous sessions.
@@ -85,8 +85,8 @@ Architecture follows a clean separation: `models/` holds plain data classes, `se
 ### Run it
 
 ```bash
-git clone https://github.com/swcidd/plus_one.git
-cd plus_one
+git clone https://github.com/swcidd/form.git
+cd form
 flutter pub get
 flutter run
 ```
@@ -97,6 +97,13 @@ flutter run
 flutter build apk --release
 # output: build/app/outputs/flutter-apk/app-release.apk
 ```
+
+Release builds need a keystore to be signed as your own. Without one the build
+falls back to the Android debug keys, so it still runs but is not a
+distributable release. The keystore lives in a gitignored `android/key.properties`
+and there are no signing secrets in this repository — see
+**[docs/BUILD.md](docs/BUILD.md)** for the debug/release differences, the one-off
+`keytool` command, and how to verify a build's signature.
 
 ---
 
@@ -146,6 +153,25 @@ git push origin feature/my-feature
 | **Sherwin Sid S. Sañol** ([@swcidd](https://github.com/swcidd)) | UI, state management, API/data layer, Git, documentation |
 
 Built for **SE2142 — Software Engineering Tools and Practices**.
+
+---
+
+## Data sources and licences
+
+FORM does not invent its exercise catalogue — it reads it from three places.
+The licences that ask for attribution get one on screen and in
+**[docs/ATTRIBUTION.md](docs/ATTRIBUTION.md)**, which also carries the notice
+texts and the two font licences.
+
+| Source | Licence |
+| --- | --- |
+| [wger.de](https://wger.de) REST API — the live catalogue | CC BY-SA 3.0/4.0, per entry |
+| [exercemus/exercises](https://github.com/exercemus/exercises) — bundled offline fallback | MIT, © 2022 exercemus |
+| [free-exercise-db](https://github.com/yuhonas/free-exercise-db) — bundled offline fallback | The Unlicense (public domain) |
+
+The interface icons are [Lucide](https://lucide.dev) (ISC). Inter and Barlow
+Condensed are bundled with the app under the SIL Open Font License 1.1, so no
+font is fetched at runtime.
 
 ---
 

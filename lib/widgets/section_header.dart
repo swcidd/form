@@ -46,9 +46,8 @@ class SectionHeader extends StatelessWidget {
               ),
               child: Text(
                 actionLabel!,
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
+                style: Theme.of(context).textTheme.labelMedium
+                    ?.copyWith(color: Theme.of(context).colorScheme.onSurface),
               ),
             ),
         ],

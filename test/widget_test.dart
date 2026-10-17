@@ -74,7 +74,7 @@ void main() {
       await tester.pumpWidget(emptyApp());
       await tester.pumpAndSettle();
 
-      expect(find.text('Plus One'), findsOneWidget);
+      expect(find.text('FORM'), findsOneWidget);
       expect(find.text('Workout Tracker'), findsOneWidget);
 
       // No session, so the card has to say so rather than inviting the user to
@@ -139,7 +139,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Heart rate, steps, sleep and calories belong to a general fitness app.
-      // +1 tracks strength training, so their absence is the point: it is what
+      // FORM tracks strength training, so their absence is the point: it is what
       // separates this from every other dashboard wearing the same layout.
       for (final removed in [
         'HEART RATE',
@@ -196,7 +196,7 @@ void main() {
       final bar = find.byType(AppNavBar);
       expect(bar, findsOneWidget);
 
-      for (final label in ['Home', 'Progress', 'Profile']) {
+      for (final label in ['Home', 'Progress', 'Library', 'Profile']) {
         expect(
           find.descendant(of: bar, matching: find.text(label)),
           findsOneWidget,
@@ -217,7 +217,38 @@ void main() {
       expect(find.text('Estimated 1RM'), findsOneWidget);
 
       await _tapDestination(tester, 'Profile');
-      expect(find.text('Profile is next'), findsOneWidget);
+      expect(find.text('Alex Mercer'), findsOneWidget);
+    });
+
+    testWidgets('the Library destination opens the exercise library', (
+      tester,
+    ) async {
+      await tester.pumpWidget(seededApp());
+      await tester.pumpAndSettle();
+
+      // Not _tapDestination: the catalogue makes real-I/O hops (the HTTP
+      // probe, then the bundled assets) that the fake clock cannot advance,
+      // so each wait grants real time and then pumps the fake one.
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AppNavBar),
+          matching: find.text('Library'),
+        ),
+      );
+      for (var i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+        if (!tester.any(find.byType(CircularProgressIndicator))) break;
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 25)),
+        );
+      }
+      await tester.pumpAndSettle();
+
+      expect(find.text('THE TRAINING LIBRARY'), findsOneWidget);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      // Widget tests stub HTTP into a failure, so this run is the offline
+      // path - the same one a phone with no signal takes.
+      expect(find.textContaining('Offline catalogue'), findsOneWidget);
     });
 
     testWidgets('the dashboard avatar opens the profile tab', (tester) async {
@@ -235,7 +266,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Profile is next'), findsOneWidget);
+      expect(find.text('Alex Mercer'), findsOneWidget);
     });
 
     testWidgets('a tab route opens its own tab, not the home one', (
@@ -273,20 +304,21 @@ void main() {
       expect(find.text('Start'), findsOneWidget);
     });
 
-    testWidgets('tapping Workout tab with planned session opens pre-workout screen', (
-      tester,
-    ) async {
-      await tester.pumpWidget(seededApp());
-      await tester.pumpAndSettle();
+    testWidgets(
+      'tapping Workout tab with planned session opens pre-workout screen',
+      (tester) async {
+        await tester.pumpWidget(seededApp());
+        await tester.pumpAndSettle();
 
-      await _tapDestination(tester, 'Workout');
-      await tester.pumpAndSettle();
+        await _tapDestination(tester, 'Workout');
+        await tester.pumpAndSettle();
 
-      // A planned session is a better answer than a form: opening the form
-      // would offer to create a second session for a day that already has one.
-      expect(find.byType(NewWorkoutDialog), findsNothing);
-      expect(find.text('THE LINEUP'), findsOneWidget);
-    });
+        // A planned session is a better answer than a form: opening the form
+        // would offer to create a second session for a day that already has one.
+        expect(find.byType(NewWorkoutDialog), findsNothing);
+        expect(find.text('THE LINEUP'), findsOneWidget);
+      },
+    );
 
     testWidgets('starting creates the workout and opens it', (tester) async {
       final provider = WorkoutProvider();
@@ -362,7 +394,7 @@ void main() {
       final dest = tester.widget<NavigationBar>(
         find.descendant(of: bar, matching: find.byType(NavigationBar)),
       );
-      expect(dest.destinations, hasLength(4));
+      expect(dest.destinations, hasLength(5));
 
       expect(find.text('Workout'), findsOneWidget);
     });

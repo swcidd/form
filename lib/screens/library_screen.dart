@@ -1,68 +1,91 @@
 import 'package:flutter/material.dart';
 
+import '../data/exercise_catalog.dart';
+import '../exercise_library.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
-import '../exercise_library.dart';
 
 /// Library screen: search, filters, current program, workout lists, + exercise catalog.
+///
+/// The catalogue is network-first (the wger REST API) with the bundled data
+/// sets as the offline fallback; [catalog] exists so tests can drive both
+/// paths without touching the network.
 class LibraryScreen extends StatefulWidget {
-  const LibraryScreen({super.key});
+  const LibraryScreen({super.key, this.catalog});
 
   static const String routeName = '/library';
+
+  /// The catalogue loader; the real one by default.
+  final ExerciseCatalog? catalog;
 
   @override
   State<LibraryScreen> createState() => _LibraryScreenState();
 }
 
 class _LibraryScreenState extends State<LibraryScreen> {
-  late Future<List<LibraryExercise>> _exercisesFuture;
+  late final ExerciseCatalog _catalog = widget.catalog ?? ExerciseCatalog();
+  late Future<ExerciseCatalogResult> _exercisesFuture;
   String _selectedTab = 'All';
 
   @override
   void initState() {
     super.initState();
-    _exercisesFuture = ExerciseLibrary.loadAll();
+    _exercisesFuture = _catalog.load();
+  }
+
+  /// Re-runs the network-first load. The offline banner and the error state
+  /// both offer this rather than asking the user to leave and come back.
+  void _reload() {
+    // Not an arrow body: setState asserts when its callback returns the
+    // Future it was handed rather than storing it.
+    setState(() {
+      _exercisesFuture = _catalog.load();
+    });
   }
 
   // --------------------------------------------------------------- UI
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final text = context.text;
 
     return Scaffold(
       backgroundColor: scheme.surface,
       body: CustomScrollView(
         slivers: [
-          _StatusBar(),
+          // Top inset only — the OS draws the phone's status bar, not the app.
+          SliverToBoxAdapter(
+            child: SafeArea(bottom: false, child: SizedBox(height: 8)),
+          ),
           SliverToBoxAdapter(
             child: Padding(
               padding: AppSpacing.pageHorizontal,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _PageHeader(),
+                  _pageHeader(),
                   const SizedBox(height: 24),
-                  _SearchBar(),
+                  _searchBar(),
                   const SizedBox(height: 16),
-                  _ExerciseFilterChips(
+                  _exerciseFilterChips(
                     selected: _selectedTab,
                     onSelected: (tab) {
                       setState(() => _selectedTab = tab);
                     },
                   ),
                   const SizedBox(height: 16),
-                  _ExerciseGrid(filter: _selectedTab),
+                  _exerciseGrid(future: _exercisesFuture, filter: _selectedTab),
                   const SizedBox(height: 24),
-                  _CurrentProgramCard(),
+                  _currentProgramCard(),
                   const SizedBox(height: 24),
-                  _SectionHeader(label: 'My Workouts'),
+                  _sectionHeader(label: 'My Workouts'),
                   const SizedBox(height: 12),
-                  _WorkoutList(),
+                  _workoutList(),
                   const SizedBox(height: 24),
-                  _SectionHeader(label: 'Saved'),
+                  _sectionHeader(label: 'Saved'),
                   const SizedBox(height: 12),
                   _SavedList(),
+                  const SizedBox(height: 24),
+                  _attribution(),
                   const SizedBox(height: 32),
                 ],
               ),
@@ -73,50 +96,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
     );
   }
 
-  // --------------------------------------------------------------- status bar
-  Widget _StatusBar() {
-    final scheme = Theme.of(context).colorScheme;
-
-    return SliverToBoxAdapter(
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(26, 8, 26, 0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '9:41',
-                style: Theme.of(
-                  context,
-                ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600),
-              ),
-              Row(
-                children: [
-                  Icon(
-                    Icons.signal_cellular_4_bar_rounded,
-                    size: 17,
-                    color: scheme.onSurface,
-                  ),
-                  const SizedBox(width: 5),
-                  Icon(Icons.wifi_rounded, size: 17, color: scheme.onSurface),
-                  const SizedBox(width: 5),
-                  Icon(
-                    Icons.battery_full_rounded,
-                    size: 17,
-                    color: scheme.onSurface,
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   // --------------------------------------------------------------- page header
-  Widget _PageHeader() {
+  Widget _pageHeader() {
     final scheme = Theme.of(context).colorScheme;
     final text = context.text;
 
@@ -147,7 +128,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   // --------------------------------------------------------------- search bar
-  Widget _SearchBar() {
+  Widget _searchBar() {
     final scheme = Theme.of(context).colorScheme;
 
     return Container(
@@ -165,9 +146,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
             child: TextField(
               decoration: InputDecoration(
                 hintText: 'Find a workout or exercise',
-                hintStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                ),
+                hintStyle: Theme.of(context).textTheme.bodyMedium
+                    ?.copyWith(color: scheme.onSurfaceVariant),
                 border: InputBorder.none,
                 isDense: true,
               ),
@@ -180,7 +160,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   // --------------------------------------------------------------- exercise filter chips
-  Widget _ExerciseFilterChips({
+  Widget _exerciseFilterChips({
     required String selected,
     required ValueChanged<String> onSelected,
   }) {
@@ -214,31 +194,56 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   // --------------------------------------------------------------- exercise grid
-  Widget _ExerciseGrid({required String filter}) {
-    return FutureBuilder<List<LibraryExercise>>(
-      future: ExerciseLibrary.loadAll(),
+  Widget _exerciseGrid({
+    required Future<ExerciseCatalogResult> future,
+    required String filter,
+  }) {
+    return FutureBuilder<ExerciseCatalogResult>(
+      future: future,
       builder: (context, snapshot) {
-        final exercises = snapshot.data ?? const [];
-        final filtered = _applyFilter(exercises, filter);
-
-        if (filtered.isEmpty) {
-          return const Center(child: Text('No exercises found.'));
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 32),
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
+        if (snapshot.hasError) {
+          return _catalogError();
         }
 
-        return GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 0.65,
-          ),
-          itemCount: filtered.length,
-          itemBuilder: (context, index) {
-            final ex = filtered[index];
-            return _ExerciseCard(exercise: ex);
-          },
+        final result = snapshot.data;
+        final filtered = _applyFilter(result?.exercises ?? const [], filter);
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (result?.isOffline ?? false) ...[
+              _offlineBanner(),
+              const SizedBox(height: 12),
+            ],
+            if (filtered.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 32),
+                child: Center(child: Text('No exercises found.')),
+              )
+            else
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  childAspectRatio: 0.65,
+                ),
+                itemCount: filtered.length,
+                itemBuilder: (context, index) {
+                  return _exerciseCard(exercise: filtered[index]);
+                },
+              ),
+          ],
         );
       },
     );
@@ -249,20 +254,20 @@ class _LibraryScreenState extends State<LibraryScreen> {
     String filter,
   ) {
     if (filter == 'All') return exercises;
+    // The chips name categories ("Strength"), so match on the category and
+    // keep a muscle fallback for names that read like muscle groups.
+    final needle = filter.toLowerCase();
     return exercises
         .where(
           (ex) =>
-              ex.primaryMuscle.toLowerCase().contains(filter.toLowerCase()) ||
-              (ex.secondaryMuscle?.toLowerCase().contains(
-                    filter.toLowerCase(),
-                  ) ??
-                  false),
+              ex.category.toLowerCase() == needle ||
+              ex.primaryMuscle.toLowerCase().contains(needle),
         )
         .toList();
   }
 
   // --------------------------------------------------------------- exercise card
-  Widget _ExerciseCard({required LibraryExercise exercise}) {
+  Widget _exerciseCard({required LibraryExercise exercise}) {
     final scheme = Theme.of(context).colorScheme;
 
     return Container(
@@ -289,7 +294,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                     width: double.infinity,
                     height: 80,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) =>
+                    errorBuilder: (_, _, _) =>
                         const Icon(Icons.fitness_center, size: 30),
                   )
                 : Icon(
@@ -309,18 +314,15 @@ class _LibraryScreenState extends State<LibraryScreen> {
           const SizedBox(height: 4),
           Text(
             exercise.primaryMuscle,
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+            style: Theme.of(context).textTheme.bodySmall
+                ?.copyWith(color: scheme.onSurfaceVariant),
           ),
           if (exercise.tips != null) ...[
             const SizedBox(height: 4),
             Text(
               exercise.tips!,
-              style: Theme.of(context).textTheme.bodyExtraSmall?.copyWith(
-                color: scheme.onSurfaceVariant,
-                fontSize: 10,
-              ),
+              style: Theme.of(context).textTheme.bodySmall
+                  ?.copyWith(color: scheme.onSurfaceVariant, fontSize: 10),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
@@ -331,9 +333,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
             children: [
               Text(
                 exercise.level,
-                style: Theme.of(
-                  context,
-                ).textTheme.labelSmall?.copyWith(color: AppColors.lime),
+                style: Theme.of(context).textTheme.labelSmall
+                    ?.copyWith(color: AppColors.lime),
               ),
               IconButton(
                 icon: const Icon(Icons.remove_circle_outline, size: 18),
@@ -347,118 +348,194 @@ class _LibraryScreenState extends State<LibraryScreen> {
     );
   }
 
+  /// The offline notice: the grid is real either way, so this states where
+  /// it came from instead of pretending the request made it.
+  Widget _offlineBanner() {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 4, 4, 4),
+      decoration: BoxDecoration(
+        color: AppColors.sage50,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.cloud_off_rounded,
+            size: 16,
+            color: scheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              "Offline catalogue — wger.de couldn't be reached.",
+              style: Theme.of(context).textTheme.bodySmall
+                  ?.copyWith(color: scheme.onSurfaceVariant),
+            ),
+          ),
+          TextButton(onPressed: _reload, child: const Text('Retry')),
+        ],
+      ),
+    );
+  }
+
+  /// Only total failure reaches this: both wger and the bundled assets are
+  /// gone, which is worth an explicit retry rather than an empty page.
+  Widget _catalogError() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 24),
+      child: Column(
+        children: [
+          Text(
+            'Could not load the exercise library.',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 8),
+          TextButton(onPressed: _reload, child: const Text('Retry')),
+        ],
+      ),
+    );
+  }
+
+  /// wger asks for attribution (its entries are CC BY-SA, per entry) and
+  /// exercemus is MIT, so both are named permanently rather than only in the
+  /// about screen. free-exercise-db is public domain but named anyway, so a
+  /// reader can tell where the offline catalogue came from.
+  ///
+  /// The full notices, including the bundled fonts, are in docs/ATTRIBUTION.md.
+  Widget _attribution() {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Text(
+      'Exercise data: wger.de (CC BY-SA 3.0/4.0) · exercemus (MIT) · '
+      'free-exercise-db (public domain).',
+      style: Theme.of(context).textTheme.bodySmall
+          ?.copyWith(color: scheme.onSurfaceVariant, fontSize: 10),
+    );
+  }
+
   // --------------------------------------------------------------- current program card
-  Widget _CurrentProgramCard() {
+  Widget _currentProgramCard() {
     final scheme = Theme.of(context).colorScheme;
     final text = context.text;
 
-    return Stack(
-      children: [
-        // Background photograph
-        ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: Image.asset(
-            'assets/images/program_hero.png',
-            height: 188,
-            width: double.infinity,
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) =>
-                Container(height: 188, color: scheme.surfaceContainerHighest),
+    return SizedBox(
+      height: 188,
+      child: Stack(
+        children: [
+          // Background photograph
+          ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Image.asset(
+              'assets/images/program_hero.png',
+              height: 188,
+              width: double.infinity,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) =>
+                  Container(height: 188, color: scheme.surfaceContainerHighest),
+            ),
           ),
-        ),
-        // Image shade
-        ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: Container(
-            height: 188,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Color(0x00121512), Color(0x73121512)],
+          // Image shade
+          ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              height: 188,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0x00121512), Color(0x73121512)],
+                ),
               ),
             ),
           ),
-        ),
-        // Content
-        Padding(
-          padding: const EdgeInsets.all(18),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Badge
-              Row(
-                children: [
-                  Text(
-                    'CURRENT PROGRAM',
-                    style: text.labelCaps.copyWith(color: AppColors.lime),
-                  ),
-                  const Spacer(),
-                  Icon(
-                    Icons.open_in_new_rounded,
-                    size: 20,
-                    color: scheme.surface,
-                  ),
-                ],
-              ),
-              const Spacer(),
-              // Program name
-              Text(
-                'FOUNDATION / 08',
-                style: text.programName.copyWith(color: scheme.surface),
-              ),
-              const SizedBox(height: 4),
-              // Program meta
-              Text(
-                '8 weeks  ·  Strength  ·  4 days / week',
-                style: text.programMeta.copyWith(color: scheme.surface),
-              ),
-              const SizedBox(height: 12),
-              // Progress bar
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        'Week 04 of 08',
-                        style: text.programMeta.copyWith(color: scheme.surface),
-                      ),
-                      const Spacer(),
-                      Text(
-                        '50%',
-                        style: text.programMeta.copyWith(color: AppColors.lime),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                      value: 0.5,
-                      minHeight: 8,
-                      backgroundColor: scheme.surfaceContainerHighest
-                          .withValues(alpha: 0.3),
-                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.lime),
+          // Content
+          Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Badge
+                Row(
+                  children: [
+                    Text(
+                      'CURRENT PROGRAM',
+                      style: text.labelCaps.copyWith(color: AppColors.lime),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                    const Spacer(),
+                    Icon(
+                      Icons.open_in_new_rounded,
+                      size: 20,
+                      color: scheme.surface,
+                    ),
+                  ],
+                ),
+                const Spacer(),
+                // Program name
+                Text(
+                  'FOUNDATION / 08',
+                  style: text.programName.copyWith(color: scheme.surface),
+                ),
+                const SizedBox(height: 4),
+                // Program meta
+                Text(
+                  '8 weeks  ·  Strength  ·  4 days / week',
+                  style: text.programMeta.copyWith(color: scheme.surface),
+                ),
+                const SizedBox(height: 12),
+                // Progress bar
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          'Week 04 of 08',
+                          style: text.programMeta.copyWith(
+                            color: scheme.surface,
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          '50%',
+                          style: text.programMeta.copyWith(
+                            color: AppColors.lime,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: 0.5,
+                        minHeight: 8,
+                        backgroundColor: scheme.surfaceContainerHighest
+                            .withValues(alpha: 0.3),
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          AppColors.lime,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
   // --------------------------------------------------------------- section header
-  Widget _SectionHeader({required String label}) {
+  Widget _sectionHeader({required String label}) {
     final text = context.text;
     return Text(label, style: text.labelCaps);
   }
 
   // --------------------------------------------------------------- my workouts list
-  Widget _WorkoutList() {
+  Widget _workoutList() {
     final workouts = [
       ('Foundation / 08', 'Week 04 of 08', 'Strength', '4 days/week', true),
       (
@@ -564,9 +641,8 @@ class _ProgramListItem extends StatelessWidget {
                     ],
                     Text(
                       name,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: Theme.of(context).textTheme.titleMedium
+                          ?.copyWith(fontWeight: FontWeight.w600),
                     ),
                   ],
                 ),
@@ -640,9 +716,8 @@ class _SavedItem extends StatelessWidget {
           Expanded(
             child: Text(
               name,
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
+              style: Theme.of(context).textTheme.titleMedium
+                  ?.copyWith(fontWeight: FontWeight.w500),
             ),
           ),
           Icon(

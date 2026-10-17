@@ -195,7 +195,7 @@ class _HeroSliver extends StatelessWidget {
             Image.asset(
               'assets/images/workout_hero.png',
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) =>
+              errorBuilder: (_, _, _) =>
                   Container(color: scheme.surfaceContainerHighest),
             ),
             // Scrim gradient
@@ -305,7 +305,7 @@ class _ExerciseList extends StatelessWidget {
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           itemCount: workout.logs.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
+          separatorBuilder: (_, _) => const SizedBox(height: 12),
           itemBuilder: (context, index) {
             final log = workout.logs[index];
             return _ExerciseRow(index: index, log: log);
@@ -354,9 +354,8 @@ class _ExerciseRow extends StatelessWidget {
               children: [
                 Text(
                   log.exercise.name.toUpperCase(),
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+                  style: Theme.of(context).textTheme.titleLarge
+                      ?.copyWith(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -395,9 +394,8 @@ class _StartWorkoutButton extends StatelessWidget {
       height: 56,
       child: ElevatedButton.icon(
         onPressed: () {
-          Navigator.of(
-            context,
-          ).pushNamed(SetLoggingScreen.routeFor(workout.id));
+          Navigator.of(context)
+              .pushNamed(SetLoggingScreen.routeFor(workout.id));
         },
         icon: const Icon(Icons.play_arrow_rounded, size: 20),
         label: Text(

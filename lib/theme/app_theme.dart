@@ -83,9 +83,8 @@ abstract final class AppTheme {
             vertical: AppSpacing.sm + 2,
           ),
           shape: const RoundedRectangleBorder(borderRadius: AppRadius.control),
-          textStyle: AppTypography.textTheme(
-            scheme,
-          ).labelLarge?.copyWith(color: scheme.onSurface),
+          textStyle: AppTypography.textTheme(scheme).labelLarge
+              ?.copyWith(color: scheme.onSurface),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
@@ -93,9 +92,8 @@ abstract final class AppTheme {
           foregroundColor: scheme.onSurface,
           minimumSize: const Size(44, 44),
           shape: const RoundedRectangleBorder(borderRadius: AppRadius.control),
-          textStyle: AppTypography.textTheme(
-            scheme,
-          ).labelLarge?.copyWith(color: scheme.onSurface),
+          textStyle: AppTypography.textTheme(scheme).labelLarge
+              ?.copyWith(color: scheme.onSurface),
         ),
       ),
       navigationBarTheme: NavigationBarThemeData(
@@ -137,9 +135,8 @@ abstract final class AppTheme {
       ),
       snackBarTheme: SnackBarThemeData(
         backgroundColor: scheme.inverseSurface,
-        contentTextStyle: AppTypography.textTheme(
-          scheme,
-        ).bodyMedium?.copyWith(color: scheme.onInverseSurface),
+        contentTextStyle: AppTypography.textTheme(scheme).bodyMedium
+            ?.copyWith(color: scheme.onInverseSurface),
         behavior: SnackBarBehavior.floating,
         shape: const RoundedRectangleBorder(borderRadius: AppRadius.control),
       ),
@@ -159,7 +156,7 @@ abstract final class AppTheme {
     );
   }
 
-  /// Plus One light: cream canvas, ink text, sage secondary.
+  /// FORM light: cream canvas, ink text, sage secondary.
   /// Surface containers are white; hairlines are sage100.
   /// Primary actions are ink; lime is the signature accent.
   static const ColorScheme _lightScheme = ColorScheme(
@@ -197,7 +194,7 @@ abstract final class AppTheme {
     surfaceContainerHighest: AppColors.sage50,
   );
 
-  /// Plus One dark: ink canvas, cream text. Placeholder until dark frames exist.
+  /// FORM dark: ink canvas, cream text. Placeholder until dark frames exist.
   /// Mirrors light semantic roles with inverted values.
   static const ColorScheme _darkScheme = ColorScheme(
     brightness: Brightness.dark,

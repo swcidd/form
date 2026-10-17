@@ -1,0 +1,17 @@
+# Copy this file to android/key.properties and fill in the real values to sign
+# a release build with your own key. Both files are gitignored: the passwords
+# and the keystore must never reach the repository.
+#
+# Create the keystore first (one-off, keep the file somewhere safe and private):
+#
+#   keytool -genkey -v \
+#     -keystore ~/form-release.jks \
+#     -keyalg RSA -keysize 2048 -validity 10000 \
+#     -alias form
+#
+# Then fill in the four values below. See docs/BUILD.md for the full walkthrough.
+
+storePassword=change-me
+keyPassword=change-me
+keyAlias=form
+storeFile=/absolute/path/to/form-release.jks

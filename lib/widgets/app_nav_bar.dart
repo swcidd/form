@@ -5,10 +5,11 @@ import '../navigation/app_tab.dart';
 
 /// Reusable bottom navigation bar using Lucide SVG icons.
 ///
-/// Uniform 4-destination bar matching Figma design:
+/// Uniform destination bar:
 /// - Home (activity icon)
 /// - Progress (chart-no-axes-combined icon)
 /// - Workout (dumbbell icon)
+/// - Library (library icon)
 /// - Profile (user-round icon)
 class AppNavBar extends StatelessWidget {
   const AppNavBar({
@@ -42,11 +43,12 @@ class AppNavBar extends StatelessWidget {
     );
   }
 
-  /// The four destinations in uniform layout.
+  /// The destinations in uniform layout.
   static List<AppTab> get _slots => [
     AppTab.home,
     AppTab.progress,
     AppTab.workout,
+    AppTab.library,
     AppTab.profile,
   ];
 
