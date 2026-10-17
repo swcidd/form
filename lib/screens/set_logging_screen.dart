@@ -117,9 +117,8 @@ class _SessionToolbar extends StatelessWidget {
                 children: [
                   Text(
                     workout.title,
-                    style: Theme.of(
-                      context,
-                    ).textTheme.labelMedium?.copyWith(color: AppColors.lime),
+                    style: Theme.of(context).textTheme.labelMedium
+                        ?.copyWith(color: AppColors.lime),
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -134,9 +133,8 @@ class _SessionToolbar extends StatelessWidget {
             ),
             Text(
               'Finish',
-              style: Theme.of(
-                context,
-              ).textTheme.labelMedium?.copyWith(color: AppColors.lime),
+              style: Theme.of(context).textTheme.labelMedium
+                  ?.copyWith(color: AppColors.lime),
             ),
           ],
         ),
@@ -508,9 +506,8 @@ class _CollapsedExercise extends StatelessWidget {
               children: [
                 Text(
                   log.exercise.name.toUpperCase(),
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: Theme.of(context).textTheme.titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w600),
                 ),
                 Text(
                   '$completed / $total sets  ·  ${log.restSeconds}s rest',
@@ -571,9 +568,8 @@ class _LoggingAction extends StatelessWidget {
             Expanded(
               child: FilledButton.icon(
                 onPressed: () {
-                  Navigator.of(
-                    context,
-                  ).pushNamed(WorkoutSummaryScreen.routeFor(workout.id));
+                  Navigator.of(context)
+                      .pushNamed(WorkoutSummaryScreen.routeFor(workout.id));
                 },
                 icon: const Icon(Icons.flag_rounded, size: 18),
                 label: const Text('Finish Workout'),

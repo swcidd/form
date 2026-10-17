@@ -98,9 +98,9 @@ class WorkoutProvider extends ChangeNotifier {
     return streak;
   }
 
-  bool _hasCompletedOn(DateTime date) => workoutsOn(
-    date,
-  ).any((workout) => workout.status == WorkoutStatus.completed);
+  bool _hasCompletedOn(DateTime date) =>
+      workoutsOn(date)
+          .any((workout) => workout.status == WorkoutStatus.completed);
 
   int get workoutsThisMonth => _workouts
       .where((w) => w.date.month == _today.month && w.date.year == _today.year)

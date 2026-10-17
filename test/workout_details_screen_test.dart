@@ -29,9 +29,9 @@ void main() {
         },
         home: Builder(
           builder: (context) => ElevatedButton(
-            onPressed: () => Navigator.of(
-              context,
-            ).pushNamed(WorkoutDetailsScreen.routeName, arguments: id),
+            onPressed: () =>
+                Navigator.of(context)
+                    .pushNamed(WorkoutDetailsScreen.routeName, arguments: id),
             child: const Text('open'),
           ),
         ),

@@ -63,9 +63,9 @@ class HomeScreen extends StatelessWidget {
               child: WorkoutCard(
                 workout: workout,
                 dense: true,
-                onTap: () => Navigator.of(
-                  context,
-                ).pushNamed(WorkoutDetailScreen.routeFor(workout.id)),
+                onTap: () =>
+                    Navigator.of(context)
+                        .pushNamed(WorkoutDetailScreen.routeFor(workout.id)),
               ),
             ),
           ),
@@ -180,9 +180,9 @@ class _FocusCard extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () => Navigator.of(
-                  context,
-                ).pushNamed(WorkoutDetailScreen.routeFor(session.id)),
+                onPressed: () =>
+                    Navigator.of(context)
+                        .pushNamed(WorkoutDetailScreen.routeFor(session.id)),
                 style: ElevatedButton.styleFrom(
                   minimumSize: const Size.fromHeight(48),
                 ),

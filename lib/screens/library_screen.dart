@@ -146,9 +146,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
             child: TextField(
               decoration: InputDecoration(
                 hintText: 'Find a workout or exercise',
-                hintStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                ),
+                hintStyle: Theme.of(context).textTheme.bodyMedium
+                    ?.copyWith(color: scheme.onSurfaceVariant),
                 border: InputBorder.none,
                 isDense: true,
               ),
@@ -315,18 +314,15 @@ class _LibraryScreenState extends State<LibraryScreen> {
           const SizedBox(height: 4),
           Text(
             exercise.primaryMuscle,
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+            style: Theme.of(context).textTheme.bodySmall
+                ?.copyWith(color: scheme.onSurfaceVariant),
           ),
           if (exercise.tips != null) ...[
             const SizedBox(height: 4),
             Text(
               exercise.tips!,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: scheme.onSurfaceVariant,
-                fontSize: 10,
-              ),
+              style: Theme.of(context).textTheme.bodySmall
+                  ?.copyWith(color: scheme.onSurfaceVariant, fontSize: 10),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
@@ -337,9 +333,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
             children: [
               Text(
                 exercise.level,
-                style: Theme.of(
-                  context,
-                ).textTheme.labelSmall?.copyWith(color: AppColors.lime),
+                style: Theme.of(context).textTheme.labelSmall
+                    ?.copyWith(color: AppColors.lime),
               ),
               IconButton(
                 icon: const Icon(Icons.remove_circle_outline, size: 18),
@@ -375,9 +370,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
           Expanded(
             child: Text(
               "Offline catalogue — wger.de couldn't be reached.",
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+              style: Theme.of(context).textTheme.bodySmall
+                  ?.copyWith(color: scheme.onSurfaceVariant),
             ),
           ),
           TextButton(onPressed: _reload, child: const Text('Retry')),
@@ -412,10 +406,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
     return Text(
       'Exercise data: wger.de (CC BY-SA) · exercemus (CC BY-SA) · '
       'free-exercise-db (public domain).',
-      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-        color: scheme.onSurfaceVariant,
-        fontSize: 10,
-      ),
+      style: Theme.of(context).textTheme.bodySmall
+          ?.copyWith(color: scheme.onSurfaceVariant, fontSize: 10),
     );
   }
 
@@ -645,9 +637,8 @@ class _ProgramListItem extends StatelessWidget {
                     ],
                     Text(
                       name,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: Theme.of(context).textTheme.titleMedium
+                          ?.copyWith(fontWeight: FontWeight.w600),
                     ),
                   ],
                 ),
@@ -721,9 +712,8 @@ class _SavedItem extends StatelessWidget {
           Expanded(
             child: Text(
               name,
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
+              style: Theme.of(context).textTheme.titleMedium
+                  ?.copyWith(fontWeight: FontWeight.w500),
             ),
           ),
           Icon(

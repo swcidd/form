@@ -41,9 +41,8 @@ class ExerciseApiClient {
   /// The catalogue is 900+ entries on wger; the card grid only needs a first
   /// page, and loading more than the user can scroll to would be waste.
   Future<List<LibraryExercise>> fetchExercises({int limit = 60}) async {
-    final uri = Uri.parse(
-      '$baseUrl/api/v2/exerciseinfo/',
-    ).replace(queryParameters: {'language': '2', 'limit': '$limit'});
+    final uri = Uri.parse('$baseUrl/api/v2/exerciseinfo/')
+        .replace(queryParameters: {'language': '2', 'limit': '$limit'});
 
     final http.Response response;
     try {

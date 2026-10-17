@@ -83,9 +83,8 @@ abstract final class AppTheme {
             vertical: AppSpacing.sm + 2,
           ),
           shape: const RoundedRectangleBorder(borderRadius: AppRadius.control),
-          textStyle: AppTypography.textTheme(
-            scheme,
-          ).labelLarge?.copyWith(color: scheme.onSurface),
+          textStyle: AppTypography.textTheme(scheme).labelLarge
+              ?.copyWith(color: scheme.onSurface),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
@@ -93,9 +92,8 @@ abstract final class AppTheme {
           foregroundColor: scheme.onSurface,
           minimumSize: const Size(44, 44),
           shape: const RoundedRectangleBorder(borderRadius: AppRadius.control),
-          textStyle: AppTypography.textTheme(
-            scheme,
-          ).labelLarge?.copyWith(color: scheme.onSurface),
+          textStyle: AppTypography.textTheme(scheme).labelLarge
+              ?.copyWith(color: scheme.onSurface),
         ),
       ),
       navigationBarTheme: NavigationBarThemeData(
@@ -137,9 +135,8 @@ abstract final class AppTheme {
       ),
       snackBarTheme: SnackBarThemeData(
         backgroundColor: scheme.inverseSurface,
-        contentTextStyle: AppTypography.textTheme(
-          scheme,
-        ).bodyMedium?.copyWith(color: scheme.onInverseSurface),
+        contentTextStyle: AppTypography.textTheme(scheme).bodyMedium
+            ?.copyWith(color: scheme.onInverseSurface),
         behavior: SnackBarBehavior.floating,
         shape: const RoundedRectangleBorder(borderRadius: AppRadius.control),
       ),
