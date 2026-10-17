@@ -398,13 +398,17 @@ class _LibraryScreenState extends State<LibraryScreen> {
     );
   }
 
-  /// wger and exercemus are CC BY-SA and ask for attribution; free-exercise-db
-  /// is public domain. One line covers every set the grid can show.
+  /// wger asks for attribution (its entries are CC BY-SA, per entry) and
+  /// exercemus is MIT, so both are named permanently rather than only in the
+  /// about screen. free-exercise-db is public domain but named anyway, so a
+  /// reader can tell where the offline catalogue came from.
+  ///
+  /// The full notices, including the bundled fonts, are in docs/ATTRIBUTION.md.
   Widget _attribution() {
     final scheme = Theme.of(context).colorScheme;
 
     return Text(
-      'Exercise data: wger.de (CC BY-SA) · exercemus (CC BY-SA) · '
+      'Exercise data: wger.de (CC BY-SA 3.0/4.0) · exercemus (MIT) · '
       'free-exercise-db (public domain).',
       style: Theme.of(context).textTheme.bodySmall
           ?.copyWith(color: scheme.onSurfaceVariant, fontSize: 10),
