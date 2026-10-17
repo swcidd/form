@@ -374,102 +374,111 @@ class _LibraryScreenState extends State<LibraryScreen> {
     final scheme = Theme.of(context).colorScheme;
     final text = context.text;
 
-    return Stack(
-      children: [
-        // Background photograph
-        ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: Image.asset(
-            'assets/images/program_hero.png',
-            height: 188,
-            width: double.infinity,
-            fit: BoxFit.cover,
-            errorBuilder: (_, _, _) =>
-                Container(height: 188, color: scheme.surfaceContainerHighest),
+    return SizedBox(
+      height: 188,
+      child: Stack(
+        children: [
+          // Background photograph
+          ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Image.asset(
+              'assets/images/program_hero.png',
+              height: 188,
+              width: double.infinity,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) =>
+                  Container(height: 188, color: scheme.surfaceContainerHighest),
+            ),
           ),
-        ),
-        // Image shade
-        ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: Container(
-            height: 188,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Color(0x00121512), Color(0x73121512)],
+          // Image shade
+          ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              height: 188,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0x00121512), Color(0x73121512)],
+                ),
               ),
             ),
           ),
-        ),
-        // Content
-        Padding(
-          padding: const EdgeInsets.all(18),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Badge
-              Row(
-                children: [
-                  Text(
-                    'CURRENT PROGRAM',
-                    style: text.labelCaps.copyWith(color: AppColors.lime),
-                  ),
-                  const Spacer(),
-                  Icon(
-                    Icons.open_in_new_rounded,
-                    size: 20,
-                    color: scheme.surface,
-                  ),
-                ],
-              ),
-              const Spacer(),
-              // Program name
-              Text(
-                'FOUNDATION / 08',
-                style: text.programName.copyWith(color: scheme.surface),
-              ),
-              const SizedBox(height: 4),
-              // Program meta
-              Text(
-                '8 weeks  ·  Strength  ·  4 days / week',
-                style: text.programMeta.copyWith(color: scheme.surface),
-              ),
-              const SizedBox(height: 12),
-              // Progress bar
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        'Week 04 of 08',
-                        style: text.programMeta.copyWith(color: scheme.surface),
-                      ),
-                      const Spacer(),
-                      Text(
-                        '50%',
-                        style: text.programMeta.copyWith(color: AppColors.lime),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                      value: 0.5,
-                      minHeight: 8,
-                      backgroundColor: scheme.surfaceContainerHighest
-                          .withValues(alpha: 0.3),
-                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.lime),
+          // Content
+          Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Badge
+                Row(
+                  children: [
+                    Text(
+                      'CURRENT PROGRAM',
+                      style: text.labelCaps.copyWith(color: AppColors.lime),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                    const Spacer(),
+                    Icon(
+                      Icons.open_in_new_rounded,
+                      size: 20,
+                      color: scheme.surface,
+                    ),
+                  ],
+                ),
+                const Spacer(),
+                // Program name
+                Text(
+                  'FOUNDATION / 08',
+                  style: text.programName.copyWith(color: scheme.surface),
+                ),
+                const SizedBox(height: 4),
+                // Program meta
+                Text(
+                  '8 weeks  ·  Strength  ·  4 days / week',
+                  style: text.programMeta.copyWith(color: scheme.surface),
+                ),
+                const SizedBox(height: 12),
+                // Progress bar
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          'Week 04 of 08',
+                          style: text.programMeta.copyWith(
+                            color: scheme.surface,
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          '50%',
+                          style: text.programMeta.copyWith(
+                            color: AppColors.lime,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: 0.5,
+                        minHeight: 8,
+                        backgroundColor: scheme.surfaceContainerHighest
+                            .withValues(alpha: 0.3),
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          AppColors.lime,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
