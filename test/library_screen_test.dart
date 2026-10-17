@@ -74,6 +74,8 @@ void main() {
     expect(find.text('Barbell Curl'), findsOneWidget);
     // Live data, so no offline notice.
     expect(find.textContaining('Offline'), findsNothing);
+    // And no mock iOS status bar — that chrome belongs to the OS.
+    expect(find.text('9:41'), findsNothing);
   });
 
   testWidgets('a failed wger shows the offline banner over the bundled sets', (
