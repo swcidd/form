@@ -19,7 +19,11 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.12.2
+  # Pinned to the toolchain the lockfile was resolved with. The lockfile asks
+  # for dart >=3.13.0 / flutter >=3.47.0; declaring anything lower promises a
+  # build that those SDKs cannot deliver.
+  sdk: ^3.13.0
+  flutter: ">=3.47.0"
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions

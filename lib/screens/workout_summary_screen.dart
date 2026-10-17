@@ -278,9 +278,8 @@ class _PersonalRecordCard extends StatelessWidget {
                   children: [
                     Text(
                       'BARBELL BACK SQUAT',
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: scheme.onSurface,
-                      ),
+                      style: Theme.of(context).textTheme.labelMedium
+                          ?.copyWith(color: scheme.onSurface),
                     ),
                     const SizedBox(height: 8),
                     Row(
