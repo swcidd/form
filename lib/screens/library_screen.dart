@@ -1,27 +1,46 @@
 import 'package:flutter/material.dart';
 
+import '../data/exercise_catalog.dart';
+import '../exercise_library.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
-import '../exercise_library.dart';
 
 /// Library screen: search, filters, current program, workout lists, + exercise catalog.
+///
+/// The catalogue is network-first (the wger REST API) with the bundled data
+/// sets as the offline fallback; [catalog] exists so tests can drive both
+/// paths without touching the network.
 class LibraryScreen extends StatefulWidget {
-  const LibraryScreen({super.key});
+  const LibraryScreen({super.key, this.catalog});
 
   static const String routeName = '/library';
+
+  /// The catalogue loader; the real one by default.
+  final ExerciseCatalog? catalog;
 
   @override
   State<LibraryScreen> createState() => _LibraryScreenState();
 }
 
 class _LibraryScreenState extends State<LibraryScreen> {
-  late Future<List<LibraryExercise>> _exercisesFuture;
+  late final ExerciseCatalog _catalog = widget.catalog ?? ExerciseCatalog();
+  late Future<ExerciseCatalogResult> _exercisesFuture;
   String _selectedTab = 'All';
 
   @override
   void initState() {
     super.initState();
-    _exercisesFuture = ExerciseLibrary.loadAll();
+    _exercisesFuture = _catalog.load();
+  }
+
+  /// Re-runs the network-first load. The offline banner and the error state
+  /// both offer this rather than asking the user to leave and come back.
+  void _reload() {
+    // Not an arrow body: setState asserts when its callback returns the
+    // Future it was handed rather than storing it.
+    setState(() {
+      _exercisesFuture = _catalog.load();
+    });
   }
 
   // --------------------------------------------------------------- UI
@@ -62,6 +81,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   _sectionHeader(label: 'Saved'),
                   const SizedBox(height: 12),
                   _SavedList(),
+                  const SizedBox(height: 24),
+                  _attribution(),
                   const SizedBox(height: 32),
                 ],
               ),
@@ -214,10 +235,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
   // --------------------------------------------------------------- exercise grid
   Widget _exerciseGrid({
-    required Future<List<LibraryExercise>> future,
+    required Future<ExerciseCatalogResult> future,
     required String filter,
   }) {
-    return FutureBuilder<List<LibraryExercise>>(
+    return FutureBuilder<ExerciseCatalogResult>(
       future: future,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -229,38 +250,40 @@ class _LibraryScreenState extends State<LibraryScreen> {
           );
         }
         if (snapshot.hasError) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 32),
-              child: Text(
-                'Could not load the exercise library.',
-                style: Theme.of(context).textTheme.bodyMedium,
+          return _catalogError();
+        }
+
+        final result = snapshot.data;
+        final filtered = _applyFilter(result?.exercises ?? const [], filter);
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (result?.isOffline ?? false) ...[
+              _offlineBanner(),
+              const SizedBox(height: 12),
+            ],
+            if (filtered.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 32),
+                child: Center(child: Text('No exercises found.')),
+              )
+            else
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  childAspectRatio: 0.65,
+                ),
+                itemCount: filtered.length,
+                itemBuilder: (context, index) {
+                  return _exerciseCard(exercise: filtered[index]);
+                },
               ),
-            ),
-          );
-        }
-
-        final exercises = snapshot.data ?? const [];
-        final filtered = _applyFilter(exercises, filter);
-
-        if (filtered.isEmpty) {
-          return const Center(child: Text('No exercises found.'));
-        }
-
-        return GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 0.65,
-          ),
-          itemCount: filtered.length,
-          itemBuilder: (context, index) {
-            final ex = filtered[index];
-            return _exerciseCard(exercise: ex);
-          },
+          ],
         );
       },
     );
@@ -365,6 +388,72 @@ class _LibraryScreenState extends State<LibraryScreen> {
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  /// The offline notice: the grid is real either way, so this states where
+  /// it came from instead of pretending the request made it.
+  Widget _offlineBanner() {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 4, 4, 4),
+      decoration: BoxDecoration(
+        color: AppColors.sage50,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.cloud_off_rounded,
+            size: 16,
+            color: scheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              "Offline catalogue — wger.de couldn't be reached.",
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+            ),
+          ),
+          TextButton(onPressed: _reload, child: const Text('Retry')),
+        ],
+      ),
+    );
+  }
+
+  /// Only total failure reaches this: both wger and the bundled assets are
+  /// gone, which is worth an explicit retry rather than an empty page.
+  Widget _catalogError() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 24),
+      child: Column(
+        children: [
+          Text(
+            'Could not load the exercise library.',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 8),
+          TextButton(onPressed: _reload, child: const Text('Retry')),
+        ],
+      ),
+    );
+  }
+
+  /// wger and exercemus are CC BY-SA and ask for attribution; free-exercise-db
+  /// is public domain. One line covers every set the grid can show.
+  Widget _attribution() {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Text(
+      'Exercise data: wger.de (CC BY-SA) · exercemus (CC BY-SA) · '
+      'free-exercise-db (public domain).',
+      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+        color: scheme.onSurfaceVariant,
+        fontSize: 10,
       ),
     );
   }

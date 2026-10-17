@@ -226,23 +226,29 @@ void main() {
       await tester.pumpWidget(seededApp());
       await tester.pumpAndSettle();
 
-      // Not _tapDestination: the catalog loads through real asset I/O, so the
-      // test has to grant real time before the fake clock can settle the
-      // FutureBuilder's spinner into the grid.
+      // Not _tapDestination: the catalogue makes real-I/O hops (the HTTP
+      // probe, then the bundled assets) that the fake clock cannot advance,
+      // so each wait grants real time and then pumps the fake one.
       await tester.tap(
         find.descendant(
           of: find.byType(AppNavBar),
           matching: find.text('Library'),
         ),
       );
-      await tester.pump();
-      await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 300)),
-      );
+      for (var i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+        if (!tester.any(find.byType(CircularProgressIndicator))) break;
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 25)),
+        );
+      }
       await tester.pumpAndSettle();
 
       expect(find.text('THE TRAINING LIBRARY'), findsOneWidget);
       expect(find.byType(CircularProgressIndicator), findsNothing);
+      // Widget tests stub HTTP into a failure, so this run is the offline
+      // path - the same one a phone with no signal takes.
+      expect(find.textContaining('Offline catalogue'), findsOneWidget);
     });
 
     testWidgets('the dashboard avatar opens the profile tab', (tester) async {
