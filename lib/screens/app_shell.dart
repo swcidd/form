@@ -8,22 +8,23 @@ import '../widgets/brand_app_bar.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/new_workout_dialog.dart';
 import 'home_screen.dart';
+import 'library_screen.dart';
 import 'progress_screen.dart';
 import 'workout_detail_screen.dart';
 
-/// Hosts the four tabs and owns which one is visible.
+/// Hosts the root tabs and owns which one is visible.
 ///
 /// Tabs live in an [IndexedStack] rather than being rebuilt on each tap, so a
 /// tab keeps whatever the user left on it. Rebuilding on tap would silently
 /// discard that state every time they came back.
 ///
 /// Each tab is built lazily and kept once built. The stack alone would construct
-/// all four on first paint, running work for screens the user may never open.
+/// all of them on first paint, running work for screens the user may never open.
 class AppShell extends StatefulWidget {
   const AppShell({super.key, this.tab = AppTab.home});
 
-  /// Which tab to show first. Taken from the route so `/calendar` opens the
-  /// calendar rather than the home tab wearing a calendar URL.
+  /// Which tab to show first. Taken from the route so `/library` opens the
+  /// library rather than the home tab wearing a library URL.
   final AppTab tab;
 
   @override
@@ -119,6 +120,7 @@ class _LazyTabState extends State<_LazyTab> {
       AppTab.home => HomeScreen(onSelectTab: widget.select),
       AppTab.progress => const ProgressScreen(),
       AppTab.workout => const WorkoutTabScreen(),
+      AppTab.library => const LibraryScreen(),
       AppTab.profile => const PlaceholderTabScreen(tab: AppTab.profile),
     };
   }
@@ -172,5 +174,6 @@ class PlaceholderTabScreen extends StatelessWidget {
       'Your training totals, personal records and the settings behind them.',
     AppTab.home => 'The dashboard.',
     AppTab.workout => 'Your workout session.',
+    AppTab.library => 'The training library.',
   };
 }

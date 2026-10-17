@@ -1,9 +1,9 @@
-/// The four root destinations, in tab-bar order.
+/// The root destinations, in tab-bar order.
 ///
-/// Matches the Figma design:
-/// - Home (activity/house icon)
-/// - Progress (chart icon)
-/// - Workout (dumbbell, center raised action, NOT a destination)
+/// - Home (activity icon)
+/// - Progress (chart-no-axes-combined icon)
+/// - Workout (dumbbell icon)
+/// - Library (library icon)
 /// - Profile (user-round icon)
 ///
 /// Modelled as an enum so the bar, the route table and any in-app
@@ -26,6 +26,12 @@ enum AppTab {
     label: 'Workout',
     iconAssetPath: 'assets/icons/dumbbell.svg',
     selectedIconAssetPath: 'assets/icons/dumbbell.svg',
+  ),
+  library(
+    routeName: '/library',
+    label: 'Library',
+    iconAssetPath: 'assets/icons/library.svg',
+    selectedIconAssetPath: 'assets/icons/library.svg',
   ),
   profile(
     routeName: '/profile',

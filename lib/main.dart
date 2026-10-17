@@ -15,7 +15,7 @@ void main() {
 
 /// Root of the application.
 ///
-/// The four tabs are declared in [routes], each resolving to the shell with its
+/// The tabs are declared in [routes], each resolving to the shell with its
 /// own tab selected, so every destination has a real URL. The workout detail
 /// screen is built by [onGenerateRoute] because it is parameterised: a
 /// `routes` entry can only match an exact string, so `/workout/:id` needed a
