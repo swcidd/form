@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'data/app_database.dart';
+import 'data/workout_repository.dart';
 import 'navigation/app_tab.dart';
 import 'providers/workout_provider.dart';
 import 'screens/app_shell.dart';
@@ -9,8 +11,18 @@ import 'screens/workout_detail_screen.dart';
 import 'screens/workout_summary_screen.dart';
 import 'theme/app_theme.dart';
 
-void main() {
-  runApp(const PlusOneApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // The store is read before the first frame so a relaunch opens on the account
+  // the user left behind, rather than an empty dashboard that fills in a moment
+  // later. A store that cannot open still starts the app empty - see [load].
+  final provider = WorkoutProvider(
+    repository: WorkoutRepository(AppDatabase()),
+  );
+  await provider.load();
+
+  runApp(PlusOneApp(provider: provider));
 }
 
 /// Root of the application.
@@ -29,6 +41,9 @@ class PlusOneApp extends StatelessWidget {
   const PlusOneApp({super.key, this.provider});
 
   /// Injected state, or a fresh empty account when null.
+  ///
+  /// [main] passes a provider backed by the SQLite store; null - the default
+  /// in tests - gets one that reads and writes nothing.
   ///
   /// Exists so tests can drive the real application - same routes, same theme -
   /// against known content. Without it a widget test can only ever see the
