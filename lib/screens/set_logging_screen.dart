@@ -65,7 +65,10 @@ class SetLoggingScreen extends StatelessWidget {
           Expanded(
             child: CustomScrollView(
               slivers: [
-                _StatusBar(workout: workout),
+                // Top inset only — the OS draws the phone's status bar, not the app.
+                SliverToBoxAdapter(
+                  child: SafeArea(bottom: false, child: SizedBox(height: 8)),
+                ),
                 _SessionToolbar(workout: workout),
                 _SessionProgress(workout: workout),
                 _ExerciseWorkspace(workout: workout),
@@ -83,55 +86,6 @@ class SetLoggingScreen extends StatelessWidget {
     final segments = routeName.split('/').where((s) => s.isNotEmpty).toList();
     if (segments.length < 2) return null;
     return Uri.decodeComponent(segments[1]);
-  }
-}
-
-/// iOS-style status bar.
-class _StatusBar extends StatelessWidget {
-  const _StatusBar({required this.workout});
-
-  final Workout workout;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return SliverToBoxAdapter(
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(26, 8, 26, 0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '9:41',
-                style: Theme.of(
-                  context,
-                ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600),
-              ),
-              Row(
-                children: [
-                  Icon(
-                    Icons.signal_cellular_4_bar_rounded,
-                    size: 17,
-                    color: scheme.onSurface,
-                  ),
-                  const SizedBox(width: 5),
-                  Icon(Icons.wifi_rounded, size: 17, color: scheme.onSurface),
-                  const SizedBox(width: 5),
-                  Icon(
-                    Icons.battery_full_rounded,
-                    size: 17,
-                    color: scheme.onSurface,
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 }
 

@@ -52,7 +52,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
       backgroundColor: scheme.surface,
       body: CustomScrollView(
         slivers: [
-          _statusBar(),
+          // Top inset only — the OS draws the phone's status bar, not the app.
+          SliverToBoxAdapter(
+            child: SafeArea(bottom: false, child: SizedBox(height: 8)),
+          ),
           SliverToBoxAdapter(
             child: Padding(
               padding: AppSpacing.pageHorizontal,
@@ -89,48 +92,6 @@ class _LibraryScreenState extends State<LibraryScreen> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  // --------------------------------------------------------------- status bar
-  Widget _statusBar() {
-    final scheme = Theme.of(context).colorScheme;
-
-    return SliverToBoxAdapter(
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(26, 8, 26, 0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '9:41',
-                style: Theme.of(
-                  context,
-                ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600),
-              ),
-              Row(
-                children: [
-                  Icon(
-                    Icons.signal_cellular_4_bar_rounded,
-                    size: 17,
-                    color: scheme.onSurface,
-                  ),
-                  const SizedBox(width: 5),
-                  Icon(Icons.wifi_rounded, size: 17, color: scheme.onSurface),
-                  const SizedBox(width: 5),
-                  Icon(
-                    Icons.battery_full_rounded,
-                    size: 17,
-                    color: scheme.onSurface,
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
