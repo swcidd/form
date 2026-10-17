@@ -195,7 +195,7 @@ class _HeroSliver extends StatelessWidget {
             Image.asset(
               'assets/images/workout_hero.png',
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) =>
+              errorBuilder: (_, _, _) =>
                   Container(color: scheme.surfaceContainerHighest),
             ),
             // Scrim gradient
@@ -305,7 +305,7 @@ class _ExerciseList extends StatelessWidget {
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           itemCount: workout.logs.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
+          separatorBuilder: (_, _) => const SizedBox(height: 12),
           itemBuilder: (context, index) {
             final log = workout.logs[index];
             return _ExerciseRow(index: index, log: log);
