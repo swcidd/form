@@ -156,6 +156,25 @@ Built for **SE2142 — Software Engineering Tools and Practices**.
 
 ---
 
+## Data sources and licences
+
+FORM does not invent its exercise catalogue — it reads it from three places.
+The licences that ask for attribution get one on screen and in
+**[docs/ATTRIBUTION.md](docs/ATTRIBUTION.md)**, which also carries the notice
+texts and the two font licences.
+
+| Source | Licence |
+| --- | --- |
+| [wger.de](https://wger.de) REST API — the live catalogue | CC BY-SA 3.0/4.0, per entry |
+| [exercemus/exercises](https://github.com/exercemus/exercises) — bundled offline fallback | MIT, © 2022 exercemus |
+| [free-exercise-db](https://github.com/yuhonas/free-exercise-db) — bundled offline fallback | The Unlicense (public domain) |
+
+The interface icons are [Lucide](https://lucide.dev) (ISC). Inter and Barlow
+Condensed are bundled with the app under the SIL Open Font License 1.1, so no
+font is fetched at runtime.
+
+---
+
 ## License
 
 This project is licensed under the MIT License — see [LICENSE](LICENSE) for details.

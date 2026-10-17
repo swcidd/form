@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import 'data/app_database.dart';
@@ -13,6 +14,13 @@ import 'theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Inter and Barlow Condensed ship in assets/fonts, so the first frame must
+  // never wait on fonts.gstatic.com. Leaving this on would trade the download
+  // the app already paid for against a request on someone's metered connection
+  // every launch, and a font that fails to arrive renders the app in the wrong
+  // face. See pubspec.yaml for the files and their weights.
+  GoogleFonts.config.allowRuntimeFetching = false;
 
   // The store is read before the first frame so a relaunch opens on the account
   // the user left behind, rather than an empty dashboard that fills in a moment
