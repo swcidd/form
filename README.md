@@ -98,6 +98,13 @@ flutter build apk --release
 # output: build/app/outputs/flutter-apk/app-release.apk
 ```
 
+Release builds need a keystore to be signed as your own. Without one the build
+falls back to the Android debug keys, so it still runs but is not a
+distributable release. The keystore lives in a gitignored `android/key.properties`
+and there are no signing secrets in this repository — see
+**[docs/BUILD.md](docs/BUILD.md)** for the debug/release differences, the one-off
+`keytool` command, and how to verify a build's signature.
+
 ---
 
 ## Project structure
