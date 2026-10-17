@@ -139,8 +139,17 @@ class WorkoutProvider extends ChangeNotifier {
   /// rather than advice — the value is editable from the profile screen.
   int get weeklyGoal => _weeklyGoal;
 
+  /// Accepted range for [setWeeklyGoal], exposed so the control that edits it
+  /// cannot offer a step this store will refuse.
+  static const int weeklyGoalMin = 1;
+  static const int weeklyGoalMax = 14;
+
   bool setWeeklyGoal(int value) {
-    if (value < 1 || value > 14 || value == _weeklyGoal) return false;
+    if (value < weeklyGoalMin ||
+        value > weeklyGoalMax ||
+        value == _weeklyGoal) {
+      return false;
+    }
     _weeklyGoal = value;
     notifyListeners();
     return true;
