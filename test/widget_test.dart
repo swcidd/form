@@ -217,7 +217,7 @@ void main() {
       expect(find.text('Estimated 1RM'), findsOneWidget);
 
       await _tapDestination(tester, 'Profile');
-      expect(find.text('Profile is next'), findsOneWidget);
+      expect(find.text('Alex Mercer'), findsOneWidget);
     });
 
     testWidgets('the Library destination opens the exercise library', (
@@ -266,7 +266,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Profile is next'), findsOneWidget);
+      expect(find.text('Alex Mercer'), findsOneWidget);
     });
 
     testWidgets('a tab route opens its own tab, not the home one', (
