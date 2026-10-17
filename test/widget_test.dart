@@ -182,8 +182,10 @@ void main() {
       await tester.tap(find.byType(ElevatedButton).first);
       await tester.pumpAndSettle();
 
-      // New pre-workout screen shows the hardcoded workout title and "THE LINEUP"
-      expect(find.textContaining('LOWER BODY'), findsWidgets);
+      // The screen shows the session that was tapped, by id, rather than the
+      // canned example it used to build for every route.
+      expect(find.text('Upper Body Hypertrophy & Core'), findsOneWidget);
+      expect(find.textContaining('LOWER BODY'), findsNothing);
       expect(find.text('THE LINEUP'), findsOneWidget);
     });
   });
@@ -337,7 +339,11 @@ void main() {
       expect(provider.workouts, hasLength(1));
       expect(provider.workouts.single.title, 'Leg Day');
       expect(provider.workouts.single.status, WorkoutStatus.planned);
-      expect(find.text('THE LINEUP'), findsOneWidget);
+
+      // A session created a moment ago has nothing on it yet, so the screen
+      // says that instead of showing a line-up it does not have.
+      expect(find.text('THE LINEUP'), findsNothing);
+      expect(find.textContaining('no exercises yet'), findsOneWidget);
     });
 
     testWidgets('an empty name falls back to the date', (tester) async {

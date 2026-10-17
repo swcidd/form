@@ -122,7 +122,7 @@ class _SessionToolbar extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '12:34',
+                    _progressLabel(workout),
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       color: scheme.surface,
                       fontWeight: FontWeight.w600,
@@ -140,6 +140,16 @@ class _SessionToolbar extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// What the toolbar reports: how much of the session is done.
+  ///
+  /// A count of ticked sets rather than a clock. The clock read "12:34" for
+  /// every user on every session - a number nothing advanced - and a session
+  /// that has no start time recorded cannot honestly show elapsed time.
+  static String _progressLabel(Workout workout) {
+    if (workout.totalSets == 0) return 'No sets yet';
+    return '${workout.completedSets} / ${workout.totalSets} sets';
   }
 }
 
@@ -262,10 +272,7 @@ class _CurrentExerciseHeader extends StatelessWidget {
         const SizedBox(height: 8),
         Text(log.exercise.name.toUpperCase(), style: text.exerciseName),
         const SizedBox(height: 4),
-        Text(
-          '${log.setScheme}  /  2 reps in reserve',
-          style: text.exerciseMeta,
-        ),
+        Text(log.setScheme, style: text.exerciseMeta),
         const SizedBox(height: 12),
         // Previous performance
         Row(
