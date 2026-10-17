@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:plus_one/data/app_database.dart';
+import 'package:plus_one/data/workout_repository.dart';
 import 'package:plus_one/models/metric.dart';
 import 'package:plus_one/models/workout.dart';
 import 'package:plus_one/providers/workout_provider.dart';
@@ -260,6 +262,39 @@ void main() {
 
       expect(metric.copyWith(value: 250).target, 10000);
       expect(metric.copyWith(value: 250).label, 'Steps');
+    });
+  });
+
+  group('persistence seam', () {
+    test('a store that cannot open leaves the app running in memory', () async {
+      // This file never installs a sqflite factory, so opening the database
+      // fails the way it would on a device whose file is unreadable. The
+      // provider runs before the first frame, so it has to survive that and
+      // still be usable rather than take the launch down with it.
+      final provider = WorkoutProvider(
+        today: today,
+        repository: WorkoutRepository(AppDatabase()),
+      );
+
+      await provider.load();
+
+      expect(provider.workouts, isEmpty);
+
+      final stored = provider.addWorkout(
+        Workout(
+          id: '',
+          title: 'Test Session',
+          date: today,
+          status: WorkoutStatus.planned,
+          durationMin: 0,
+          estimatedKcal: 0,
+          targetMuscleGroups: const [],
+          equipment: const [],
+          logs: const [],
+        ),
+      );
+
+      expect(provider.byId(stored.id), isNotNull);
     });
   });
 }
