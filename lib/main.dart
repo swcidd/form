@@ -78,7 +78,7 @@ class PlusOneApp extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = provider;
     final app = MaterialApp(
-      title: '+1',
+      title: 'FORM',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
