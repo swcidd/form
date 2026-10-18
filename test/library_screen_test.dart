@@ -257,4 +257,47 @@ void main() {
     await tester.pump();
     expect(find.text('Barbell Curl'), findsOneWidget);
   });
+
+  group('a narrow screen', () {
+    const longEntry = LibraryExercise(
+      name: 'Standing Hamstring Stretch With A Very Long Name',
+      primaryMuscle: 'Hamstrings',
+      instructions: 'Reach for the toes.',
+      equipment: [],
+      category: 'stretching',
+      tips: 'Breathe out as you fold, and keep the back flat.',
+    );
+
+    testWidgets('lays every tab out on a 320dp phone', (tester) async {
+      tester.view.physicalSize = const Size(320 * 2, 640 * 2);
+      tester.view.devicePixelRatio = 2;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        _screen(
+          provider: seededProvider(today: _today),
+          catalog: ExerciseCatalog(
+            api: ExerciseApiClient(
+              client: MockClient((_) async => http.Response('down', 500)),
+            ),
+            bundled: () async => const [longEntry],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull, reason: 'My workouts');
+
+      await openDiscover(tester);
+      await settleCatalog(tester);
+      await tester.pump();
+      // A catalogue card is an image, a title, a muscle and up to two lines of
+      // tips. On a 320dp phone it is handed about 104dp of width, and the text
+      // has to give up lines rather than run past the bottom of the card.
+      expect(tester.takeException(), isNull, reason: 'Discover');
+
+      await tester.tap(find.text('Saved'));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull, reason: 'Saved');
+    });
+  });
 }

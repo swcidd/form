@@ -624,7 +624,12 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   crossAxisCount: 2,
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
-                  childAspectRatio: 0.68,
+                  // An extent rather than a ratio: the card holds an image, a
+                  // title, a muscle and up to two lines of tips, which does
+                  // not scale with whatever width the phone hands over. A 0.68
+                  // ratio is 165dp of card on a 320dp screen and the text
+                  // block does not fit in it.
+                  mainAxisExtent: 228,
                 ),
                 itemCount: exercises.length,
                 itemBuilder: (context, index) =>
@@ -1170,31 +1175,63 @@ class _ExerciseCard extends StatelessWidget {
                   ),
           ),
           const SizedBox(height: 8),
-          Text(
-            exercise.name,
-            style: text.exerciseMeta.copyWith(fontWeight: FontWeight.w600),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          Text(
-            exercise.primaryMuscle,
-            style: text.annotation.copyWith(color: AppColors.sage600),
-          ),
-          if (exercise.tips != null) ...[
-            const SizedBox(height: 4),
-            Text(
-              exercise.tips!,
-              style: text.annotation.copyWith(color: AppColors.sage600),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-          const Spacer(),
-          Text(
-            exercise.level.toUpperCase(),
-            style: text.annotation.copyWith(
-              color: AppColors.sage600,
-              fontWeight: FontWeight.w600,
+          // Flexible from here down, so a long title at a large text scale
+          // gives up a line instead of overflowing the card. The level stays
+          // pinned to the bottom, which is why the space is distributed
+          // between the two rather than with a spacer between them.
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Flexible(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          exercise.name,
+                          style: text.exerciseMeta.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Text(
+                        exercise.primaryMuscle,
+                        style: text.annotation.copyWith(
+                          color: AppColors.sage600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (exercise.tips != null) ...[
+                        const SizedBox(height: 4),
+                        Flexible(
+                          child: Text(
+                            exercise.tips!,
+                            style: text.annotation.copyWith(
+                              color: AppColors.sage600,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                Text(
+                  exercise.level.toUpperCase(),
+                  style: text.annotation.copyWith(
+                    color: AppColors.sage600,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
           ),
         ],
