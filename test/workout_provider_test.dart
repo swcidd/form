@@ -2,7 +2,9 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:plus_one/data/app_database.dart';
 import 'package:plus_one/data/workout_repository.dart';
+import 'package:plus_one/exercise_library.dart';
 import 'package:plus_one/models/metric.dart';
+import 'package:plus_one/models/saved_exercise.dart';
 import 'package:plus_one/models/workout.dart';
 import 'package:plus_one/providers/workout_provider.dart';
 
@@ -349,6 +351,109 @@ void main() {
 
       expect(metric.copyWith(value: 250).target, 10000);
       expect(metric.copyWith(value: 250).label, 'Steps');
+    });
+  });
+
+  group('saved exercises', () {
+    const barbellCurl = LibraryExercise(
+      name: 'Barbell Curl',
+      primaryMuscle: 'biceps',
+      instructions: 'Curl the bar.',
+      equipment: ['Barbell'],
+      category: 'strength',
+    );
+    const inclineCurl = LibraryExercise(
+      name: 'Incline Dumbbell Curl',
+      primaryMuscle: 'biceps',
+      instructions: 'Curl on an incline.',
+      equipment: ['Dumbbells'],
+      category: 'strength',
+    );
+
+    test('starts with nothing saved', () {
+      final provider = WorkoutProvider(today: today);
+
+      expect(provider.savedExercises, isEmpty);
+      expect(provider.isSaved(barbellCurl.id), isFalse);
+    });
+
+    test('keeps an exercise, then drops it', () {
+      final provider = WorkoutProvider(today: today);
+
+      provider.toggleSavedExercise(barbellCurl, at: today);
+      expect(provider.isSaved(barbellCurl.id), isTrue);
+      expect(provider.savedExercises.single.exercise.name, 'Barbell Curl');
+      expect(provider.savedExercises.single.savedAt, today);
+
+      provider.toggleSavedExercise(barbellCurl, at: today);
+      expect(provider.isSaved(barbellCurl.id), isFalse);
+      expect(provider.savedExercises, isEmpty);
+    });
+
+    test('lists the newest first', () {
+      final provider = WorkoutProvider(today: today);
+
+      provider.toggleSavedExercise(barbellCurl, at: today);
+      provider.toggleSavedExercise(
+        inclineCurl,
+        at: today.add(const Duration(minutes: 5)),
+      );
+
+      expect(provider.savedExercises.map((saved) => saved.exercise.name), [
+        'Incline Dumbbell Curl',
+        'Barbell Curl',
+      ]);
+    });
+
+    test('keeping the same exercise twice does not make it newly kept', () {
+      final provider = WorkoutProvider(today: today);
+
+      provider.toggleSavedExercise(barbellCurl, at: today);
+      // The second call drops it rather than re-inserting, so a bookmark that
+      // is on turns off instead of moving the entry to the top.
+      provider.toggleSavedExercise(barbellCurl, at: today);
+
+      expect(provider.savedExercises, isEmpty);
+    });
+
+    test('two spellings of one exercise are one entry', () {
+      final provider = WorkoutProvider(today: today);
+
+      provider.toggleSavedExercise(barbellCurl, at: today);
+      provider.toggleSavedExercise(
+        const LibraryExercise(
+          name: 'barbell  curl',
+          primaryMuscle: 'biceps',
+          instructions: 'Curl the bar.',
+          equipment: ['Barbell'],
+          category: 'strength',
+        ),
+        at: today,
+      );
+
+      expect(provider.savedExercises, isEmpty);
+    });
+
+    test('notifies once per change', () {
+      final provider = WorkoutProvider(today: today);
+      var notifications = 0;
+      provider.addListener(() => notifications++);
+
+      provider.toggleSavedExercise(barbellCurl, at: today);
+      provider.toggleSavedExercise(barbellCurl, at: today);
+
+      expect(notifications, 2);
+    });
+
+    test('an injected provider reads and writes nothing', () {
+      final provider = WorkoutProvider(
+        today: today,
+        saved: [SavedExercise(exercise: barbellCurl, savedAt: today)],
+      );
+
+      // The constructor fixtures are the whole world without a repository.
+      expect(provider.isSaved(barbellCurl.id), isTrue);
+      expect(provider.savedExercises, hasLength(1));
     });
   });
 

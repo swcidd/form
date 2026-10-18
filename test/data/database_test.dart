@@ -1,8 +1,13 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as p;
 import 'package:plus_one/data/app_database.dart';
 import 'package:plus_one/data/workout_repository.dart';
+import 'package:plus_one/exercise_library.dart';
 import 'package:plus_one/models/exercise.dart';
 import 'package:plus_one/models/profile_stats.dart';
+import 'package:plus_one/models/saved_exercise.dart';
 import 'package:plus_one/models/workout.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -78,6 +83,7 @@ void main() {
           AppDatabase.exerciseLogsTable,
           AppDatabase.setsTable,
           AppDatabase.profileTable,
+          AppDatabase.savedExercisesTable,
         ]),
       );
     });
@@ -92,6 +98,43 @@ void main() {
       );
       expect(indexes.map((row) => row['name']), contains('idx_workouts_date'));
     });
+
+    test(
+      'migrating from version 1 keeps the account and adds the table',
+      () async {
+        // A file a v1 app left behind: the workouts, and no saved-exercises
+        // table. Rewinding the version is what makes the next open run the
+        // migration rather than the fresh-install path. A file rather than the
+        // in-memory path, because each in-memory open is its own database and
+        // closing it would throw the account away before the migration ran.
+        final path = p.join(
+          Directory.systemTemp.path,
+          'form_migration_test.db',
+        );
+        final file = File(path);
+        if (file.existsSync()) file.deleteSync();
+        addTearDown(() {
+          if (file.existsSync()) file.deleteSync();
+        });
+
+        final oldDb = AppDatabase();
+        final old = WorkoutRepository(oldDb);
+        await oldDb.open(path: path);
+        await old.replaceWorkout(sampleWorkout());
+        final db = await oldDb.open();
+        await db.execute('DROP TABLE ${AppDatabase.savedExercisesTable}');
+        await db.execute('PRAGMA user_version = 1');
+        await oldDb.close();
+
+        // The next launch: same file, current version.
+        final nextDb = AppDatabase();
+        final next = WorkoutRepository(nextDb);
+        await nextDb.open(path: path);
+        expect(await next.loadWorkouts(), hasLength(1));
+        expect(await next.loadSavedExercises(), isEmpty);
+        await nextDb.close();
+      },
+    );
   });
 
   group('round trip', () {
@@ -299,15 +342,107 @@ void main() {
     });
   });
 
+  group('saved exercises', () {
+    final at = DateTime(2026, 10, 18, 9, 30);
+
+    LibraryExercise exercise({String name = 'Barbell Curl'}) => LibraryExercise(
+      name: name,
+      primaryMuscle: 'biceps',
+      secondaryMuscle: 'forearms',
+      instructions: 'Curl the bar slowly.',
+      equipment: const ['Barbell'],
+      category: 'strength',
+      level: 'intermediate',
+      images: const ['assets/images/free-db/barbell-curl_1.png'],
+      tips: 'Keep the elbows fixed.',
+      variations: const ['Hammer curl'],
+    );
+
+    SavedExercise kept({String name = 'Barbell Curl'}) => SavedExercise(
+      exercise: exercise(name: name),
+      savedAt: at,
+    );
+
+    test('an empty store reads back as empty', () async {
+      expect(await repository.loadSavedExercises(), isEmpty);
+    });
+
+    test('round trips every field through the payload', () async {
+      await repository.saveSavedExercise(kept());
+
+      final loaded = await repository.loadSavedExercises();
+
+      expect(loaded, hasLength(1));
+      expect(loaded.single.id, LibraryExercise.keyFor('Barbell Curl'));
+      expect(loaded.single.savedAt, at);
+      expect(loaded.single.exercise.name, 'Barbell Curl');
+      expect(loaded.single.exercise.secondaryMuscle, 'forearms');
+      expect(loaded.single.exercise.equipment, ['Barbell']);
+      expect(loaded.single.exercise.level, 'intermediate');
+      expect(loaded.single.exercise.images, [
+        'assets/images/free-db/barbell-curl_1.png',
+      ]);
+      expect(loaded.single.exercise.tips, 'Keep the elbows fixed.');
+      expect(loaded.single.exercise.variations, ['Hammer curl']);
+    });
+
+    test('keeping one exercise twice leaves a single row', () async {
+      await repository.saveSavedExercise(kept());
+      await repository.saveSavedExercise(kept());
+
+      final loaded = await repository.loadSavedExercises();
+      expect(loaded, hasLength(1));
+    });
+
+    test(
+      'a row whose payload no longer decodes is skipped, not thrown',
+      () async {
+        await repository.saveSavedExercise(kept());
+
+        // A saved row outlives the code that wrote it, so the payload can be
+        // anything. One unreadable entry costs that entry, not the library.
+        final db = await app.open();
+        await db.update(
+          AppDatabase.savedExercisesTable,
+          {'payload': '{not json'},
+          where: 'id = ?',
+          whereArgs: [LibraryExercise.keyFor('Barbell Curl')],
+        );
+
+        expect(await repository.loadSavedExercises(), isEmpty);
+      },
+    );
+
+    test('clear empties the saved list with the rest', () async {
+      await repository.saveSavedExercise(kept());
+      await repository.clear();
+
+      expect(await repository.loadSavedExercises(), isEmpty);
+    });
+  });
+
   group('clear', () {
     test('empties every table', () async {
       await repository.replaceWorkout(sampleWorkout());
       await repository.saveProfile(seedProfile());
+      await repository.saveSavedExercise(
+        SavedExercise(
+          exercise: LibraryExercise(
+            name: 'Barbell Curl',
+            primaryMuscle: 'biceps',
+            instructions: 'Curl the bar.',
+            equipment: const ['Barbell'],
+            category: 'strength',
+          ),
+          savedAt: DateTime(2026, 10, 18),
+        ),
+      );
 
       await repository.clear();
 
       expect(await repository.loadWorkouts(), isEmpty);
       expect(await repository.loadProfile(), isNull);
+      expect(await repository.loadSavedExercises(), isEmpty);
     });
   });
 }
