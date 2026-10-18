@@ -364,4 +364,82 @@ void main() {
       );
     });
   });
+  group('saved exercises', () {
+    const barbellCurl = LibraryExercise(
+      name: 'Barbell Curl',
+      primaryMuscle: 'biceps',
+      instructions: 'Curl the bar.',
+      equipment: ['Barbell'],
+      category: 'strength',
+    );
+
+    ExerciseCatalog catalog() => ExerciseCatalog(
+      api: ExerciseApiClient(
+        client: MockClient((_) async => http.Response('down', 500)),
+      ),
+      bundled: () async => const [barbellCurl],
+    );
+
+    testWidgets('keeping one in Discover puts it in Saved', (tester) async {
+      final provider = WorkoutProvider();
+
+      await tester.pumpWidget(_screen(catalog: catalog(), provider: provider));
+      await openDiscover(tester);
+      await settleCatalog(tester);
+
+      expect(find.byTooltip('Save this exercise'), findsOneWidget);
+      await tester.tap(find.byTooltip('Save this exercise'));
+      await tester.pump();
+
+      expect(provider.isSaved(barbellCurl.id), isTrue);
+      expect(find.byTooltip('Remove from saved'), findsOneWidget);
+
+      // The saved list is the stored copy, so it renders whether or not the
+      // catalogue could be reached again.
+      await tester.tap(find.text('Saved'));
+      await tester.pump();
+
+      expect(find.text('SAVED EXERCISES'), findsOneWidget);
+      expect(find.text('1 exercise'), findsOneWidget);
+      expect(find.text('Barbell Curl'), findsOneWidget);
+      expect(find.textContaining('biceps · saved'), findsOneWidget);
+    });
+
+    testWidgets('removing it from Saved leaves the empty state', (
+      tester,
+    ) async {
+      final provider = WorkoutProvider();
+
+      await tester.pumpWidget(_screen(catalog: catalog(), provider: provider));
+      await openDiscover(tester);
+      await settleCatalog(tester);
+      await tester.tap(find.byTooltip('Save this exercise'));
+      await tester.pump();
+      await tester.tap(find.text('Saved'));
+      await tester.pump();
+
+      await tester.tap(find.byTooltip('Remove from saved'));
+      await tester.pump();
+
+      expect(provider.savedExercises, isEmpty);
+      expect(find.text('NOTHING SAVED YET.'), findsOneWidget);
+    });
+
+    testWidgets('the search field narrows the saved list', (tester) async {
+      final provider = WorkoutProvider();
+
+      await tester.pumpWidget(_screen(catalog: catalog(), provider: provider));
+      await openDiscover(tester);
+      await settleCatalog(tester);
+      await tester.tap(find.byTooltip('Save this exercise'));
+      await tester.pump();
+      await tester.tap(find.text('Saved'));
+      await tester.pump();
+
+      await tester.enterText(find.byType(TextField), 'deadlift');
+      await tester.pump();
+
+      expect(find.textContaining('No saved exercises match'), findsOneWidget);
+    });
+  });
 }
