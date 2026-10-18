@@ -46,6 +46,14 @@ void main() {
     level: 'intermediate',
   );
 
+  const inclineCurl = LibraryExercise(
+    name: 'Incline Dumbbell Curl',
+    primaryMuscle: 'biceps',
+    instructions: 'Curl on an incline.',
+    equipment: ['Dumbbells'],
+    category: 'strength',
+  );
+
   Workout planned({String title = 'Upper Body'}) => Workout(
     id: '',
     title: title,
@@ -161,6 +169,28 @@ void main() {
     expect(restored.exercise.equipment, ['Barbell']);
     expect(restored.exercise.level, 'intermediate');
     expect(second.isSaved(barbellCurl.id), isTrue);
+  });
+
+  test('the order the list is kept in survives the restart', () async {
+    final first = launch();
+    // Kept newest first, then an older one: a restart reads the moment each
+    // was kept, which is the order the store is asked for, rather than the
+    // order the bookmarks happened to be pressed in.
+    first.toggleSavedExercise(inclineCurl, at: DateTime(2026, 10, 18));
+    first.toggleSavedExercise(barbellCurl, at: DateTime(2026, 10, 12));
+    final before = first.savedExercises
+        .map((saved) => saved.exercise.name)
+        .toList();
+    await pumpEventQueue();
+
+    final second = launch();
+    await second.load();
+
+    expect(before, ['Incline Dumbbell Curl', 'Barbell Curl']);
+    expect(
+      second.savedExercises.map((saved) => saved.exercise.name).toList(),
+      before,
+    );
   });
 
   test('an exercise dropped before the restart stays dropped', () async {

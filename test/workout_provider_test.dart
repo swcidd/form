@@ -405,6 +405,24 @@ void main() {
       ]);
     });
 
+    test('keeps the store\'s order when the times arrive out of order', () {
+      final provider = WorkoutProvider(today: today);
+
+      provider.toggleSavedExercise(inclineCurl, at: today);
+      provider.toggleSavedExercise(
+        barbellCurl,
+        at: today.subtract(const Duration(days: 6)),
+      );
+
+      // "Newest first" is the moment it was kept, which is also the order the
+      // store reads back on the next launch - not the order the buttons were
+      // pressed in.
+      expect(provider.savedExercises.map((saved) => saved.exercise.name), [
+        'Incline Dumbbell Curl',
+        'Barbell Curl',
+      ]);
+    });
+
     test('keeping the same exercise twice does not make it newly kept', () {
       final provider = WorkoutProvider(today: today);
 

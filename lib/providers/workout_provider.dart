@@ -340,11 +340,18 @@ class WorkoutProvider extends ChangeNotifier {
       return;
     }
 
-    _saved.insert(
-      0,
-      SavedExercise(exercise: exercise, savedAt: at ?? DateTime.now()),
+    final entry = SavedExercise(
+      exercise: exercise,
+      savedAt: at ?? DateTime.now(),
     );
-    unawaited(_persistSavedExercise(_saved.first));
+    // Kept in the store's own order - the moment it was kept, newest first -
+    // so the list cannot reorder itself across a restart when a caller hands
+    // over a time rather than letting the clock be the clock.
+    final position = _saved.indexWhere(
+      (saved) => !saved.savedAt.isAfter(entry.savedAt),
+    );
+    _saved.insert(position < 0 ? _saved.length : position, entry);
+    unawaited(_persistSavedExercise(entry));
     notifyListeners();
   }
 
