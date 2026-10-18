@@ -10,6 +10,7 @@ import 'package:plus_one/data/exercise_api_client.dart';
 import 'package:plus_one/data/exercise_catalog.dart';
 import 'package:plus_one/exercise_library.dart';
 import 'package:plus_one/main.dart';
+import 'package:plus_one/models/workout.dart';
 import 'package:plus_one/providers/workout_provider.dart';
 import 'package:plus_one/screens/library_screen.dart';
 import 'package:plus_one/theme/app_theme.dart';
@@ -298,6 +299,69 @@ void main() {
       await tester.tap(find.text('Saved'));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull, reason: 'Saved');
+    });
+  });
+
+  group('the week card', () {
+    testWidgets('names this week, not a session weeks out', (tester) async {
+      final far = Workout(
+        id: 'far',
+        title: 'Session Three Weeks Out',
+        date: _today.add(const Duration(days: 21)),
+        status: WorkoutStatus.planned,
+        durationMin: 45,
+        estimatedKcal: 400,
+        targetMuscleGroups: const ['Chest'],
+        equipment: const [],
+        logs: const [],
+      );
+
+      await tester.pumpWidget(
+        _screen(
+          provider: WorkoutProvider(today: _today, workouts: [far]),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // The panel is labelled THIS WEEK, so it cannot answer with a plan from
+      // three weeks out; the rotation is where that session belongs.
+      expect(find.text('THIS WEEK'), findsOneWidget);
+      expect(find.text('NOTHING PLANNED'), findsOneWidget);
+      expect(find.text('0 of 4 sessions done'), findsOneWidget);
+      expect(find.text('SESSION THREE WEEKS OUT'), findsOneWidget);
+      expect(find.text('NEXT SESSION'), findsOneWidget);
+    });
+  });
+
+  group('a sparse session', () {
+    testWidgets('leaves no blank meta line', (tester) async {
+      final bare = Workout(
+        id: 'bare',
+        title: 'Bare Session',
+        date: _today,
+        status: WorkoutStatus.planned,
+        durationMin: 0,
+        estimatedKcal: 0,
+        targetMuscleGroups: const [],
+        equipment: const [],
+        logs: const [],
+      );
+
+      await tester.pumpWidget(
+        _screen(
+          provider: WorkoutProvider(today: _today, workouts: [bare]),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('BARE SESSION'), findsWidgets);
+      // No duration, no muscles, no logged sets: an empty meta line would
+      // still take a line's height and leave a gap under the title. The search
+      // field's own editable text is empty too, hence the Text-specific finder.
+      expect(
+        find.byWidgetPredicate((widget) => widget is Text && widget.data == ''),
+        findsNothing,
+      );
     });
   });
 }

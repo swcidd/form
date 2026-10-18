@@ -367,7 +367,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
         .where((workout) => workout.status == WorkoutStatus.completed)
         .length;
     final target = provider.weeklyGoal;
-    final next = provider.focusWorkout;
+    // Scoped to the week, not the account: the panel is labelled THIS WEEK.
+    final next = provider.focusWorkoutThisWeek;
 
     final ratio = target == 0 ? 0.0 : (done / target).clamp(0.0, 1.0);
     final headline =
@@ -1056,12 +1057,18 @@ class _RotationRow extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  Text(
-                    entry.meta,
-                    style: text.previousPerf.copyWith(color: AppColors.sage600),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  // A session planned with no exercises and no target muscle
+                  // has nothing to say here. An empty string would still take
+                  // a line's height and leave the card with a blank row in it.
+                  if (entry.meta.isNotEmpty)
+                    Text(
+                      entry.meta,
+                      style: text.previousPerf.copyWith(
+                        color: AppColors.sage600,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                 ],
               ),
             ),
