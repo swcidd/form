@@ -756,7 +756,14 @@ class _LibraryScreenState extends State<LibraryScreen> {
     }
 
     final visible = saved
-        .where((entry) => _matches(entry.exercise.name))
+        .where(
+          (entry) =>
+              _matches(entry.exercise.name) ||
+              // The row shows the muscle it trains, so the search field has to
+              // find it by that too - the same terms the catalogue matches on,
+              // since a saved entry came from there.
+              _matches(entry.exercise.primaryMuscle),
+        )
         .toList();
 
     return Column(

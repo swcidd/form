@@ -440,6 +440,14 @@ void main() {
       await tester.pump();
 
       expect(find.textContaining('No saved exercises match'), findsOneWidget);
+
+      // The row shows the muscle it trains, so the field finds it by that too,
+      // the way the catalogue does.
+      await tester.enterText(find.byType(TextField), 'biceps');
+      await tester.pump();
+
+      expect(find.text('Barbell Curl'), findsOneWidget);
+      expect(find.textContaining('No saved exercises match'), findsNothing);
     });
   });
 }
