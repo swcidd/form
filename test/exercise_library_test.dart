@@ -158,6 +158,27 @@ void main() {
         containsAll(['Only Exercemus', 'Only Free Db']),
       );
     });
+
+    test('drops an entry with no name from either source', () {
+      final merged = ExerciseLibrary.merge(
+        exercemus: [
+          {
+            'name': '',
+            'primary_muscles': ['chest'],
+          },
+          {'name': 'Named'},
+        ],
+        freeDb: [
+          {'name': '   ', 'level': 'expert'},
+        ],
+      );
+
+      // A nameless entry has no key to merge on and nothing to show in a card,
+      // so two of them would collide on the empty name rather than be two
+      // exercises. The wger client drops its own for the same reason.
+      expect(merged, hasLength(1));
+      expect(merged.single.name, 'Named');
+    });
   });
 
   group('ExerciseLibrary.loadAll', () {

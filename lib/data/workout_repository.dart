@@ -48,9 +48,14 @@ class WorkoutRepository {
       try {
         final decoded = jsonDecode(payload);
         if (decoded is! Map<String, dynamic>) continue;
+        final exercise = LibraryExercise.fromJson(decoded);
+        // A payload that keys to nothing is not an exercise: it has no
+        // identity to match the bookmark against, so it would show as a blank
+        // row and share a key with every other nameless entry.
+        if (exercise.id.isEmpty) continue;
         saved.add(
           SavedExercise(
-            exercise: LibraryExercise.fromJson(decoded),
+            exercise: exercise,
             savedAt: DateTime.fromMillisecondsSinceEpoch(
               row['savedAt']! as int,
             ),

@@ -413,6 +413,23 @@ void main() {
       },
     );
 
+    test('a payload that decodes to no exercise is skipped too', () async {
+      await repository.saveSavedExercise(kept());
+
+      // Valid JSON, no usable entry: an exercise with no name has no key to
+      // match the bookmark against and nothing to draw, so it and every other
+      // nameless row would share the empty one.
+      final db = await app.open();
+      await db.update(
+        AppDatabase.savedExercisesTable,
+        {'payload': '{"primaryMuscle":"biceps"}'},
+        where: 'id = ?',
+        whereArgs: [LibraryExercise.keyFor('Barbell Curl')],
+      );
+
+      expect(await repository.loadSavedExercises(), isEmpty);
+    });
+
     test('clear empties the saved list with the rest', () async {
       await repository.saveSavedExercise(kept());
       await repository.clear();

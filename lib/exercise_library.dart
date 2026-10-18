@@ -260,10 +260,15 @@ class ExerciseLibrary {
     final merged = <String, LibraryExercise>{};
     for (final map in exercemus) {
       final exercise = LibraryExercise.fromExercemus(map);
+      // No name, no identity: the catalogue merges by name and the cards show
+      // it, so an entry that keys to nothing is nothing to show. The wger
+      // client drops its nameless entries for the same reason.
+      if (exercise.id.isEmpty) continue;
       merged[_key(exercise.name)] = exercise;
     }
     for (final map in freeDb) {
       final fromDb = LibraryExercise.fromFreeDb(map);
+      if (fromDb.id.isEmpty) continue;
       final key = _key(fromDb.name);
       final existing = merged[key];
       merged[key] = existing == null
