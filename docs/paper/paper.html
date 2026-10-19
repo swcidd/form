@@ -1,0 +1,1007 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FORM — Final Project Documentation</title>
+<style>
+  /* ---------- Fonts: the app's own type, so the paper and the product agree --- */
+  @font-face { font-family: 'Inter'; src: url('../../assets/fonts/Inter-Regular.ttf'); font-weight: 400; }
+  @font-face { font-family: 'Inter'; src: url('../../assets/fonts/Inter-Medium.ttf'); font-weight: 500; }
+  @font-face { font-family: 'Inter'; src: url('../../assets/fonts/Inter-SemiBold.ttf'); font-weight: 600; }
+  @font-face { font-family: 'Inter'; src: url('../../assets/fonts/Inter-Bold.ttf'); font-weight: 700; }
+  @font-face { font-family: 'Barlow Condensed'; src: url('../../assets/fonts/BarlowCondensed-SemiBold.ttf'); font-weight: 600; }
+  @font-face { font-family: 'Barlow Condensed'; src: url('../../assets/fonts/BarlowCondensed-Bold.ttf'); font-weight: 700; }
+
+  :root {
+    --ink: #121512;
+    --ink-soft: #353c31;
+    --sage: #677060;
+    --rule: #d8dcd0;
+    --cream: #fafaf7;
+    --warm: #f2f1e9;
+    --lime: #d5fc61;
+  }
+
+  @page {
+    size: A4;
+    margin: 20mm 17mm 18mm;
+    @top-left {
+      content: "FORM — Final Project Documentation";
+      font-family: 'Inter'; font-size: 7.5pt; letter-spacing: 0.08em;
+      color: #9aa294; text-transform: uppercase;
+    }
+    @top-right {
+      content: "SE2142";
+      font-family: 'Inter'; font-size: 7.5pt; letter-spacing: 0.08em;
+      color: #9aa294;
+    }
+    @bottom-right {
+      content: counter(page);
+      font-family: 'Barlow Condensed'; font-size: 10pt; color: var(--ink);
+    }
+    @bottom-left {
+      content: "Strength training, logged honestly";
+      font-family: 'Inter'; font-size: 7pt; color: #9aa294;
+    }
+  }
+  @page :first {
+    margin: 0;
+    background: #121512;
+    @top-left { content: none } @top-right { content: none }
+    @bottom-right { content: none } @bottom-left { content: none }
+  }
+
+  html { -weasy-hyphens: none; }
+  body {
+    font-family: 'Inter', sans-serif;
+    font-size: 9.6pt;
+    line-height: 1.58;
+    color: var(--ink);
+    margin: 0;
+    hyphens: none;
+  }
+
+  /* --------------------------------------------- Cover ---------------------- */
+  .cover {
+    page-break-after: always;
+    color: var(--cream);
+    padding: 26mm 22mm 22mm;
+  }
+  .cover .spacer { height: 78mm; }
+  .cover .eyebrow {
+    font-size: 7.6pt; letter-spacing: 0.22em; text-transform: uppercase;
+    color: var(--lime); font-weight: 600;
+  }
+  .cover h1 {
+    break-before: auto;
+    font-family: 'Barlow Condensed'; font-weight: 700; font-size: 74pt;
+    line-height: 0.92; margin: 16mm 0 0; letter-spacing: -0.01em;
+  }
+  .cover h1 span { color: var(--lime); }
+  .cover .tagline {
+    font-family: 'Barlow Condensed'; font-weight: 600; font-size: 21pt;
+    line-height: 1.15; margin: 7mm 0 0; color: var(--cream);
+  }
+  .cover .rule { height: 1.2mm; width: 42mm; background: var(--lime); margin: 9mm 0; }
+  .cover .meta { border-top: 0.4pt solid #3a4137; padding-top: 6mm; margin-top: 8mm; }
+  .cover table { width: 100%; border-collapse: collapse; font-size: 8.6pt; }
+  .cover td { padding: 1.6mm 0; vertical-align: top; }
+  .cover td.k { color: #97a08f; text-transform: uppercase; letter-spacing: 0.1em; font-size: 7.2pt; width: 34mm; }
+  .cover a { color: var(--lime); text-decoration: none; }
+  .cover .footnote { font-size: 8.4pt; color: #97a08f; margin-top: 14mm; }
+
+  /* --------------------------------------------- Headings ------------------- */
+  h1 {
+    font-family: 'Barlow Condensed'; font-weight: 700;
+    font-size: 25pt; line-height: 1.02; margin: 11mm 0 4mm;
+    letter-spacing: 0.005em; text-transform: uppercase;
+    break-after: avoid;
+  }
+  h1.first { margin-top: 0; }
+  h1 .num {
+    display: block; font-family: 'Inter'; font-size: 7.6pt; font-weight: 600;
+    letter-spacing: 0.2em; color: var(--sage); margin-bottom: 2mm;
+  }
+  h2 {
+    font-family: 'Barlow Condensed'; font-weight: 700; font-size: 14pt;
+    text-transform: uppercase; letter-spacing: 0.02em;
+    margin: 7mm 0 2mm;
+  }
+  h3 {
+    font-family: 'Inter'; font-weight: 600; font-size: 9.8pt;
+    margin: 5mm 0 1.5mm;
+  }
+  p { margin: 0 0 2.6mm; }
+  .lede { font-size: 10.6pt; line-height: 1.55; color: var(--ink-soft); margin-bottom: 4mm; }
+  strong { font-weight: 600; }
+  a { color: #1f5f3a; text-decoration: none; border-bottom: 0.4pt solid #c7cdc2; }
+  code, .mono {
+    font-family: 'DejaVu Sans Mono', monospace; font-size: 8.2pt;
+    background: var(--warm); padding: 0.3mm 1mm; border-radius: 0.8mm;
+  }
+  ul, ol { margin: 0 0 2.6mm; padding-left: 5mm; }
+  li { margin-bottom: 1.1mm; }
+
+  /* --------------------------------------------- Blocks --------------------- */
+  .kicker {
+    font-size: 7.4pt; font-weight: 600; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--sage); margin-bottom: 1.5mm;
+  }
+  blockquote {
+    margin: 4mm 0; padding: 3mm 4mm; border-left: 1mm solid var(--lime);
+    background: var(--warm); font-size: 9.4pt; color: var(--ink-soft);
+  }
+  blockquote p:last-child { margin-bottom: 0; }
+
+  table.data {
+    width: 100%; border-collapse: collapse; font-size: 8.4pt;
+    margin: 3mm 0 4mm;
+  }
+  table.data th {
+    text-align: left; font-weight: 600; font-size: 7.2pt;
+    letter-spacing: 0.1em; text-transform: uppercase; color: var(--sage);
+    border-bottom: 0.6pt solid var(--ink); padding: 1.6mm 2mm;
+  }
+  table.data td {
+    padding: 1.8mm 2mm; border-bottom: 0.4pt solid var(--rule);
+    vertical-align: top;
+  }
+  table.data tr:nth-child(even) td { background: #fbfbf8; }
+  table.data td.n, table.data th.n { text-align: right; white-space: nowrap; }
+
+  .callout {
+    border: 0.5pt solid var(--rule); border-radius: 2mm;
+    padding: 3mm 4mm; margin: 3mm 0 4mm; background: #fcfcfa;
+    font-size: 9pt;
+  }
+  .callout .kicker { margin-bottom: 1mm; }
+  .callout p:last-child { margin-bottom: 0; }
+
+  pre.json {
+    font-family: 'DejaVu Sans Mono', monospace; font-size: 7.4pt;
+    line-height: 1.42; background: var(--ink); color: #e9f0e2;
+    padding: 3.5mm 4mm; border-radius: 1.6mm; margin: 2mm 0 4mm;
+    white-space: pre-wrap;
+  }
+  pre.json .k { color: #b6e26a; }
+
+  /* --------------------------------------------- Figures -------------------- */
+  .shots { width: 100%; border-collapse: collapse; margin: 3mm 0 2mm; }
+  .shots td {
+    width: 50%; padding: 0 3mm 5mm 0; vertical-align: top;
+  }
+  .shots td + td { padding-right: 0; padding-left: 3mm; }
+  .shots img {
+    width: 100%; display: block;
+    border: 0.4pt solid var(--rule); border-radius: 2mm;
+  }
+  .shots .cap {
+    margin-top: 1.6mm; font-size: 7.8pt; line-height: 1.35; color: var(--ink-soft);
+  }
+  .shots .cap b { font-weight: 600; color: var(--ink); display: block; font-size: 8.2pt; }
+  .wide { width: 100%; margin: 3mm 0 4mm; }
+  .wide img { width: 100%; border: 0.4pt solid var(--rule); border-radius: 1.6mm; }
+
+  .two-col { column-count: 2; column-gap: 7mm; }
+
+  .avoid { break-inside: avoid; }
+  .note { font-size: 8.2pt; color: var(--sage); }
+  .toc { margin: 2mm 0 0; }
+  .toc td { padding: 1.4mm 0; border-bottom: 0.4pt solid var(--rule); font-size: 9pt; }
+  .toc td.n { width: 10mm; color: var(--sage); font-family: 'Barlow Condensed'; font-size: 11pt; }
+</style>
+</head>
+<body>
+
+<!-- ============================================================ COVER -->
+<section class="cover">
+  <div class="eyebrow">SE2142 · Software Engineering Tools and Practices</div>
+  <h1>FOR<span>M</span></h1>
+  <div class="tagline">A strength-training app that remembers<br>what you lifted — and only what you lifted.</div>
+  <div class="rule"></div>
+  <p style="font-size:10pt; color:#c9d2c3; max-width:120mm; margin:0;">
+    Final project documentation: the problem, the product, the engineering
+    decisions behind it, and the evidence that they work.
+  </p>
+  <div class="spacer"></div>
+  <div class="footnote">
+    Log the workout. See the progress. Beat yourself — by one.
+  </div>
+  <div class="meta">
+    <table>
+      <tr><td class="k">Application</td><td>FORM — <span class="mono" style="background:none;color:#c9d2c3;">com.swcidd.form</span></td></tr>
+      <tr><td class="k">Group</td><td>FORM</td></tr>
+      <tr><td class="k">Submitted by</td><td>Sherwin Sid S. Sañol</td></tr>
+      <tr><td class="k">Course · Section</td><td>SE2142 · ____________________</td></tr>
+      <tr><td class="k">Repository</td><td><a href="https://github.com/swcidd/form">github.com/swcidd/form</a></td></tr>
+      <tr><td class="k">Date</td><td>19 October 2026</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ============================================================ ROLES -->
+<h1 class="first"><span class="num">Section 01</span>Member Roles</h1>
+
+<p class="lede">
+  FORM was built by one member, so the table below is not a division of labour
+  between people — it is the set of roles the project actually required, what
+  each one was responsible for, and where the evidence of it lives in the
+  repository.
+</p>
+
+<table class="data">
+  <tr>
+    <th style="width:24%">Role</th>
+    <th>Responsibilities</th>
+    <th style="width:26%">Where to look</th>
+  </tr>
+  <tr>
+    <td><strong>Design and interface</strong></td>
+    <td>Translated the Figma design system into a Flutter theme (colour, type scale, control shapes), laid out eleven screens, and built the reusable widgets they share. Kept one voice for empty, loading and error states.</td>
+    <td><code>lib/screens/</code>, <code>lib/widgets/</code>, <code>lib/theme/</code></td>
+  </tr>
+  <tr>
+    <td><strong>State management</strong></td>
+    <td>Two <code>ChangeNotifier</code> providers, the derived figures the screens read, the per-account store lifecycle, and the rule that screens read state rather than mutate it.</td>
+    <td><code>lib/providers/</code></td>
+  </tr>
+  <tr>
+    <td><strong>Data layer and schema</strong></td>
+    <td>The SQLite schema (version 4), the migration that gave every row an owner, the repository that scopes reads and writes to one account, and the statistics file that derives progress.</td>
+    <td><code>lib/data/</code></td>
+  </tr>
+  <tr>
+    <td><strong>Authentication</strong></td>
+    <td>The <code>AuthRepository</code> seam, the local implementation, PBKDF2 hashing off the UI isolate, session restore, sign-out and account deletion.</td>
+    <td><code>lib/auth/</code>, <code>docs/AUTH.md</code></td>
+  </tr>
+  <tr>
+    <td><strong>API integration</strong></td>
+    <td>The wger REST client over <code>http</code>, the JSON-to-model mapping, the network-first/offline-fallback policy, and the loading, success and error states that expose it.</td>
+    <td><code>lib/data/exercise_api_client.dart</code>, <code>exercise_catalog.dart</code></td>
+  </tr>
+  <tr>
+    <td><strong>Quality assurance</strong></td>
+    <td>286 automated tests across models, providers, persistence and widgets; a hand-built v3 database for the migration test; screenshots rendered as golden files; <code>dart format</code> and <code>flutter analyze</code> kept clean at every commit.</td>
+    <td><code>test/</code>, <code>tool/screenshot_test.dart</code></td>
+  </tr>
+  <tr>
+    <td><strong>Git and repository management</strong></td>
+    <td>Branch pipeline, conventional commit messages, pull requests with review comments, issue tracking, and promotions through staging to master.</td>
+    <td>Pull requests and issues on GitHub</td>
+  </tr>
+  <tr>
+    <td><strong>Documentation</strong></td>
+    <td>README, authentication design note, build guide, branding note, attribution and licences, the DevTools case study, and this paper.</td>
+    <td><code>README.md</code>, <code>docs/</code></td>
+  </tr>
+</table>
+
+<p>
+  Because the roles were held by one person, the value of separating them is not
+  coordination but <em>review</em>: each role produced an artefact the others
+  could check. The interface role produced screenshots; the QA role compared
+  them and found that the dashboard and the library disagreed about the week
+  (Section 6). The API role produced a fallback catalogue; the QA role asserted
+  that a failed request still renders a usable screen. The data role produced a
+  migration; the QA role built a version-3 database by hand and migrated it,
+  because a test that rewinds <code>user_version</code> on a current database
+  only proves that the migration runs, not that it is correct.
+</p>
+
+<h2>Working method</h2>
+<p>
+  Work moved through four branches: <code>feat/*</code> for features,
+  <code>dev</code> as the integration branch, <code>staging</code> for what is
+  about to be released, and <code>master</code> for what was released. Every
+  feature arrived as a pull request with review comments on the lines that
+  carried a decision, not on formatting. Every commit was required to be green
+  on its own — formatter, analyzer and the full test suite before the commit
+  was made — so that a bisect never lands on a broken tree.
+</p>
+
+<!-- ============================================================ PROBLEM -->
+<h1><span class="num">Section 02</span>Problem Statement</h1>
+<p class="lede">
+  Strength training only works if the load goes up, and the load can only go up
+  if the lifter knows what it was last time. That single fact is the whole
+  problem: the numbers that matter are the ones nobody can remember.
+</p>
+
+<h2>The problem</h2>
+<p>
+  Progressive overload — doing a little more than last time — is the mechanism
+  by which training produces strength. It requires a comparison: this week's
+  bench press against last week's. Most people training in a gym carry that
+  comparison in their head, or in a notes app, or on a paper card that stays in
+  the car. Memory is unreliable under fatigue, and a note that records
+  <em>“bench 3×8”</em> without the weight cannot answer the only question the
+  next set asks.
+</p>
+<p>
+  The apps that solve this tend to solve several other things at once. They ask
+  for an account before showing a screen, sync to a cloud the user cannot
+  inspect, fill the dashboard with step counts and calorie estimates, and add
+  social surfaces that turn a training log into a feed. Each addition is another
+  thing that can be wrong, another number that was invented rather than
+  measured, and another reason the app needs a network to open.
+</p>
+
+<h2>Why it matters</h2>
+<ul>
+  <li><strong>Without a record there is no overload.</strong> A lifter who cannot
+  see last week's weight either repeats it or guesses upward; both waste
+  sessions.</li>
+  <li><strong>Progress is invisible in the short term.</strong> A single session
+  rarely feels easier; a month of volume does not feel different. Only a
+  comparison makes the change visible, which is what keeps people training.</li>
+  <li><strong>Trust is easy to lose.</strong> One fabricated figure — a personal
+  record nobody earned, a duration nobody measured — teaches the user to
+  distrust every other number on the screen.</li>
+  <li><strong>Gyms have poor signal.</strong> A logging app that needs the
+  network fails exactly where it is used.</li>
+</ul>
+
+<h2>Current challenges</h2>
+<p>
+  Existing trackers are either heavy or thin. The heavy ones require an account
+  and a cloud, which makes an offline demo impossible; the thin ones are note
+  fields with a stopwatch, which cannot compute a record or a weekly comparison.
+  Both leave the same gap: a fast log, a truthful summary, and a progress view
+  derived from what was actually performed.
+</p>
+
+<h2>Target users</h2>
+<p>
+  FORM is for the beginner-to-intermediate lifter training three or four times a
+  week, who wants to log a session in under a minute and see an honest picture of
+  the last month. It is also for the privacy-minded user who does not want an
+  account to lift, and for the student who needs the app to work on a phone with
+  no data plan. All three pull in the same direction: local first, account
+  optional, no invented numbers.
+</p>
+
+<!-- ============================================================ OVERVIEW -->
+<h1><span class="num">Section 03</span>Application Overview</h1>
+
+<p class="lede">
+  FORM is a Flutter application for logging strength training and reading
+  progress from the log. It ships empty, works offline, and every figure it
+  prints can be traced back to a session the user recorded.
+</p>
+
+<p>
+  <strong>Repository:</strong>
+  <a href="https://github.com/swcidd/form">https://github.com/swcidd/form</a>
+  — public, with the full commit history, pull requests and reviewed changes.
+</p>
+
+<h2>What it is</h2>
+<p>
+  The app has eleven screens. A first launch offers a welcome with three ways in:
+  create an account, sign in, or continue offline as the device account. Behind
+  that front door is a shell with five destinations — Home, Progress, Workout,
+  Library and Profile — plus three screens reached from a session: the workout
+  detail, the set logger and the summary.
+</p>
+<p>
+  A session is a plan: exercises, each with sets of reps and weight. The user
+  ticks sets as they are performed, and the session finishes when the last set
+  is ticked. Home shows the session to walk into next, the week's target and the
+  most recent sessions. Progress derives records, volume and consistency from
+  finished sessions only. The Library holds the user's rotation and a
+  searchable catalogue of exercises, read from the public wger API when the
+  device is online and from a bundled set when it is not.
+</p>
+
+<h2>How it works, in the order a user meets it</h2>
+<ol>
+  <li><strong>Open.</strong> No session? The welcome. A session? The app, on the
+  account that owns it.</li>
+  <li><strong>Home.</strong> “Up next” names today's session and how much of it
+  is done; the week shows finished sessions against the goal; recent sessions
+  show what happened.</li>
+  <li><strong>Log.</strong> Ticking the last planned set closes the session.
+  Unticking one reopens it. Every tap writes through a repository to SQLite.</li>
+  <li><strong>See.</strong> The summary turns the session into volume, duration,
+  sets, reps and — only if it really beat one — a record.</li>
+  <li><strong>Reflect.</strong> Progress ranks records by estimated one-rep max,
+  compares this month's volume with last month's, and measures consistency over
+  thirty days.</li>
+</ol>
+
+<div class="callout">
+  <div class="kicker">One rule, applied everywhere</div>
+  <p>
+    Only finished sessions count, and inside them only completed sets. A set
+    that was planned and never ticked is work nobody did; counting it would let
+    a routine nobody performed move every number in the app.
+  </p>
+</div>
+
+<h2>The screens</h2>
+<p class="note">
+  Screenshots are rendered from the app's own widgets by
+  <code>tool/screenshot_test.dart</code> with a sample account loaded. FORM ships
+  with no training data: the empty-account screenshot is what a fresh install
+  shows.
+</p>
+
+<table class="shots">
+  <tr>
+    <td><img src="img/01-welcome.jpg" alt="Welcome"><div class="cap"><b>Welcome</b>Three ways in; the third needs no account.</div></td>
+    <td><img src="img/04-home.jpg" alt="Home"><div class="cap"><b>Home</b>The session to walk into, the week, and what happened last.</div></td>
+  </tr>
+  <tr>
+    <td><img src="img/05-progress.jpg" alt="Progress"><div class="cap"><b>Progress</b>Records, volume change and consistency, all derived.</div></td>
+    <td><img src="img/06-library.jpg" alt="Library"><div class="cap"><b>Library</b>The rotation, and a catalogue behind a search field.</div></td>
+  </tr>
+  <tr>
+    <td><img src="img/07-profile.jpg" alt="Profile"><div class="cap"><b>Profile</b>The week's target, body metrics and the account.</div></td>
+    <td><img src="img/02-sign-in.jpg" alt="Sign in"><div class="cap"><b>Sign in</b>Local accounts; the failure never says which half was wrong.</div></td>
+  </tr>
+  <tr>
+    <td><img src="img/03-create-account.jpg" alt="Create account"><div class="cap"><b>Create account</b>The design's three steps, collapsed into one screen.</div></td>
+    <td><img src="img/11-empty-account.jpg" alt="Empty account"><div class="cap"><b>Empty account</b>What a fresh install shows: an invitation, not zeros.</div></td>
+  </tr>
+  <tr>
+    <td><img src="img/08-workout-detail.jpg" alt="Workout detail"><div class="cap"><b>Workout</b>The plan, its focus and equipment, and where it is.</div></td>
+    <td><img src="img/09-logging.jpg" alt="Logging"><div class="cap"><b>Logging</b>One set at a time, with last time's numbers beside it.</div></td>
+  </tr>
+  <tr>
+    <td><img src="img/10-summary.jpg" alt="Summary"><div class="cap"><b>Summary</b>What the session was worth, and a record only if it beat one.</div></td>
+    <td><img src="img/12-discover.jpg" alt="Discover"><div class="cap"><b>Discover</b>The network failing on purpose: banner, then the bundled catalogue.</div></td>
+  </tr>
+</table>
+
+<!-- ============================================================ SOLUTION -->
+<h1><span class="num">Section 04</span>Proposed Solution</h1>
+
+<p class="lede">
+  The concept is one sentence long: <strong>the app remembers, so the user can
+  progress</strong>. Everything below follows from taking that sentence
+  literally — a memory that is durable, private and honest, and a view of it
+  that answers the next question.
+</p>
+
+<h2>The idea</h2>
+<p>
+  FORM treats the training log as the only source of truth. A session, its
+  exercises and its sets are stored; every other number in the app is computed
+  from them on read. Nothing is stored twice, so nothing can go stale, and there
+  is no “demo data” to explain away. An empty account is empty: the app says so
+  and offers the first session, rather than printing a scoreboard of zeros.
+</p>
+
+<h2>The workflow</h2>
+<table class="data">
+  <tr><th style="width:18%">Step</th><th>What happens</th><th style="width:32%">What it is built on</th></tr>
+  <tr><td><strong>1. Enter</strong></td><td>Continue offline or sign in. The chosen account owns everything that follows.</td><td>The auth seam and a per-account store</td></tr>
+  <tr><td><strong>2. Pick</strong></td><td>Home names the session to walk into: the soonest planned session in this week that is not behind the user.</td><td><code>focusWorkoutThisWeek</code></td></tr>
+  <tr><td><strong>3. Log</strong></td><td>Each exercise shows its sets, the last time it was trained, and a tick per set. The tick is the record.</td><td><code>toggleSet</code>, <code>previousSetsFor</code></td></tr>
+  <tr><td><strong>4. Finish</strong></td><td>The last tick closes the session; the summary reports volume, sets, reps and any record.</td><td><code>SessionStats</code></td></tr>
+  <tr><td><strong>5. Reflect</strong></td><td>Progress shows records ranked by estimated one-rep max, volume against the previous window, and consistency.</td><td><code>lib/data/session_stats.dart</code></td></tr>
+  <tr><td><strong>6. Extend</strong></td><td>The Library adds sessions to the rotation and exercises to a saved list, using the live catalogue or the bundled one.</td><td><code>ExerciseCatalog</code>, saved exercises</td></tr>
+</table>
+
+<h2>How the technical choices support it</h2>
+<h3>Provider, so a number has one owner</h3>
+<p>
+  <code>WorkoutProvider</code> holds the account's sessions and exposes derived
+  getters — the week's sessions, the streak, the session to walk into, the last
+  time an exercise was trained. Screens watch the provider and read those
+  getters; they never compute a shared figure themselves. This is the choice
+  that made the week bug in Section 6 possible to find: two screens disagreeing
+  meant two definitions existed, and the fix was to delete one and keep the
+  other in the provider.
+</p>
+
+<h3>SQLite behind a repository, so memory survives the process</h3>
+<p>
+  Every write goes through <code>WorkoutRepository</code>, which is constructed
+  with a <code>userId</code> and cannot read or write a row without one. The
+  in-memory copy is treated as a cache: it is loaded before the first frame, and
+  writes are applied to it immediately and persisted behind it. A restart is
+  therefore an ordinary event, not a data-loss risk.
+</p>
+
+<h3>An HTTP client behind a policy, so the network is an enhancement</h3>
+<p>
+  The catalogue is loaded by <code>ExerciseCatalog</code>, which asks wger first
+  and falls back to the bundled sets when the request fails, times out or
+  returns nothing. Screens see one result type with a flag saying where it came
+  from, so the offline case is a banner rather than an error screen.
+</p>
+
+<h3>Accounts without a server, so the demo works without wifi</h3>
+<p>
+  Sign-in is local, behind an interface shaped like a server
+  (<code>AuthRepository</code>). Passwords are hashed with PBKDF2-HMAC-SHA256 on
+  a worker isolate. A real backend could replace the implementation without a
+  screen changing, and the project avoids shipping a Firebase configuration file
+  in a public repository, which would be a credential in the APK.
+</p>
+
+<h3>Empty and error states as first-class screens</h3>
+<p>
+  A new account, a failed request, an unknown session id and an invalid field
+  all have a written answer. None of them is a blank screen and none is a
+  fabricated value.
+</p>
+
+<h2>What the solution refuses to do</h2>
+<p>
+  No cloud sync, no social features, no vitals or calorie tracking. These are
+  recorded as deliberate cuts in the README, and the reasoning is the same in
+  each case: a surface with nothing behind it is a promise the app cannot keep.
+</p>
+
+<!-- ============================================================ GOALS -->
+<h1><span class="num">Section 05</span>Goals and Objectives</h1>
+
+<p class="lede">
+  Six objectives, each with the thing that would show it had been met. They are
+  stated as outcomes rather than features because the project is graded on what
+  the app can demonstrate, not on how much code it contains.
+</p>
+
+<table class="data">
+  <tr><th style="width:6%" class="n">#</th><th style="width:44%">Objective</th><th>Evidence that it was met</th></tr>
+  <tr>
+    <td class="n">1</td>
+    <td><strong>Make a session loggable in under a minute.</strong> The plan arrives with its sets, and each exercise shows what it was lifted at last time, so the user confirms rather than types.</td>
+    <td>The logging screen's PREVIOUS column and “Last time” line are computed from the store; a session of eight exercises needs eight ticks.</td>
+  </tr>
+  <tr>
+    <td class="n">2</td>
+    <td><strong>Make every figure traceable.</strong> Any number on any screen can be recomputed from the sessions the user recorded.</td>
+    <td><code>lib/data/session_stats.dart</code> is the only place progress is computed, and its tests assert the counting rules directly.</td>
+  </tr>
+  <tr>
+    <td class="n">3</td>
+    <td><strong>Work without a network.</strong> Training and browsing the catalogue both survive a dead connection.</td>
+    <td>The bundled catalogue renders behind an “offline catalogue” banner with a retry; the Discover screenshot in Section 3 is that path.</td>
+  </tr>
+  <tr>
+    <td class="n">4</td>
+    <td><strong>Support accounts without a server.</strong> Two people can use one device with separate training, and no credential ships in the app.</td>
+    <td>Schema v4 gives every row an owner; switching accounts opens a different store and disposes the previous one; passwords are hashed, salted and iterated.</td>
+  </tr>
+  <tr>
+    <td class="n">5</td>
+    <td><strong>Be release-ready.</strong> Custom name, icon and splash; a working release APK; the steps written down.</td>
+    <td><code>docs/BUILD.md</code>, the generated launcher icon and splash, and the APK built from <code>master</code>.</td>
+  </tr>
+  <tr>
+    <td class="n">6</td>
+    <td><strong>Practise the engineering, not only the programming.</strong> Branches, reviewed pull requests, issues, tests, a DevTools case, and documentation a stranger can follow.</td>
+    <td>More than thirty merged pull requests with inline review comments, ten issues closed, 286 tests, <code>docs/DEVTOOLS.md</code>.</td>
+  </tr>
+</table>
+
+<h2>Non-goals</h2>
+<p>
+  The project did not aim to be a social product, a nutrition tracker or a
+  cloud service. It also did not aim for visual parity with every frame in the
+  design file: the design's sign-up flow has three steps, and the delivered
+  screen collapses them into one because the app has no age column and no
+  reader for it. That deviation is documented rather than hidden, which is the
+  standard the rest of the project is held to.
+</p>
+
+<!-- ============================================================ FEATURES -->
+<h1><span class="num">Section 06</span>Features</h1>
+
+<p class="lede">
+  Every feature below is demonstrable in the running app. Where a screen needs a
+  behaviour that is easy to fake — a record, a comparison, a streak — the
+  feature section says what the number is derived from.
+</p>
+
+<h2>Core features</h2>
+<table class="data">
+  <tr><th style="width:24%">Feature</th><th>What it does</th><th style="width:24%">Where</th></tr>
+  <tr><td><strong>Session logging</strong></td><td>Exercises with sets of reps and weight; a tick per set; the last tick closes the session, unticking reopens it.</td><td><code>set_logging_screen.dart</code></td></tr>
+  <tr><td><strong>CRUD</strong></td><td>Create, rename, reschedule and delete sessions; add and remove sets; edit the profile and body metrics; save and unsave exercises.</td><td><code>workout_provider.dart</code>, <code>workout_repository.dart</code></td></tr>
+  <tr><td><strong>Progress from the log</strong></td><td>Records ranked by estimated one-rep max, volume with the change against the previous window, and thirty-day consistency.</td><td><code>session_stats.dart</code></td></tr>
+  <tr><td><strong>Last time's numbers</strong></td><td>The logger shows the best set from the most recent finished session containing that exercise, and each row shows the matching set.</td><td><code>previousSetsFor</code></td></tr>
+  <tr><td><strong>Weekly goal and streak</strong></td><td>Finished sessions against a target the user can raise or lower; consecutive days with a finished session.</td><td><code>sessionsDoneThisWeek</code>, <code>streakDays</code></td></tr>
+  <tr><td><strong>Exercise catalogue</strong></td><td>Live wger data over <code>http</code> with search, muscle filters and a saved list; bundled fallback offline.</td><td><code>exercise_catalog.dart</code>, <code>library_screen.dart</code></td></tr>
+  <tr><td><strong>Accounts</strong></td><td>A local account with a hashed password or the device account; per-account training; sign out; delete with confirmation.</td><td><code>lib/auth/</code>, schema v4</td></tr>
+</table>
+
+<h2>Supporting behaviour</h2>
+<ul>
+  <li><strong>Validation</strong> — field-level messages under the field, and a
+  single failure vocabulary for sign-in: an unknown address and a wrong password
+  produce the same message and take the same time to compute.</li>
+  <li><strong>Empty states</strong> — an empty account gets a first-session
+  panel and “other ways to start”; an empty progress tab says what will appear
+  rather than showing zeros.</li>
+  <li><strong>Error states</strong> — a failed catalogue request renders a
+  banner with a retry; a session id that is not in the store says “Session not
+  found” instead of inventing one.</li>
+  <li><strong>Theming</strong> — one palette and one type scale, applied through
+  the theme rather than per screen.</li>
+</ul>
+
+<h2>Reusable widgets</h2>
+<p>
+  The assignment asks for at least three custom widgets used on more than one
+  screen. FORM has eighteen; the ones that carry the most weight are:
+</p>
+<table class="data">
+  <tr><th style="width:26%">Widget</th><th>Used by</th><th>What it hides</th></tr>
+  <tr><td><code>AppNavBar</code></td><td>All five tab screens</td><td>Five destinations, the raised centre action, and the selected state.</td></tr>
+  <tr><td><code>SectionHeader</code></td><td>Home, progress, library, profile</td><td>The small-caps section label and its spacing.</td></tr>
+  <tr><td><code>WorkoutCard</code></td><td>Home, library, profile</td><td>The status chip, the muscle tags, the progress rule and the date formatting.</td></tr>
+  <tr><td><code>EmptyState</code></td><td>Home, progress, library</td><td>The icon, title and explanation that replace a blank list.</td></tr>
+  <tr><td><code>AuthField</code></td><td>Sign in, create account</td><td>Label, obscure toggle, error text and focus behaviour.</td></tr>
+  <tr><td><code>AuthAction</code></td><td>Welcome, sign in, create account</td><td>The busy state that disables the button and shows a spinner.</td></tr>
+  <tr><td><code>MetricTile</code> / <code>StatTile</code></td><td>Home, progress, profile</td><td>The value, unit and caption layout of a statistic.</td></tr>
+</table>
+
+<h2>What the screenshots exposed</h2>
+<p>
+  Rendering every screen for this paper found two defects that code review had
+  not, both of the same kind: a number that had been invented rather than
+  derived.
+</p>
+<p>
+  <strong>The week disagreed with itself.</strong> Home read the length of the
+  week's session list and the library counted finished sessions, so a week
+  holding four plans and no training showed <code>4/4</code> on the dashboard
+  and <code>0 of 4 sessions done</code> in the library. The fix was to define
+  the number once, next to the window it counts
+  (<code>sessionsDoneThisWeek</code>), and have all three places read it.
+</p>
+<p>
+  <strong>The PREVIOUS column was a placeholder.</strong> The logging screen
+  drew a “previous” column and a “No previous data” line from fields nothing
+  ever wrote, so every exercise claimed to be new. It now asks the store for the
+  completed sets of the last finished session containing that exercise — a
+  feature that could not be tested before, because the fixtures named their
+  exercises <code>Push Day Movement 4</code> and no name ever repeated.
+</p>
+<p class="note">
+  Both screenshots in Section 3 were rendered after the fix: the weekly tile and
+  the library's week card read the same getter, and the logger's PREVIOUS column
+  is filled from the store.
+</p>
+
+<!-- ============================================================ TECH -->
+<h1><span class="num">Section 07</span>Technical Implementation</h1>
+
+<p class="lede">
+  Three areas carry the course: navigation, state management and API
+  integration. For each one this section states what the app needed, how it was
+  built — naming the files and classes — and what would be harder or broken
+  without it.
+</p>
+
+<h2>7.1 Navigation</h2>
+
+<h3>What the app needed</h3>
+<p>
+  Four kinds of movement: between the five destinations of the shell without
+  rebuilding the app; from a list into a session, where the destination depends
+  on an id; from a session into a logger and then a summary, without the user
+  being able to walk back into a logger for a session that is already finished;
+  and between entirely different windows when the user signs in or out.
+</p>
+
+<h3>How it was built</h3>
+<p>
+  The destinations are an enum, and each value owns its route name, its label
+  and its icon, so the shell, the navigation bar and the route table cannot fall
+  out of step:
+</p>
+<pre class="json">enum AppTab { home, progress, workout, library, profile }
+
+// lib/main.dart
+for (final tab in AppTab.values) tab.routeName: (_) => AppShell(tab: tab),</pre>
+<p>
+  Parameterised destinations are generated rather than registered, because a
+  route like <code>/workout-detail/:id</code> is not a fixed string:
+</p>
+<pre class="json">static const String routeName = '/workout-detail';
+static String routeFor(String id) =&gt; '$routeName/$id';
+
+// resolved in PlusOneApp.routeFor, which reads the id off the settings
+case WorkoutDetailScreen.routeName:
+  return MaterialPageRoute(builder: (_) =&gt; WorkoutDetailScreen(route: settings));</pre>
+<p>
+  <strong>Data is passed as an id, not as an object.</strong> The list pushes
+  <code>WorkoutDetailScreen.routeFor(workout.id)</code>; the detail screen reads
+  the id from its route settings and asks the provider for the session
+  (<code>context.watch&lt;WorkoutProvider&gt;().byId(id)</code>). That single
+  decision is what keeps a detail screen alive across a change: when a set is
+  ticked in the logger and the user walks back, the detail screen rebuilds from
+  the provider rather than showing a copy of the session that no longer matches
+  the store.
+</p>
+<p>
+  The last kind of movement is not a push at all. The gate in
+  <code>lib/main.dart</code> chooses a window — splash while the session is
+  being restored, the sign-in flow while signed out, the app while signed in —
+  and each window carries a distinct <code>ValueKey</code>. Replacing the window
+  instead of pushing onto it is what makes signing out leave no app screen on
+  the back stack, and signing in as somebody else leave no store from the
+  previous account listening.
+</p>
+
+<h3>What would be harder without it</h3>
+<p>
+  Without the id-as-argument rule, a session would travel through constructors
+  from the list to the logger to the summary, and every screen in the chain
+  would hold a stale copy the moment a tick changed it. Without the window
+  replacement, signing out would be a push, and the back button would walk into
+  the account that just left.
+</p>
+
+<h2>7.2 State Management</h2>
+
+<h3>What the app needed</h3>
+<p>
+  Two kinds of shared state. <em>Account</em> state: is somebody signed in, who,
+  and what is the app allowed to show. <em>Training</em> state: the sessions,
+  the saved exercises, the profile, the weekly target, and every figure derived
+  from them. Both are read by many screens and written by a few, which is
+  exactly the shape <code>provider</code> exists for.
+</p>
+
+<h3>How it was built</h3>
+<table class="data">
+  <tr><th style="width:20%">Provider</th><th>Holds</th><th>Read by</th></tr>
+  <tr>
+    <td><code>AuthProvider</code></td>
+    <td>The session, a status (<code>checking</code>, <code>signedOut</code>, <code>signedIn</code>) and a busy flag; commands to create an account, sign in, continue offline, sign out and delete.</td>
+    <td>The gate in <code>main.dart</code>, the welcome and sign-in screens, the profile's account section.</td>
+  </tr>
+  <tr>
+    <td><code>WorkoutProvider</code></td>
+    <td>Sessions, saved exercises, profile and metrics, plus derived getters: the week's sessions, the focus session, the streak, the count of finished sessions, the previous sets for an exercise.</td>
+    <td>Home, progress, workout, library and profile — every tab.</td>
+  </tr>
+</table>
+<p>
+  Screens <em>watch</em> when they render a value and <em>read</em> when they
+  only call a command. A tap handler that called <code>watch</code> would
+  subscribe the screen to a rebuild it does not need; a build method that called
+  <code>read</code> would never update. The distinction is small in code and
+  large in behaviour, and it is applied consistently.
+</p>
+<p>
+  The store's lifetime is tied to the account, not to the app:
+</p>
+<pre class="json">// lib/main.dart — one store per account, created and disposed by the widget
+ChangeNotifierProvider(
+  key: ValueKey(userId),
+  create: (_) =&gt; openStore(userId)..load(),
+)</pre>
+<p>
+  The key is what makes signing in as someone else open <em>their</em> training
+  rather than reuse the previous object, and it disposes the departed store with
+  the widget that held it. A widget test asserts both halves, including that the
+  old store throws when a listener is added after the switch.
+</p>
+
+<h3>What would be harder without it</h3>
+<p>
+  Without a shared provider, the weekly figure would have to be passed from the
+  shell to each tab, and the "last time" lookup would be repeated in the logger
+  and the summary. That is not a style preference: passing state down a
+  constructor chain is how two screens end up computing the same figure
+  differently — which is precisely the defect described in Section 6, where the
+  dashboard and the library each had their own definition of the week. With a
+  single provider and a single getter, the second definition cannot exist
+  without deleting the first.
+</p>
+<p>
+  Without the account-keyed provider, the app would either keep one store for the
+  process (leaking one account's training into another's) or dispose nothing
+  (leaving listeners on a dead notifier).
+</p>
+
+<h2>7.3 API Integration</h2>
+
+<h3>What the app needed</h3>
+<p>
+  A catalogue of exercises the app does not have to invent, searchable by name
+  and muscle, that still works when the phone has no signal in a basement gym.
+</p>
+
+<h3>The API and its endpoints</h3>
+<p>
+  FORM reads the public <strong>wger</strong> REST API
+  (<a href="https://wger.de/api/v2/">https://wger.de/api/v2/</a>) through
+  <code>package:http</code>. Reads need no API key.
+</p>
+<pre class="json">GET https://wger.de/api/v2/exerciseinfo/?language=2&amp;limit=60
+Accept: application/json
+timeout: 8 s</pre>
+<p>
+  The catalogue holds 932 entries; the app requests the first page of sixty,
+  which is more than a scrolling grid will reach in one session. Language 2 is
+  English.
+</p>
+
+<h3>Sample response and parsing</h3>
+<p>
+  A real response, abridged to the fields the app reads:
+</p>
+<pre class="json">{
+  "count": 932,
+  "results": [
+    {
+      "id": 9,
+      "category": { "id": 10, "name": "Abs" },
+      "muscles": [
+        { "id": 11, "name": "Biceps femoris", "name_en": "Hamstrings" }
+      ],
+      "muscles_secondary": [
+        { "id": 10, "name": "Quadriceps femoris", "name_en": "Quads" }
+      ],
+      "equipment": [ { "id": 10, "name": "Kettlebell" } ],
+      "translations": [
+        {
+          "language": 2,
+          "name": "2 Handed Kettlebell Swing",
+          "description": "&lt;p&gt;Two Handed Russian Style Kettlebell swing&lt;/p&gt;"
+        }
+      ]
+    }
+  ]
+}</pre>
+<p>
+  <code>ExerciseApiClient._parse</code> maps one entry onto
+  <code>LibraryExercise</code> — the same model the bundled data sets parse
+  into. It prefers the English translation and falls back to the first one, so a
+  German-only entry still appears; it joins muscle names, preferring
+  <code>name_en</code> over the Latin name; it flattens equipment objects to
+  names; and it strips HTML from descriptions, because the card shows plain
+  text. Entries with no usable translation are dropped rather than rendered
+  blank.
+</p>
+
+<h3>Loading, success and error states</h3>
+<table class="data">
+  <tr><th style="width:18%">State</th><th>What the user sees</th><th style="width:30%">Trigger</th></tr>
+  <tr><td><strong>Loading</strong></td><td>A progress indicator in the grid area; the header, search field and filter pills stay usable.</td><td>The request is in flight.</td></tr>
+  <tr><td><strong>Success (network)</strong></td><td>The catalogue, with the attribution line at the foot of the list.</td><td>HTTP 200 with at least one parsable result.</td></tr>
+  <tr><td><strong>Fallback</strong></td><td>The bundled catalogue plus a banner: “Offline catalogue — wger.de couldn't be reached. <u>Retry</u>”.</td><td>Timeout, socket error, non-200, invalid JSON, or an empty result list.</td></tr>
+  <tr><td><strong>Error</strong></td><td>An error state with a retry, only when both sources fail.</td><td>The bundled assets cannot be read either.</td></tr>
+</table>
+<p>
+  Failures are collapsed into one <code>ExerciseApiException</code> at the
+  client boundary, so no screen deals in socket errors or status codes. The
+  policy — network first, bundled second, error only if both fail — lives in
+  <code>ExerciseCatalog.load</code>, which is tested on its own with a fake
+  client: a client that throws must produce a bundled result with
+  <code>isOffline</code> true, and a client that returns an empty list must do
+  the same.
+</p>
+
+<h3>What would be harder without it</h3>
+<p>
+  Without the API, the catalogue would be whatever shipped in the assets — 
+  correct but frozen, and blind to exercises the user actually wants. Without
+  the fallback, the library would be empty in the one place the app is used
+  most. Without the collapse at the boundary, every screen with a catalogue
+  would carry its own timeout handling and its own error copy, and they would
+  drift.
+</p>
+
+<h2>7.4 Tests and verification</h2>
+<p>
+  The suite holds <strong>286 tests</strong>. Three of them are worth naming
+  because they test the parts that would be expensive to get wrong:
+</p>
+<ul>
+  <li><strong>The migration.</strong> A version-3 database is built by hand in
+  the test — old tables, old primary keys, rows with no owner — and then opened
+  by the current code. The test asserts that every row survived, that it belongs
+  to the device account, and that the new primary key is <code>(userId, id)</code>.
+  Rewinding <code>user_version</code> on a current database would prove only
+  that the migration runs.</li>
+  <li><strong>The account switch.</strong> Signing in as somebody else must open
+  their store and dispose the previous one. The test asserts the new store's
+  contents and that adding a listener to the old store throws.</li>
+  <li><strong>The counting rules.</strong> A planned session and an uncompleted
+  set must not move any figure. The tests state that directly, which is how the
+  weekly-goal defect in Section 6 became a failing test rather than an opinion.</li>
+</ul>
+<p>
+  <code>dart format --set-exit-if-changed</code> and <code>flutter analyze</code>
+  are clean, and every commit in the history was required to be green on its
+  own.
+</p>
+
+<h2>7.5 The DevTools case</h2>
+<p>
+  The documented case is the release APK's size budget. Building with
+  <code>--analyze-size</code> and opening the analysis in DevTools' App Size
+  tool showed a 20 MB APK: 11.75 MB engine, 6.75 MB Dart AOT, 1.24 MB assets.
+  Inside the AOT, <code>package:plus_one</code> — every screen, provider,
+  repository and widget in the app — is <strong>281 KB</strong>, while
+  <code>flutter_svg</code> and its parser stack are <strong>≈380 KB</strong> for
+  five icons that total 1.1 KB on disk. The tool also confirmed that Material
+  icons tree-shake from 1.6 MB to 4.8 KB, so the icon font is not the cost it is
+  often assumed to be.
+</p>
+<p>
+  The decision was to keep <code>flutter_svg</code> — 1.9% of the APK, and
+  replacing the icon pipeline would be a design change disguised as an
+  optimisation — and to record it, with the order in which it would be cut if
+  the budget ever mattered. <code>docs/DEVTOOLS.md</code> also documents the
+  frame that a 12 000-iteration PBKDF2 verify blocked on the UI isolate (105 ms,
+  measured), and why that work now runs through <code>compute</code>.
+</p>
+
+<!-- ============================================================ REFS -->
+<h1><span class="num">Section 08</span>References</h1>
+
+<h2>Packages (pub.dev)</h2>
+<table class="data">
+  <tr><th style="width:26%">Package</th><th class="n" style="width:9%">Version</th><th>Used for</th></tr>
+  <tr><td><code>provider</code></td><td class="n">6.1.5+1</td><td><code>ChangeNotifier</code> state shared across screens.</td></tr>
+  <tr><td><code>sqflite</code></td><td class="n">2.4.4+1</td><td>The local SQLite database, its schema and migrations.</td></tr>
+  <tr><td><code>path</code></td><td class="n">1.9.1</td><td>Platform-correct database paths.</td></tr>
+  <tr><td><code>http</code></td><td class="n">1.6.0</td><td>The wger REST client.</td></tr>
+  <tr><td><code>crypto</code></td><td class="n">3.0.7</td><td>HMAC-SHA256 for PBKDF2 password hashing.</td></tr>
+  <tr><td><code>intl</code></td><td class="n">0.20.3</td><td>Date formatting (weekdays, month names, relative weeks).</td></tr>
+  <tr><td><code>google_fonts</code></td><td class="n">9.0.0</td><td>Resolves Inter and Barlow Condensed from bundled assets.</td></tr>
+  <tr><td><code>flutter_svg</code></td><td class="n">2.3.0</td><td>Lucide interface icons drawn as vectors.</td></tr>
+  <tr><td><code>equatable</code></td><td class="n">2.1.0</td><td>Value equality on models, so tests compare meaning not identity.</td></tr>
+  <tr><td><code>flutter_lints</code></td><td class="n">6.0.0</td><td>The analyzer rule set.</td></tr>
+  <tr><td><code>sqflite_common_ffi</code></td><td class="n">2.4.3</td><td>Real SQLite in tests, without a device.</td></tr>
+  <tr><td><code>flutter_launcher_icons</code></td><td class="n">0.14.4</td><td>Generates the Android icon and its adaptive variant.</td></tr>
+  <tr><td><code>flutter_native_splash</code></td><td class="n">2.4.8</td><td>Generates the launch screen.</td></tr>
+</table>
+
+<h2>APIs, data sets and assets</h2>
+<table class="data">
+  <tr><th style="width:30%">Source</th><th>Use and licence</th></tr>
+  <tr><td><a href="https://wger.de/api/v2/">wger REST API</a></td><td><code>/api/v2/exerciseinfo/</code> — the live exercise catalogue. CC BY-SA 3.0/4.0 per entry; attributed in the app and in <code>docs/ATTRIBUTION.md</code>.</td></tr>
+  <tr><td><a href="https://github.com/exercemus/exercises">exercemus/exercises</a></td><td>Bundled offline catalogue: tips, tempo and variations. MIT, © 2022 exercemus.</td></tr>
+  <tr><td><a href="https://github.com/yuhonas/free-exercise-db">free-exercise-db</a></td><td>Bundled offline catalogue: images and level. The Unlicense (public domain).</td></tr>
+  <tr><td><a href="https://lucide.dev">Lucide</a></td><td>Interface icons. ISC licence.</td></tr>
+  <tr><td>Inter, Barlow Condensed</td><td>Typefaces, bundled as TTFs under the SIL Open Font License 1.1.</td></tr>
+</table>
+
+<h2>Documentation and specifications consulted</h2>
+<ul>
+  <li>Flutter documentation: <em>Navigation and routing</em>, <em>State management with Provider</em>, <em>Internationalization and fonts</em> — <a href="https://docs.flutter.dev">docs.flutter.dev</a>.</li>
+  <li>Flutter DevTools documentation: <em>App Size tool</em> and <em>Performance view</em> — <a href="https://docs.flutter.dev/tools/devtools">docs.flutter.dev/tools/devtools</a>.</li>
+  <li>Dart documentation: <em>Isolates and compute</em>, <em>Effective Dart</em> — <a href="https://dart.dev">dart.dev</a>.</li>
+  <li><code>provider</code>, <code>sqflite</code>, <code>http</code>, <code>crypto</code>, <code>google_fonts</code>, <code>flutter_svg</code> package documentation on pub.dev.</li>
+  <li>RFC 8018, <em>PKCS #5: Password-Based Cryptography Specification</em> — the PBKDF2 definition (Algorithm 2).</li>
+  <li>OWASP, <em>Password Storage Cheat Sheet</em> — iteration counts, salts and constant-time comparison.</li>
+  <li>SQLite documentation: <em>ALTER TABLE</em> limits (why the v4 migration rebuilds tables rather than altering a primary key).</li>
+</ul>
+
+<h2>AI tools</h2>
+<p>
+  AI assistance was used during the project as a pair-programming and drafting
+  assistant, under the author's direction: proposing implementations, writing
+  boilerplate, reviewing diffs, and helping to draft documentation. Every change
+  was reviewed, run and tested before it was committed, and the architecture,
+  scope decisions, design mapping and the choices documented in this paper were
+  made by the author. No AI tool generated the application's data, and no
+  service handles the user's training data.
+</p>
+<p>
+  The agent used was <strong>OpenCode</strong> (open-source coding agent) running
+  <strong>DeepSeek V4.1 Flash Free</strong>, in a terminal on Linux, with access
+  to the repository and its test suite.
+</p>
+
+<h2>Design</h2>
+<ul>
+  <li>Figma design file “Form design” — the source of truth for layout, type
+  scale and colour; the frames used for the sign-in flow, the library, the
+  workout screens and the profile are referenced by node in the commit history.</li>
+</ul>
+
+</body>
+</html>
