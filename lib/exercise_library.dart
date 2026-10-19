@@ -60,6 +60,71 @@ class LibraryExercise {
   /// Optional variation names
   final List<String>? variations;
 
+  /// Stable identity for an entry.
+  ///
+  /// The catalogue is keyed by name because that is the only field both
+  /// sources agree on, normalised so "3/4 Sit-Up" and "3-4 sit up" are one
+  /// exercise. Keeping an entry needs the same key to find it again after a
+  /// restart, so the normalisation lives on the entry rather than in whichever
+  /// loader happened to build it.
+  String get id => keyFor(name);
+
+  /// The key two spellings of the same exercise share.
+  static String keyFor(String name) =>
+      name.toLowerCase().replaceAll(RegExp('[^a-z0-9]+'), '');
+
+  /// This entry as plain JSON, for the saved-exercises table.
+  ///
+  /// Every field, not just the ones the card draws: a saved entry is a copy of
+  /// something the catalogue may not be able to hand back - the wger page it
+  /// came from is one request away and the app may well be offline - so what
+  /// is stored has to stand on its own.
+  Map<String, Object?> toJson() => {
+    'name': name,
+    'primaryMuscle': primaryMuscle,
+    'secondaryMuscle': secondaryMuscle,
+    'instructions': instructions,
+    'equipment': equipment,
+    'category': category,
+    'level': level,
+    'force': force,
+    'images': images,
+    'tips': tips,
+    'video': video,
+    'variations': variations,
+  };
+
+  /// Rebuilds an entry from [toJson]'s output.
+  ///
+  /// Tolerant field by field: a saved row outlives the code that wrote it, and
+  /// an entry missing one field beats a screen that cannot open.
+  static LibraryExercise fromJson(Map<String, dynamic> json) {
+    return LibraryExercise(
+      name: _text(json['name']),
+      primaryMuscle: _text(json['primaryMuscle']),
+      secondaryMuscle: _optionalText(json['secondaryMuscle']),
+      instructions: _text(json['instructions']),
+      equipment: _textList(json['equipment']),
+      category: _text(json['category']),
+      level: _optionalText(json['level']) ?? 'beginner',
+      force: _optionalText(json['force']) ?? 'pull',
+      images: _textList(json['images']),
+      tips: _optionalText(json['tips']),
+      video: _optionalText(json['video']),
+      variations: json['variations'] == null
+          ? null
+          : _textList(json['variations']),
+    );
+  }
+
+  static String _text(Object? raw) => raw is String ? raw : '';
+
+  static String? _optionalText(Object? raw) =>
+      raw is String && raw.isNotEmpty ? raw : null;
+
+  static List<String> _textList(Object? raw) =>
+      raw is List ? [for (final item in raw) '$item'] : const [];
+
   /// Parse from exercemus JSON object.
   static LibraryExercise fromExercemus(Map<String, dynamic> map) {
     // Muscles are lists in exercemus; the catalog uses the first entry.
@@ -195,10 +260,15 @@ class ExerciseLibrary {
     final merged = <String, LibraryExercise>{};
     for (final map in exercemus) {
       final exercise = LibraryExercise.fromExercemus(map);
+      // No name, no identity: the catalogue merges by name and the cards show
+      // it, so an entry that keys to nothing is nothing to show. The wger
+      // client drops its nameless entries for the same reason.
+      if (exercise.id.isEmpty) continue;
       merged[_key(exercise.name)] = exercise;
     }
     for (final map in freeDb) {
       final fromDb = LibraryExercise.fromFreeDb(map);
+      if (fromDb.id.isEmpty) continue;
       final key = _key(fromDb.name);
       final existing = merged[key];
       merged[key] = existing == null
@@ -232,6 +302,5 @@ class ExerciseLibrary {
   }
 
   /// "3/4 Sit-Up" and "3-4 sit up" are the same exercise.
-  static String _key(String name) =>
-      name.toLowerCase().replaceAll(RegExp('[^a-z0-9]+'), '');
+  static String _key(String name) => LibraryExercise.keyFor(name);
 }

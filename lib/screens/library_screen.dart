@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../data/exercise_catalog.dart';
 import '../exercise_library.dart';
+import '../models/saved_exercise.dart';
 import '../models/workout.dart';
 import '../providers/workout_provider.dart';
 import '../theme/app_colors.dart';
@@ -582,6 +583,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
   // --------------------------------------------------------------- discover
 
   Widget _discover() {
+    final provider = context.watch<WorkoutProvider>();
+
     return FutureBuilder<ExerciseCatalogResult>(
       future: _exercisesFuture,
       builder: (context, snapshot) {
@@ -633,8 +636,14 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   mainAxisExtent: 228,
                 ),
                 itemCount: exercises.length,
-                itemBuilder: (context, index) =>
-                    _ExerciseCard(exercise: exercises[index]),
+                itemBuilder: (context, index) {
+                  final exercise = exercises[index];
+                  return _ExerciseCard(
+                    exercise: exercise,
+                    saved: provider.isSaved(exercise.id),
+                    onToggleSaved: () => provider.toggleSavedExercise(exercise),
+                  );
+                },
               ),
           ],
         );
@@ -739,6 +748,45 @@ class _LibraryScreenState extends State<LibraryScreen> {
   // --------------------------------------------------------------- saved
 
   Widget _saved() {
+    final provider = context.watch<WorkoutProvider>();
+    final saved = provider.savedExercises;
+
+    if (saved.isEmpty) {
+      return _emptySaved();
+    }
+
+    final visible = saved
+        .where(
+          (entry) =>
+              _matches(entry.exercise.name) ||
+              // The row shows the muscle it trains, so the search field has to
+              // find it by that too - the same terms the catalogue matches on,
+              // since a saved entry came from there.
+              _matches(entry.exercise.primaryMuscle),
+        )
+        .toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _sectionHeading('SAVED EXERCISES', _count(visible.length, 'exercise')),
+        const SizedBox(height: 12),
+        if (visible.isEmpty)
+          _note('No saved exercises match "${_query.trim()}".')
+        else
+          for (final entry in visible)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _SavedRow(
+                entry: entry,
+                onRemove: () => provider.toggleSavedExercise(entry.exercise),
+              ),
+            ),
+      ],
+    );
+  }
+
+  Widget _emptySaved() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1105,6 +1153,110 @@ class _RotationRow extends StatelessWidget {
   }
 }
 
+/// The bookmark that keeps an exercise.
+///
+/// Filled when it is kept, outlined when it is not, so the two states read at
+/// a glance in a grid of identical cards.
+class _Bookmark extends StatelessWidget {
+  const _Bookmark({required this.isSaved, required this.onToggle});
+
+  final bool isSaved;
+  final VoidCallback onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      onPressed: onToggle,
+      tooltip: isSaved ? 'Remove from saved' : 'Save this exercise',
+      visualDensity: VisualDensity.compact,
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+      icon: Icon(
+        isSaved ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+        size: 20,
+        color: isSaved ? AppColors.ink : AppColors.sage600,
+      ),
+      style: IconButton.styleFrom(
+        backgroundColor: AppColors.white.withValues(alpha: 0.9),
+        shape: const CircleBorder(),
+      ),
+    );
+  }
+}
+
+/// One kept exercise, with the way out of the list.
+class _SavedRow extends StatelessWidget {
+  const _SavedRow({required this.entry, required this.onRemove});
+
+  final SavedExercise entry;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = context.text;
+    final exercise = entry.exercise;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.hairline),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              color: AppColors.sage50,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(
+              Icons.bookmark_rounded,
+              size: 24,
+              color: AppColors.ink,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  exercise.name,
+                  style: text.exerciseMeta.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  '${exercise.primaryMuscle} · saved '
+                  '${DateFormat('MMM d').format(entry.savedAt)}',
+                  style: text.annotation.copyWith(color: AppColors.sage600),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            onPressed: onRemove,
+            tooltip: 'Remove from saved',
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(
+              Icons.bookmark_remove_rounded,
+              size: 20,
+              color: AppColors.sage600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// The design's outlined secondary action.
 class _OutlineButton extends StatelessWidget {
   const _OutlineButton({
@@ -1135,11 +1287,20 @@ class _OutlineButton extends StatelessWidget {
   }
 }
 
-/// One catalogue entry.
+/// One catalogue entry, with its bookmark.
 class _ExerciseCard extends StatelessWidget {
-  const _ExerciseCard({required this.exercise});
+  const _ExerciseCard({
+    required this.exercise,
+    required this.saved,
+    required this.onToggleSaved,
+  });
 
   final LibraryExercise exercise;
+
+  /// Whether the user has kept this one already.
+  final bool saved;
+
+  final VoidCallback onToggleSaved;
 
   @override
   Widget build(BuildContext context) {
@@ -1155,31 +1316,43 @@ class _ExerciseCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: double.infinity,
-            height: 80,
-            decoration: BoxDecoration(
-              color: AppColors.sage50,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: exercise.images.isNotEmpty
-                ? ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: Image.asset(
-                      exercise.images.first,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => const Icon(
+          Stack(
+            children: [
+              Container(
+                width: double.infinity,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: AppColors.sage50,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: exercise.images.isNotEmpty
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Image.asset(
+                          exercise.images.first,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) => const Icon(
+                            Icons.fitness_center_rounded,
+                            size: 30,
+                            color: AppColors.ink,
+                          ),
+                        ),
+                      )
+                    : const Icon(
                         Icons.fitness_center_rounded,
                         size: 30,
                         color: AppColors.ink,
                       ),
-                    ),
-                  )
-                : const Icon(
-                    Icons.fitness_center_rounded,
-                    size: 30,
-                    color: AppColors.ink,
-                  ),
+              ),
+              // Kept against the corner of the image rather than under the
+              // text, so the card's lower half reads the same whatever the
+              // title's length.
+              Positioned(
+                top: 4,
+                right: 4,
+                child: _Bookmark(isSaved: saved, onToggle: onToggleSaved),
+              ),
+            ],
           ),
           const SizedBox(height: 8),
           // Flexible from here down, so a long title at a large text scale

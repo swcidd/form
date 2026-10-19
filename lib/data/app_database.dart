@@ -18,12 +18,13 @@ class AppDatabase {
   final String fileName;
 
   /// Current schema version. Increment with every migration.
-  static const int version = 1;
+  static const int version = 2;
 
   static const String workoutsTable = 'workouts';
   static const String exerciseLogsTable = 'exercise_logs';
   static const String setsTable = 'sets';
   static const String profileTable = 'profile';
+  static const String savedExercisesTable = 'saved_exercises';
 
   Database? _database;
 
@@ -140,12 +141,36 @@ class AppDatabase {
     // scanned per query.
     batch.execute('CREATE INDEX idx_workouts_date ON $workoutsTable (date)');
 
+    batch.execute(_savedExercisesDdl);
+
     await batch.commit(noResult: true);
   }
 
+  /// The saved-exercises table's DDL, shared by a fresh install and the
+  /// migration.
+  ///
+  /// One payload column rather than a column per field: a saved entry is a
+  /// copy of a catalogue record the app cannot ask for again while offline,
+  /// and nothing queries inside it — the list reads and deletes whole rows.
+  static const String _savedExercisesDdl =
+      '''
+    CREATE TABLE $savedExercisesTable (
+      id      TEXT    PRIMARY KEY,
+      savedAt INTEGER NOT NULL,
+      payload TEXT    NOT NULL
+    )
+  ''';
+
+  static void _createSavedExercises(DatabaseExecutor db) {
+    db.execute(_savedExercisesDdl);
+  }
+
   Future<void> _upgrade(Database db, int from, int to) async {
-    // Only version 1 exists so far, so there is nothing to migrate from. Future
-    // steps go here as `if (from < 2) { ... }`, never as a wholesale recreate:
-    // dropping the tables would throw away the user's training history.
+    // v2 adds saved exercises. Added as its own table, never as a recreate:
+    // dropping the others would throw away the user's training history to gain
+    // one feature.
+    if (from < 2) {
+      _createSavedExercises(db);
+    }
   }
 }

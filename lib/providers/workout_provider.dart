@@ -3,9 +3,11 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../data/workout_repository.dart';
+import '../exercise_library.dart';
 import '../models/exercise.dart';
 import '../models/metric.dart';
 import '../models/profile_stats.dart';
+import '../models/saved_exercise.dart';
 import '../models/workout.dart';
 
 /// Single source of truth for workout state.
@@ -25,12 +27,14 @@ import '../models/workout.dart';
 /// writes it back, so a restart shows the same account. Without one - the
 /// default in tests and in an injected app - nothing is read or written and
 /// the constructor fixtures are the whole world. Weekly goal and metrics stay
-/// in memory either way; the schema has no column for them yet.
+/// in memory either way; the schema has no column for them yet. Saved exercises
+/// are kept too, because the wger page they came from is one request away.
 class WorkoutProvider extends ChangeNotifier {
   WorkoutProvider({
     DateTime? today,
     List<Workout>? workouts,
     List<Metric>? metrics,
+    List<SavedExercise>? saved,
     ProfileStats? profile,
     this.repository,
   }) : _today = _dayOnly(today ?? DateTime.now()),
@@ -39,6 +43,7 @@ class WorkoutProvider extends ChangeNotifier {
        // and replace entries in place.
        _workouts = List.of(workouts ?? const []),
        _metrics = List.of(metrics ?? const []),
+       _saved = List.of(saved ?? const []),
        _profile = profile ?? ProfileStats.empty() {
     _sort();
   }
@@ -46,6 +51,7 @@ class WorkoutProvider extends ChangeNotifier {
   final DateTime _today;
   final List<Workout> _workouts;
   final List<Metric> _metrics;
+  final List<SavedExercise> _saved;
   ProfileStats _profile;
 
   /// The durable copy, or null when this provider is memory-only.
@@ -77,6 +83,9 @@ class WorkoutProvider extends ChangeNotifier {
         ..addAll(stored);
       _sort();
       if (profile != null) _profile = profile;
+      _saved
+        ..clear()
+        ..addAll(await store.loadSavedExercises());
       _advanceNextId();
     } catch (error) {
       debugPrint('Could not read the store, starting empty: $error');
@@ -126,6 +135,22 @@ class WorkoutProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> _persistSavedExercise(SavedExercise saved) async {
+    try {
+      await repository?.saveSavedExercise(saved);
+    } catch (error) {
+      debugPrint('Could not save the exercise: $error');
+    }
+  }
+
+  Future<void> _forgetSavedExercise(String id) async {
+    try {
+      await repository?.deleteSavedExercise(id);
+    } catch (error) {
+      debugPrint('Could not forget the exercise: $error');
+    }
+  }
+
   // --- Reads -----------------------------------------------------------------
 
   DateTime get today => _today;
@@ -133,6 +158,12 @@ class WorkoutProvider extends ChangeNotifier {
   List<Workout> get workouts => List.unmodifiable(_workouts);
 
   List<Metric> get metrics => List.unmodifiable(_metrics);
+
+  /// Exercises the user kept, newest first.
+  List<SavedExercise> get savedExercises => List.unmodifiable(_saved);
+
+  bool isSaved(String exerciseId) =>
+      _saved.any((saved) => saved.id == exerciseId);
 
   ProfileStats get profile => _profile;
 
@@ -293,6 +324,36 @@ class WorkoutProvider extends ChangeNotifier {
   }
 
   // --- Writes ----------------------------------------------------------------
+
+  /// Keeps [exercise] in the saved list, or drops it if it is already there.
+  ///
+  /// One verb because the UI has one control: a bookmark that is either on or
+  /// off. An entry already kept drops rather than re-inserting, which keeps the
+  /// order honest - "newest first" is the order things were kept, and keeping
+  /// something again does not make it newly kept.
+  void toggleSavedExercise(LibraryExercise exercise, {DateTime? at}) {
+    final existing = _saved.indexWhere((saved) => saved.id == exercise.id);
+    if (existing >= 0) {
+      final entry = _saved.removeAt(existing);
+      unawaited(_forgetSavedExercise(entry.id));
+      notifyListeners();
+      return;
+    }
+
+    final entry = SavedExercise(
+      exercise: exercise,
+      savedAt: at ?? DateTime.now(),
+    );
+    // Kept in the store's own order - the moment it was kept, newest first -
+    // so the list cannot reorder itself across a restart when a caller hands
+    // over a time rather than letting the clock be the clock.
+    final position = _saved.indexWhere(
+      (saved) => !saved.savedAt.isAfter(entry.savedAt),
+    );
+    _saved.insert(position < 0 ? _saved.length : position, entry);
+    unawaited(_persistSavedExercise(entry));
+    notifyListeners();
+  }
 
   /// Adds a workout, assigning an id when the caller did not pick one, and
   /// returns the stored copy.

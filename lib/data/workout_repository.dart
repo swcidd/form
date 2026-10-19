@@ -1,9 +1,12 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 
+import '../exercise_library.dart';
 import '../models/exercise.dart';
 import '../models/profile_stats.dart';
+import '../models/saved_exercise.dart';
 import '../models/workout.dart';
 import 'app_database.dart';
 
@@ -25,6 +28,45 @@ class WorkoutRepository {
   Future<Database> get _db => _app.open();
 
   // --- Reads ----------------------------------------------------------------
+
+  /// Exercises the user kept, newest first.
+  ///
+  /// A row whose payload no longer decodes is skipped rather than thrown: one
+  /// unreadable entry should cost the user that entry, not their library and
+  /// not the launch.
+  Future<List<SavedExercise>> loadSavedExercises() async {
+    final db = await _db;
+    final rows = await db.query(
+      AppDatabase.savedExercisesTable,
+      orderBy: 'savedAt DESC',
+    );
+
+    final saved = <SavedExercise>[];
+    for (final row in rows) {
+      final payload = row['payload'];
+      if (payload is! String) continue;
+      try {
+        final decoded = jsonDecode(payload);
+        if (decoded is! Map<String, dynamic>) continue;
+        final exercise = LibraryExercise.fromJson(decoded);
+        // A payload that keys to nothing is not an exercise: it has no
+        // identity to match the bookmark against, so it would show as a blank
+        // row and share a key with every other nameless entry.
+        if (exercise.id.isEmpty) continue;
+        saved.add(
+          SavedExercise(
+            exercise: exercise,
+            savedAt: DateTime.fromMillisecondsSinceEpoch(
+              row['savedAt']! as int,
+            ),
+          ),
+        );
+      } on FormatException catch (error) {
+        debugPrint('Skipping an unreadable saved exercise: $error');
+      }
+    }
+    return saved;
+  }
 
   Future<List<Workout>> loadWorkouts() async {
     final db = await _db;
@@ -132,6 +174,26 @@ class WorkoutRepository {
 
   // --- Writes ---------------------------------------------------------------
 
+  Future<void> saveSavedExercise(SavedExercise saved) async {
+    final db = await _db;
+    // Replace rather than insert: the key is the exercise, so keeping
+    // something already kept has one row, not two with different timestamps.
+    await db.insert(AppDatabase.savedExercisesTable, {
+      'id': saved.id,
+      'savedAt': saved.savedAt.millisecondsSinceEpoch,
+      'payload': jsonEncode(saved.exercise.toJson()),
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  Future<void> deleteSavedExercise(String id) async {
+    final db = await _db;
+    await db.delete(
+      AppDatabase.savedExercisesTable,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
   Future<void> replaceWorkout(Workout workout) async {
     final db = await _db;
     await db.transaction((txn) async {
@@ -219,6 +281,7 @@ class WorkoutRepository {
     await db.delete(AppDatabase.exerciseLogsTable);
     await db.delete(AppDatabase.workoutsTable);
     await db.delete(AppDatabase.profileTable);
+    await db.delete(AppDatabase.savedExercisesTable);
   }
 
   // --- Mapping --------------------------------------------------------------
