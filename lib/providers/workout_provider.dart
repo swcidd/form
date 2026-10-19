@@ -58,6 +58,19 @@ class WorkoutProvider extends ChangeNotifier {
   final WorkoutRepository? repository;
   int _nextId = 0;
   int _weeklyGoal = 4;
+  bool _loaded = false;
+
+  /// Whether this provider's copy of the account is complete.
+  ///
+  /// False from construction until [load] has finished, which is what the gate
+  /// holds the app window on: a store that has not read yet reads as an empty
+  /// account, and showing it would put a true-looking "0 sessions this week" in
+  /// front of somebody who has twenty.
+  ///
+  /// True from the start without a [repository]: with nothing to read there is
+  /// nothing to wait for, and a provider a test handed fixtures means them to be
+  /// the account.
+  bool get isLoaded => repository == null || _loaded;
 
   static DateTime _dayOnly(DateTime date) =>
       DateTime(date.year, date.month, date.day);
@@ -91,6 +104,10 @@ class WorkoutProvider extends ChangeNotifier {
       debugPrint('Could not read the store, starting empty: $error');
     }
 
+    // Loaded either way, and on purpose. A store that could not be read is an
+    // empty account rather than an app that never opens - the same reason the
+    // failure above is swallowed instead of thrown.
+    _loaded = true;
     notifyListeners();
   }
 

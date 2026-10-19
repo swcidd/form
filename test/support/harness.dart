@@ -25,12 +25,12 @@ AuthProvider signedInAuth() => AuthProvider.resolved(
 
 /// The app, signed in as the device account.
 Widget emptyApp() =>
-    PlusOneApp(provider: WorkoutProvider(), auth: signedInAuth());
+    PlusOneApp(openStore: (_) => WorkoutProvider(), auth: signedInAuth());
 
 /// An empty account whose provider the test holds a reference to, so it can
 /// assert on what the UI did to the store.
 Widget emptyAppWith(WorkoutProvider provider) =>
-    PlusOneApp(provider: provider, auth: signedInAuth());
+    PlusOneApp(openStore: (_) => provider, auth: signedInAuth());
 
 /// The app with the seeded sessions behind it, for tests that assert on a
 /// populated screen.
@@ -39,14 +39,14 @@ Widget emptyAppWith(WorkoutProvider provider) =>
 /// application ships no sample data. Leaving that implicit is what let four
 /// tests pass against fixtures the app itself no longer had.
 Widget seededApp({DateTime? today}) => PlusOneApp(
-  provider: seededProvider(today: today),
+  openStore: (_) => seededProvider(today: today),
   auth: signedInAuth(),
 );
 
 /// The app on its first launch: nobody signed in, the store behind the sign-in
 /// screens held by the test so it can be driven.
 Widget signedOutApp({AuthProvider? auth}) => PlusOneApp(
-  provider: WorkoutProvider(),
+  openStore: (_) => WorkoutProvider(),
   auth: auth ?? AuthProvider.resolved(),
 );
 
@@ -55,7 +55,7 @@ Widget signedOutApp({AuthProvider? auth}) => PlusOneApp(
 /// The store never answers, so the gate stays on its splash — which is the one
 /// state a test cannot otherwise hold still.
 Widget checkingApp({AuthProvider? auth}) => PlusOneApp(
-  provider: WorkoutProvider(),
+  openStore: (_) => WorkoutProvider(),
   auth: auth ?? AuthProvider(repository: FakeAuth()),
 );
 

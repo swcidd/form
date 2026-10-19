@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -5,7 +7,6 @@ import 'package:provider/provider.dart';
 import 'auth/local_auth_repository.dart';
 import 'data/app_database.dart';
 import 'data/workout_repository.dart';
-import 'models/session.dart';
 import 'navigation/app_tab.dart';
 import 'providers/auth_provider.dart';
 import 'providers/workout_provider.dart';
@@ -30,19 +31,23 @@ Future<void> main() async {
   GoogleFonts.config.allowRuntimeFetching = false;
 
   // Whoever is signed in is read first, and on purpose: it decides which
-  // account's training the next line reads. Both answers are in before the
-  // first frame, so a relaunch opens on the screen the user left behind rather
-  // than on a welcome screen that a moment later turns out to be wrong.
+  // account's training the app opens on, and a launch that showed the sign-in
+  // screen before taking it away would look exactly like having been signed
+  // out. The training itself is read behind the gate's splash, which is on
+  // screen by then - see [_StoreWindow].
   final database = AppDatabase();
   final auth = AuthProvider(repository: LocalAuthRepository(database));
-  final provider = WorkoutProvider(
-    repository: WorkoutRepository(database, userId: Session.deviceUserId),
-  );
 
   await auth.restore();
-  await provider.load();
 
-  runApp(PlusOneApp(provider: provider, auth: auth));
+  runApp(
+    PlusOneApp(
+      auth: auth,
+      openStore: (userId) => WorkoutProvider(
+        repository: WorkoutRepository(database, userId: userId),
+      ),
+    ),
+  );
 }
 
 /// Root of the application.
@@ -58,21 +63,22 @@ Future<void> main() async {
 /// "unknown route" error instead of this method quietly substituting the wrong
 /// screen.
 class PlusOneApp extends StatelessWidget {
-  const PlusOneApp({super.key, this.provider, this.auth});
+  const PlusOneApp({super.key, this.openStore, this.auth});
 
-  /// Injected state, or a fresh empty account when null.
+  /// Builds the store for one account, whoever is signed in.
   ///
-  /// [main] passes a provider backed by the SQLite store; null - the default
-  /// in tests - gets one that reads and writes nothing.
+  /// A function rather than a provider, because a session belongs to an
+  /// account: the app calls this with the id the session names, so signing in
+  /// as somebody else opens their training and the previous account's copy goes
+  /// with the widget that held it. [main] passes the SQLite one; null - the
+  /// default in tests - gets accounts that read and write nothing.
   ///
-  /// Exists so tests can drive the real application - same routes, same theme -
-  /// against known content. Without it a widget test can only ever see the
-  /// empty default, which is a state no user ever reaches after signing in.
-  final WorkoutProvider? provider;
+  /// The app takes ownership of what this returns and disposes it.
+  final WorkoutProvider Function(String userId)? openStore;
 
   /// Who is signed in, or null for a resolved "nobody" with no store behind it.
   ///
-  /// Injected for the same reason as [provider]: a widget test about a screen
+  /// Injected for the same reason as [openStore]: a widget test about a screen
   /// wants the shell, not a sign-in flow.
   final AuthProvider? auth;
 
@@ -155,7 +161,6 @@ class PlusOneApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final state = provider;
     final identity = auth;
 
     return MultiProvider(
@@ -166,14 +171,8 @@ class PlusOneApp extends StatelessWidget {
           ChangeNotifierProvider<AuthProvider>(
             create: (_) => AuthProvider.resolved(),
           ),
-        if (state != null)
-          ChangeNotifierProvider<WorkoutProvider>.value(value: state)
-        else
-          ChangeNotifierProvider<WorkoutProvider>(
-            create: (_) => WorkoutProvider(),
-          ),
       ],
-      child: const _Gate(),
+      child: _Gate(openStore: openStore),
     );
   }
 }
@@ -185,17 +184,59 @@ class PlusOneApp extends StatelessWidget {
 /// them instead of starting over. Swapping the whole window gives each side its
 /// own navigator, so signing out cannot leave anything of the session's behind.
 class _Gate extends StatelessWidget {
-  const _Gate();
+  const _Gate({this.openStore});
+
+  /// Builds the store for the signed-in account, or null in a test that has no
+  /// store behind the app.
+  final WorkoutProvider Function(String userId)? openStore;
 
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
+    final session = auth.session;
 
-    if (!auth.isSignedIn) {
+    if (session == null) {
       return PlusOneApp._window(
         key: const ValueKey('sign-in'),
         home: const _SignInHome(),
         routes: PlusOneApp.signInRoutes,
+      );
+    }
+
+    // One store per account, keyed on whose it is: signing in as somebody else
+    // builds theirs and disposes the copy the previous account was reading,
+    // rather than letting two accounts' sessions share one object.
+    final open = openStore ?? (_) => WorkoutProvider();
+
+    return ChangeNotifierProvider<WorkoutProvider>(
+      key: ValueKey(session.userId),
+      create: (_) {
+        final store = open(session.userId);
+        unawaited(store.load());
+        return store;
+      },
+      child: const _StoreWindow(),
+    );
+  }
+}
+
+/// The app's window, held on the splash until the account's training is read.
+///
+/// Every screen behind the gate reads counts off the store, and one that has not
+/// read yet is an empty account: showing it would put a true-looking "0 sessions
+/// this week" in front of somebody who has twenty. The splash is the one the
+/// session check uses, so the two waits look like a single one.
+class _StoreWindow extends StatelessWidget {
+  const _StoreWindow();
+
+  @override
+  Widget build(BuildContext context) {
+    final store = context.watch<WorkoutProvider>();
+
+    if (!store.isLoaded) {
+      return PlusOneApp._window(
+        key: const ValueKey('opening'),
+        home: const _SessionSplash(),
       );
     }
 

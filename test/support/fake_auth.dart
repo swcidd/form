@@ -83,7 +83,10 @@ class FakeAuth implements AuthRepository {
     if (error != null) throw error;
     lastEmail = email;
     lastPassword = password;
-    return session = Session(
+    // A session the test already set is the one this signs in as: the fake
+    // stands in for a store that knows which account the address belongs to,
+    // and a test that set one has said who it is.
+    return session ??= Session(
       userId: 'acct_1',
       issuedAt: DateTime(2026, 10, 19),
       email: email,

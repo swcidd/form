@@ -489,6 +489,9 @@ void main() {
       await provider.load();
 
       expect(provider.workouts, isEmpty);
+      // Unreadable is still read: the app opens on an empty account rather
+      // than on a splash that never leaves.
+      expect(provider.isLoaded, isTrue);
 
       final stored = provider.addWorkout(
         Workout(
