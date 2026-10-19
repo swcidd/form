@@ -257,7 +257,7 @@ screenshots side by side rather than by reading either screen's code.
 | Requirement | Where |
 | --- | --- |
 | REST API over `http`, JSON, loading/success/error | `lib/exercise_library.dart` + `Discover` |
-| 4+ screens | 8: welcome, sign in, create account, home, progress, workout, library, profile |
+| 4+ screens | 11: welcome, sign in, create account, home, progress, workout, library, profile, workout detail, set logger, summary |
 | 3+ reusable widgets | `AuthField`, `AuthAction`, `AppNavBar`, `WorkoutCard`, `SectionHeader`, `EmptyState`… |
 | Provider state management | `AuthProvider`, `WorkoutProvider` |
 | CRUD | Sessions, exercises, sets, profile, saved exercises |
