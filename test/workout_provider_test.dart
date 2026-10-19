@@ -154,6 +154,34 @@ void main() {
 
       expect(provider.focusWorkoutThisWeek?.id, 'second');
     });
+
+    test('the weekly goal counts finishes, not plans', () {
+      final provider = WorkoutProvider(
+        today: today,
+        workouts: [
+          workoutOn(today, status: WorkoutStatus.completed),
+          workoutOn(today.add(const Duration(days: 1)), id: 'planned'),
+        ],
+      );
+
+      // Both are in the week, but only one is work the user has done. The home
+      // tile, the profile target and the library's week card all read the
+      // second number, so a week of plans cannot read as a week of training.
+      expect(provider.workoutsInCurrentWeek, hasLength(2));
+      expect(provider.sessionsDoneThisWeek, 1);
+    });
+
+    test('a week of plans has nothing done', () {
+      final provider = WorkoutProvider(
+        today: today,
+        workouts: [
+          workoutOn(today),
+          workoutOn(today.add(const Duration(days: 2)), id: 'later'),
+        ],
+      );
+
+      expect(provider.sessionsDoneThisWeek, 0);
+    });
   });
 
   group('streak and consistency', () {

@@ -226,7 +226,7 @@ class _WeekRow extends StatelessWidget {
         children: [
           Expanded(
             child: StatTile(
-              value: '${provider.workoutsThisWeek}/${provider.weeklyGoal}',
+              value: '${provider.sessionsDoneThisWeek}/${provider.weeklyGoal}',
               label: 'Sessions',
               icon: Icons.event_available_outlined,
               caption: 'This week',
