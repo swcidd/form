@@ -1,0 +1,377 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+import 'package:plus_one/auth/auth_repository.dart';
+import 'package:plus_one/providers/auth_provider.dart';
+import 'package:plus_one/screens/app_shell.dart';
+import 'package:plus_one/screens/create_account_screen.dart';
+import 'package:plus_one/screens/sign_in_screen.dart';
+import 'package:plus_one/screens/welcome_screen.dart';
+import 'package:plus_one/widgets/auth_field.dart';
+
+import 'support/fake_auth.dart';
+import 'support/harness.dart';
+
+void main() {
+  useOfflineFonts();
+
+  /// The field carrying [label], however the screen has ordered them.
+  Finder fieldFor(String label) => find.descendant(
+    of: find.ancestor(of: find.text(label), matching: find.byType(AuthField)),
+    matching: find.byType(TextField),
+  );
+
+  /// A phone-shaped surface.
+  ///
+  /// The default test window is 800x600, and these screens are a full-height
+  /// hero over a form: at 600 tall the action sits below the fold, which is a
+  /// fact about the window rather than about the screen.
+  void usePhone(WidgetTester tester, {Size size = const Size(402, 874)}) {
+    tester.view.physicalSize = size * 2;
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+  }
+
+  /// Taps an action on a form, scrolling to it first.
+  Future<void> tapAction(WidgetTester tester, String label) async {
+    final finder = find.text(label).last;
+    await tester.ensureVisible(finder);
+    await tester.pumpAndSettle();
+    await tester.tap(finder);
+    await tester.pumpAndSettle();
+  }
+
+  group('the welcome screen', () {
+    testWidgets('offers all three ways in', (tester) async {
+      await tester.pumpWidget(signedOutApp());
+
+      expect(find.byType(WelcomeScreen), findsOneWidget);
+      expect(find.text('Create an account'), findsOneWidget);
+      expect(find.text('Log in'), findsOneWidget);
+      expect(find.text('Continue offline'), findsOneWidget);
+    });
+
+    testWidgets('opens the sign-in screen', (tester) async {
+      await tester.pumpWidget(signedOutApp());
+
+      await tapAction(tester, 'Log in');
+
+      expect(find.byType(SignInScreen), findsOneWidget);
+    });
+
+    testWidgets('opens the create-account screen', (tester) async {
+      await tester.pumpWidget(signedOutApp());
+
+      await tapAction(tester, 'Create an account');
+
+      expect(find.byType(CreateAccountScreen), findsOneWidget);
+    });
+
+    testWidgets('continuing offline goes on to the app itself', (tester) async {
+      final auth = AuthProvider(repository: FakeAuth());
+      // The app reads the stored session before the first frame; a test that
+      // drives the flow has to do the same, or it is looking at a splash.
+      await auth.restore();
+      await tester.pumpWidget(signedOutApp(auth: auth));
+
+      await tapAction(tester, 'Continue offline');
+
+      // The gate swapped the whole window: no sign-in screen anywhere, and the
+      // tabs are up.
+      expect(find.byType(AppShell), findsOneWidget);
+      expect(find.byType(WelcomeScreen), findsNothing);
+      expect(auth.session?.isGuest, isTrue);
+    });
+  });
+
+  group('signing in', () {
+    late FakeAuth fake;
+    late AuthProvider auth;
+
+    Future<void> openSignIn(WidgetTester tester) async {
+      usePhone(tester);
+      await tester.pumpWidget(signedOutApp(auth: auth));
+      await tapAction(tester, 'Log in');
+    }
+
+    setUp(() async {
+      fake = FakeAuth();
+      auth = AuthProvider(repository: fake);
+      await auth.restore();
+    });
+
+    testWidgets('an empty form says what is missing, and asks nobody', (
+      tester,
+    ) async {
+      await openSignIn(tester);
+
+      await tapAction(tester, 'Log in');
+
+      expect(find.text('Enter your email address.'), findsOneWidget);
+      expect(find.text('Enter your password.'), findsOneWidget);
+      expect(fake.lastEmail, isNull);
+    });
+
+    testWidgets('an address that cannot be one is refused before the store', (
+      tester,
+    ) async {
+      await openSignIn(tester);
+
+      await tester.enterText(fieldFor('EMAIL ADDRESS'), 'sam@example');
+      await tester.enterText(fieldFor('PASSWORD'), 'one-rep-more');
+      await tapAction(tester, 'Log in');
+
+      expect(
+        find.text('That does not look like an email address.'),
+        findsOneWidget,
+      );
+      expect(fake.lastEmail, isNull);
+    });
+
+    testWidgets('credentials that do not match are reported on the form', (
+      tester,
+    ) async {
+      fake.signInError = const AuthException(AuthFailure.invalidCredentials);
+      await openSignIn(tester);
+
+      await tester.enterText(fieldFor('EMAIL ADDRESS'), 'sam@example.com');
+      await tester.enterText(fieldFor('PASSWORD'), 'not-the-password');
+      await tapAction(tester, 'Log in');
+
+      expect(
+        find.text(
+          'That email and password do not match. Check both and try again.',
+        ),
+        findsOneWidget,
+      );
+      // Still on the form: a refusal is not a reason to lose what was typed.
+      expect(find.byType(SignInScreen), findsOneWidget);
+      expect(find.text('not-the-password'), findsOneWidget);
+    });
+
+    testWidgets('the right credentials open the app', (tester) async {
+      await openSignIn(tester);
+
+      await tester.enterText(fieldFor('EMAIL ADDRESS'), 'sam@example.com');
+      await tester.enterText(fieldFor('PASSWORD'), 'one-rep-more');
+      await tapAction(tester, 'Log in');
+
+      expect(fake.lastEmail, 'sam@example.com');
+      expect(fake.lastPassword, 'one-rep-more');
+      expect(find.byType(AppShell), findsOneWidget);
+    });
+
+    testWidgets('shows progress and locks the form while it waits', (
+      tester,
+    ) async {
+      fake.gate = Completer<void>();
+      await openSignIn(tester);
+
+      await tester.enterText(fieldFor('EMAIL ADDRESS'), 'sam@example.com');
+      await tester.enterText(fieldFor('PASSWORD'), 'one-rep-more');
+      await tester.ensureVisible(find.text('Log in').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Log in').last);
+      await tester.pump();
+
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      // A second tap cannot become a second request.
+      final field = tester.widget<TextField>(fieldFor('EMAIL ADDRESS'));
+      expect(field.enabled, isFalse);
+
+      fake.gate!.complete();
+      await tester.pumpAndSettle();
+      expect(find.byType(AppShell), findsOneWidget);
+    });
+
+    testWidgets('the eye shows and hides the password', (tester) async {
+      await openSignIn(tester);
+
+      expect(find.byTooltip('Show password'), findsOneWidget);
+      await tester.tap(find.byTooltip('Show password'));
+      await tester.pumpAndSettle();
+
+      expect(find.byTooltip('Hide password'), findsOneWidget);
+      final field = tester.widget<TextField>(fieldFor('PASSWORD'));
+      expect(field.obscureText, isFalse);
+    });
+
+    testWidgets('links on to creating an account', (tester) async {
+      await openSignIn(tester);
+
+      await tapAction(tester, 'Sign up');
+
+      expect(find.byType(CreateAccountScreen), findsOneWidget);
+    });
+
+    testWidgets('goes back to the welcome screen', (tester) async {
+      await openSignIn(tester);
+
+      await tapAction(tester, 'Back');
+
+      expect(find.byType(WelcomeScreen), findsOneWidget);
+    });
+  });
+
+  group('creating an account', () {
+    late FakeAuth fake;
+    late AuthProvider auth;
+
+    Future<void> openCreateAccount(WidgetTester tester) async {
+      usePhone(tester);
+      await tester.pumpWidget(signedOutApp(auth: auth));
+      await tapAction(tester, 'Create an account');
+    }
+
+    setUp(() async {
+      fake = FakeAuth();
+      auth = AuthProvider(repository: fake);
+      await auth.restore();
+    });
+
+    testWidgets('an empty form says what is missing', (tester) async {
+      await openCreateAccount(tester);
+
+      await tapAction(tester, 'Create account');
+
+      expect(find.text('Enter your email address.'), findsOneWidget);
+      expect(find.text('Choose a password.'), findsOneWidget);
+      expect(fake.lastEmail, isNull);
+    });
+
+    testWidgets('a short password says what the floor is', (tester) async {
+      await openCreateAccount(tester);
+
+      await tester.enterText(fieldFor('EMAIL ADDRESS'), 'sam@example.com');
+      await tester.enterText(fieldFor('PASSWORD'), 'seven!!');
+      await tapAction(tester, 'Create account');
+
+      expect(find.text('Use at least 8 characters.'), findsOneWidget);
+      expect(fake.lastEmail, isNull);
+    });
+
+    testWidgets('an address already taken is refused under the address', (
+      tester,
+    ) async {
+      fake.createError = const AuthException(AuthFailure.emailInUse);
+      await openCreateAccount(tester);
+
+      await tester.enterText(fieldFor('EMAIL ADDRESS'), 'sam@example.com');
+      await tester.enterText(fieldFor('PASSWORD'), 'one-rep-more');
+      await tapAction(tester, 'Create account');
+
+      expect(
+        find.text('That email already has an account. Log in.'),
+        findsOneWidget,
+      );
+      expect(find.byType(CreateAccountScreen), findsOneWidget);
+    });
+
+    testWidgets('a name goes to the account, and the app opens without one', (
+      tester,
+    ) async {
+      await openCreateAccount(tester);
+
+      await tester.enterText(fieldFor('NAME'), 'Sam');
+      await tester.enterText(fieldFor('EMAIL ADDRESS'), 'sam@example.com');
+      await tester.enterText(fieldFor('PASSWORD'), 'one-rep-more');
+      await tapAction(tester, 'Create account');
+
+      expect(fake.lastDisplayName, 'Sam');
+      expect(find.byType(AppShell), findsOneWidget);
+    });
+
+    testWidgets('an account can be made without a name', (tester) async {
+      await openCreateAccount(tester);
+
+      await tester.enterText(fieldFor('EMAIL ADDRESS'), 'sam@example.com');
+      await tester.enterText(fieldFor('PASSWORD'), 'one-rep-more');
+      await tapAction(tester, 'Create account');
+
+      expect(fake.lastEmail, 'sam@example.com');
+      expect(auth.session?.isGuest, isFalse);
+      expect(find.byType(AppShell), findsOneWidget);
+    });
+  });
+
+  group('the gate', () {
+    testWidgets('holds the splash while the session is being read', (
+      tester,
+    ) async {
+      await tester.pumpWidget(checkingApp());
+
+      // The store has not answered yet, so showing the welcome screen would be
+      // a claim about who is signed in that is not known to be true.
+      expect(find.byType(WelcomeScreen), findsNothing);
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.text('FORM'), findsOneWidget);
+    });
+
+    testWidgets('opens on the app when there is a session', (tester) async {
+      final auth = AuthProvider(repository: FakeAuth(session: namedSession()));
+      await auth.restore();
+
+      await tester.pumpWidget(signedOutApp(auth: auth));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AppShell), findsOneWidget);
+      expect(find.byType(WelcomeScreen), findsNothing);
+    });
+
+    testWidgets('opens on the welcome screen when there is not', (
+      tester,
+    ) async {
+      final auth = AuthProvider(repository: FakeAuth());
+      await auth.restore();
+
+      await tester.pumpWidget(signedOutApp(auth: auth));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(WelcomeScreen), findsOneWidget);
+      expect(find.byType(AppShell), findsNothing);
+    });
+
+    testWidgets('signing out comes back to the welcome screen', (tester) async {
+      final fake = FakeAuth(session: namedSession());
+      final auth = AuthProvider(repository: fake);
+      await auth.restore();
+      await tester.pumpWidget(signedOutApp(auth: auth));
+      await tester.pumpAndSettle();
+      expect(find.byType(AppShell), findsOneWidget);
+
+      await auth.signOut();
+      await tester.pumpAndSettle();
+
+      // Nothing of the app is left behind: the whole window was replaced.
+      expect(find.byType(WelcomeScreen), findsOneWidget);
+      expect(find.byType(AppShell), findsNothing);
+    });
+  });
+
+  group('on a narrow screen', () {
+    testWidgets('every screen in the flow lays out on a 320dp phone', (
+      tester,
+    ) async {
+      usePhone(tester, size: const Size(320, 568));
+
+      final auth = AuthProvider(repository: FakeAuth());
+      await auth.restore();
+      await tester.pumpWidget(signedOutApp(auth: auth));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull, reason: 'Welcome');
+
+      await tapAction(tester, 'Log in');
+      expect(find.byType(SignInScreen), findsOneWidget);
+      expect(tester.takeException(), isNull, reason: 'Sign in');
+
+      await tapAction(tester, 'Back');
+      await tapAction(tester, 'Create an account');
+      expect(find.byType(CreateAccountScreen), findsOneWidget);
+      // Four labels, three fields and a note on a 568-tall screen: the form
+      // scrolls rather than overflowing.
+      expect(tester.takeException(), isNull, reason: 'Create account');
+    });
+  });
+}

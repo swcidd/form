@@ -5,125 +5,14 @@ import 'package:plus_one/auth/auth_repository.dart';
 import 'package:plus_one/models/session.dart';
 import 'package:plus_one/providers/auth_provider.dart';
 
-/// An identity that lives in memory.
-///
-/// It is also the point of the seam: everything the provider needs sits behind
-/// [AuthRepository], so this stands in for the store *and* for the server that
-/// would replace it.
-class _FakeAuth implements AuthRepository {
-  Session? session;
-  Object? restoreError;
-  AuthException? signInError;
-  AuthException? createError;
-  AuthException? changeError;
-
-  /// Holds an operation open, so a test can look at [AuthProvider.busy] while
-  /// something is in flight.
-  Completer<void>? gate;
-
-  int restoreCount = 0;
-  int signOutCount = 0;
-  String? lastEmail;
-  String? lastPassword;
-  String? lastUserId;
-  String? lastCurrentPassword;
-  String? lastNewPassword;
-
-  Future<void> _hold() async {
-    final gate = this.gate;
-    if (gate != null) await gate.future;
-  }
-
-  @override
-  Future<Session?> restoreSession() async {
-    restoreCount++;
-    final error = restoreError;
-    if (error != null) throw error;
-    return session;
-  }
-
-  @override
-  Future<Session> createAccount({
-    required String email,
-    required String password,
-    String? displayName,
-  }) async {
-    await _hold();
-    final error = createError;
-    if (error != null) throw error;
-    lastEmail = email;
-    lastPassword = password;
-    return session = Session(
-      userId: 'acct_new',
-      issuedAt: DateTime(2026, 10, 19),
-      email: email,
-      displayName: displayName,
-    );
-  }
-
-  @override
-  Future<Session> signIn({
-    required String email,
-    required String password,
-  }) async {
-    await _hold();
-    final error = signInError;
-    if (error != null) throw error;
-    lastEmail = email;
-    lastPassword = password;
-    return session = Session(
-      userId: 'acct_1',
-      issuedAt: DateTime(2026, 10, 19),
-      email: email,
-    );
-  }
-
-  @override
-  Future<Session> continueOffline() async {
-    await _hold();
-    return session = Session.device(issuedAt: DateTime(2026, 10, 19));
-  }
-
-  @override
-  Future<void> signOut() async {
-    signOutCount++;
-    session = null;
-  }
-
-  @override
-  Future<void> changePassword({
-    required String userId,
-    required String currentPassword,
-    required String newPassword,
-  }) async {
-    await _hold();
-    final error = changeError;
-    if (error != null) throw error;
-    lastUserId = userId;
-    lastCurrentPassword = currentPassword;
-    lastNewPassword = newPassword;
-  }
-
-  @override
-  Future<void> deleteAccount(String userId) async {
-    await _hold();
-    lastUserId = userId;
-    session = null;
-  }
-}
-
-/// A session belonging to a named account.
-Session namedSession({
-  String id = 'acct_1',
-  String email = 'sam@example.com',
-}) => Session(userId: id, issuedAt: DateTime(2026, 10, 19), email: email);
+import 'support/fake_auth.dart';
 
 void main() {
-  late _FakeAuth fake;
+  late FakeAuth fake;
   late AuthProvider auth;
 
   setUp(() {
-    fake = _FakeAuth();
+    fake = FakeAuth();
     auth = AuthProvider(repository: fake);
   });
 
