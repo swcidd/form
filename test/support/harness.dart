@@ -64,9 +64,18 @@ Widget checkingApp({AuthProvider? auth}) => PlusOneApp(
 /// Uses the app's own routes and theme rather than a bare MaterialApp, so a
 /// test cannot pass here and fail in the app because of a different navigator
 /// or route table.
-Widget shellWith(WorkoutProvider provider) =>
-    ChangeNotifierProvider<WorkoutProvider>.value(
-      value: provider,
+///
+/// Comes with an identity, because the screens behind the shell are given one by
+/// the app: the default is the device account, which is what a test that has not
+/// said otherwise means.
+Widget shellWith(WorkoutProvider provider, {AuthProvider? auth}) =>
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider<AuthProvider>.value(
+          value: auth ?? signedInAuth(),
+        ),
+        ChangeNotifierProvider<WorkoutProvider>.value(value: provider),
+      ],
       child: MaterialApp(
         theme: AppTheme.light(),
         onGenerateRoute: PlusOneApp.routeFor,
