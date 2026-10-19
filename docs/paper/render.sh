@@ -21,7 +21,7 @@ from weasyprint import HTML
 
 here, root = (pathlib.Path(arg) for arg in sys.argv[1:3])
 HTML(here / "paper.html", base_url=str(here)).write_pdf(
-    root / "SE2142_FinalProject_FORM.pdf"
+    root / "SE2142_FinalProject_letmesolothis.pdf"
 )
-print("wrote", root / "SE2142_FinalProject_FORM.pdf")
+print("wrote", root / "SE2142_FinalProject_letmesolothis.pdf")
 PY
