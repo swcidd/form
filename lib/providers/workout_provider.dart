@@ -212,8 +212,43 @@ class WorkoutProvider extends ChangeNotifier {
 
   /// Sessions dated inside the current week, planned and completed alike, so a
   /// scheduled session already counts toward the weekly target.
-  int get workoutsThisWeek =>
-      _workouts.where((w) => !_dayOnly(w.date).isBefore(weekStart)).length;
+  ///
+  /// Bounded at both ends: the window is the seven days from [weekStart], not
+  /// "Monday and everything after". Without the upper bound a plan made for
+  /// next month counts toward this week, which would report training nobody
+  /// has done yet as progress against the goal.
+  ///
+  /// Exposed as the list rather than only as a count because the library shows
+  /// the week's sessions and the dashboard counts them: two definitions of
+  /// where the week starts is how the tile and the list end up disagreeing.
+  List<Workout> get workoutsInCurrentWeek {
+    final end = weekStart.add(const Duration(days: 7));
+    return [
+      for (final workout in _workouts)
+        if (!_dayOnly(workout.date).isBefore(weekStart) &&
+            _dayOnly(workout.date).isBefore(end))
+          workout,
+    ];
+  }
+
+  /// The session being walked into, inside the current week.
+  ///
+  /// [focusWorkout] answers "what comes next" across the whole account, which
+  /// is a different question: a plan three weeks out is not this week's work,
+  /// and a panel labelled with the week must not name it as if it were. The
+  /// window rule stays here, next to the list it bounds, so the two cannot
+  /// drift. Null means the week has nothing left to do.
+  Workout? get focusWorkoutThisWeek {
+    for (final workout in workoutsInCurrentWeek) {
+      if (workout.status != WorkoutStatus.planned) continue;
+      if (_dayOnly(workout.date).isBefore(_today)) continue;
+      return workout;
+    }
+    // The list arrives in date order, so the first match is the soonest.
+    return null;
+  }
+
+  int get workoutsThisWeek => workoutsInCurrentWeek.length;
 
   /// Sessions the user is aiming for each week.
   ///

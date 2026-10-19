@@ -31,6 +31,24 @@ void main() {
     return provider;
   }
 
+  /// A minimal session on [date], for the questions that only care about when
+  /// it is and whether it counts as training.
+  Workout workoutOn(
+    DateTime date, {
+    String id = 'session',
+    WorkoutStatus status = WorkoutStatus.planned,
+  }) => Workout(
+    id: id,
+    title: 'Session $id',
+    date: date,
+    status: status,
+    durationMin: 45,
+    estimatedKcal: 400,
+    targetMuscleGroups: const ['Chest'],
+    equipment: const [],
+    logs: const [],
+  );
+
   group('reads', () {
     test('seeds a resumable plan for today', () {
       final provider = build();
@@ -64,6 +82,75 @@ void main() {
 
     test('byId returns null for an unknown session', () {
       expect(build().byId('nope'), isNull);
+    });
+
+    test('the week focus is today\'s plan, not one further out', () {
+      final provider = build();
+
+      final next = provider.focusWorkoutThisWeek;
+      expect(next, isNotNull);
+      expect(next!.id, 'upper-body');
+      expect(next.date, today);
+    });
+
+    test('the week focus is null when the week has nothing left', () {
+      // Three weeks out: `focusWorkout` answers "what comes next" and returns
+      // it, but it is not this week's session and the library's week card -
+      // labelled THIS WEEK - must not name it as one.
+      final provider = WorkoutProvider(
+        today: today,
+        workouts: [
+          Workout(
+            id: 'far',
+            title: 'Session Three Weeks Out',
+            date: today.add(const Duration(days: 21)),
+            status: WorkoutStatus.planned,
+            durationMin: 45,
+            estimatedKcal: 400,
+            targetMuscleGroups: const ['Chest'],
+            equipment: const [],
+            logs: const [],
+          ),
+        ],
+      );
+
+      expect(provider.focusWorkout, isNotNull);
+      expect(provider.focusWorkoutThisWeek, isNull);
+    });
+
+    test('the week focus skips what is behind and what is not training', () {
+      final provider = WorkoutProvider(
+        today: today,
+        workouts: [
+          workoutOn(
+            today.add(const Duration(days: -1)),
+            status: WorkoutStatus.completed,
+          ),
+          workoutOn(
+            today.add(const Duration(days: 1)),
+            status: WorkoutStatus.rest,
+          ),
+          workoutOn(today.add(const Duration(days: 2)), id: 'later'),
+        ],
+      );
+
+      // This file's today is a Tuesday, so the week runs Monday to Sunday and
+      // +1 and +2 are both inside it. The finished session and the rest day
+      // are in the week too, but neither is a session to walk into.
+      expect(provider.focusWorkoutThisWeek?.id, 'later');
+    });
+
+    test('the week focus is the soonest of several still to do', () {
+      final provider = WorkoutProvider(
+        today: today,
+        workouts: [
+          workoutOn(today.add(const Duration(days: 4)), id: 'fourth'),
+          workoutOn(today.add(const Duration(days: 2)), id: 'second'),
+          workoutOn(today.add(const Duration(days: 3)), id: 'third'),
+        ],
+      );
+
+      expect(provider.focusWorkoutThisWeek?.id, 'second');
     });
   });
 

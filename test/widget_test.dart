@@ -226,15 +226,14 @@ void main() {
       await tester.pumpWidget(seededApp());
       await tester.pumpAndSettle();
 
-      // Not _tapDestination: the catalogue makes real-I/O hops (the HTTP
-      // probe, then the bundled assets) that the fake clock cannot advance,
-      // so each wait grants real time and then pumps the fake one.
-      await tester.tap(
-        find.descendant(
-          of: find.byType(AppNavBar),
-          matching: find.text('Library'),
-        ),
-      );
+      await _tapDestination(tester, 'Library');
+      expect(find.text('THE TRAINING LIBRARY'), findsOneWidget);
+
+      // The catalogue sits behind the Discover pill rather than on the first
+      // screen, and it makes real-I/O hops (the HTTP probe, then the bundled
+      // assets) that the fake clock cannot advance, so each wait grants real
+      // time and then pumps the fake one.
+      await tester.tap(find.text('Discover'));
       for (var i = 0; i < 10; i++) {
         await tester.pump(const Duration(milliseconds: 100));
         if (!tester.any(find.byType(CircularProgressIndicator))) break;
@@ -244,7 +243,6 @@ void main() {
       }
       await tester.pumpAndSettle();
 
-      expect(find.text('THE TRAINING LIBRARY'), findsOneWidget);
       expect(find.byType(CircularProgressIndicator), findsNothing);
       // Widget tests stub HTTP into a failure, so this run is the offline
       // path - the same one a phone with no signal takes.
