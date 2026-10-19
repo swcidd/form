@@ -31,10 +31,20 @@ class WelcomeScreen extends StatelessWidget {
     final text = context.text;
     final auth = context.watch<AuthProvider>();
 
+    // Taller than the sign-in screens' hero, on purpose: there are no fields
+    // between it and the actions, only breathing room, and a screen with no
+    // fields is a screen that would otherwise leave the middle third empty.
+    // Clamped at both ends so a small phone keeps the headline on screen and a
+    // tablet does not end up as a photograph and nothing else.
+    final heroHeight = (MediaQuery.sizeOf(context).height * 0.56)
+        .clamp(318.0, 520.0)
+        .toDouble();
+
     return Scaffold(
       body: Column(
         children: [
-          const AuthHero(
+          AuthHero(
+            height: heroHeight,
             kicker: 'YOUR TRAINING / STARTS HERE',
             headline: 'YOUR STRONG.\nSTARTS HERE.',
           ),

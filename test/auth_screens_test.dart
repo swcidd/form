@@ -10,6 +10,7 @@ import 'package:plus_one/screens/create_account_screen.dart';
 import 'package:plus_one/screens/sign_in_screen.dart';
 import 'package:plus_one/screens/welcome_screen.dart';
 import 'package:plus_one/widgets/auth_field.dart';
+import 'package:plus_one/widgets/auth_hero.dart';
 
 import 'support/fake_auth.dart';
 import 'support/harness.dart';
@@ -372,6 +373,42 @@ void main() {
       // Four labels, three fields and a note on a 568-tall screen: the form
       // scrolls rather than overflowing.
       expect(tester.takeException(), isNull, reason: 'Create account');
+    });
+  });
+
+  group('the welcome hero', () {
+    testWidgets('takes more of a tall screen, where no form fills it', (
+      tester,
+    ) async {
+      usePhone(tester, size: const Size(402, 874));
+
+      final auth = AuthProvider(repository: FakeAuth());
+      await auth.restore();
+      await tester.pumpWidget(signedOutApp(auth: auth));
+      await tester.pumpAndSettle();
+
+      // 56% of the viewport. With no fields between the photograph and the
+      // actions, anything less leaves the middle third of the screen empty.
+      expect(
+        tester.getSize(find.byType(AuthHero)).height,
+        moreOrLessEquals(874 * 0.56, epsilon: 0.01),
+      );
+    });
+
+    testWidgets('keeps the design height on a small phone', (tester) async {
+      usePhone(tester, size: const Size(320, 568));
+
+      final auth = AuthProvider(repository: FakeAuth());
+      await auth.restore();
+      await tester.pumpWidget(signedOutApp(auth: auth));
+      await tester.pumpAndSettle();
+
+      // 56% of 568 is just over the floor, so the clamp is what keeps the
+      // headline from being pushed under the crop on a short screen.
+      expect(
+        tester.getSize(find.byType(AuthHero)).height,
+        inInclusiveRange(318.0, 320.0),
+      );
     });
   });
 }
