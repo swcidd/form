@@ -82,16 +82,15 @@ class ExerciseLog extends Equatable {
   const ExerciseLog({
     required this.exercise,
     required this.sets,
-    this.previousBest,
     this.restSeconds = 120,
-    this.previousSets = const [],
   });
 
   final Exercise exercise;
   final List<WorkoutSet> sets;
-  final String? previousBest;
+
+  /// What the plan asks for between sets. Displayed, never edited: the design's
+  /// rest field is part of the plan, and nothing in the app writes it yet.
   final int restSeconds;
-  final List<WorkoutSet> previousSets;
 
   int get totalSets => sets.length;
 
@@ -127,16 +126,12 @@ class ExerciseLog extends Equatable {
   ExerciseLog copyWith({
     Exercise? exercise,
     List<WorkoutSet>? sets,
-    String? previousBest,
     int? restSeconds,
-    List<WorkoutSet>? previousSets,
   }) {
     return ExerciseLog(
       exercise: exercise ?? this.exercise,
       sets: sets ?? this.sets,
-      previousBest: previousBest ?? this.previousBest,
       restSeconds: restSeconds ?? this.restSeconds,
-      previousSets: previousSets ?? this.previousSets,
     );
   }
 
@@ -146,30 +141,16 @@ class ExerciseLog extends Equatable {
       sets: (json['sets'] as List<dynamic>)
           .map((s) => WorkoutSet.fromJson(s as Map<String, dynamic>))
           .toList(),
-      previousBest: json['previousBest'] as String?,
       restSeconds: (json['restSeconds'] as num?)?.toInt() ?? 120,
-      previousSets:
-          (json['previousSets'] as List<dynamic>?)
-              ?.map((s) => WorkoutSet.fromJson(s as Map<String, dynamic>))
-              .toList() ??
-          [],
     );
   }
 
   Map<String, dynamic> toJson() => {
     'exercise': exercise.toJson(),
     'sets': sets.map((s) => s.toJson()).toList(),
-    'previousBest': previousBest,
     'restSeconds': restSeconds,
-    'previousSets': previousSets.map((s) => s.toJson()).toList(),
   };
 
   @override
-  List<Object?> get props => [
-    exercise,
-    sets,
-    previousBest,
-    restSeconds,
-    previousSets,
-  ];
+  List<Object?> get props => [exercise, sets, restSeconds];
 }
