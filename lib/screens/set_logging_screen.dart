@@ -437,10 +437,11 @@ class _SetRow extends StatelessWidget {
             height: 34,
             child: Checkbox(
               value: set.completed,
-              onChanged: (_) {
-                provider.toggleSet(workoutId, logIndex, setIndex);
-                // TODO: Auto-start rest timer
-              },
+              // No rest timer here on purpose: a countdown nobody started by
+              // hand would be a clock, not a record, and the app only keeps
+              // what it can trace to a set.
+              onChanged: (_) =>
+                  provider.toggleSet(workoutId, logIndex, setIndex),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(4),
               ),
