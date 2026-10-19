@@ -9,69 +9,163 @@
 [![Flutter](https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white)](https://flutter.dev)
 [![Dart](https://img.shields.io/badge/Dart-0175C2?style=for-the-badge&logo=dart&logoColor=white)](https://dart.dev)
 [![License: MIT](https://img.shields.io/badge/License-MIT-FFA000?style=for-the-badge)](LICENSE)
-[![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20iOS%20%7C%20Web%20%7C%20Desktop-FFA000?style=for-the-badge)](#download)
+[![Platform](https://img.shields.io/badge/Platform-Android-FFA000?style=for-the-badge&logo=android&logoColor=white)](#getting-started)
 
 </div>
 
 ---
 
-## Why FORM?
-
-Tracking your lifts shouldn't feel like homework. Most apps either bury your numbers under five layers of menus or lock them behind a subscription. FORM does one thing and does it well: **it remembers what you lifted so you can see yourself getting stronger.**
-
-- ✍️ **Log in seconds** — exercises, sets, reps, and weight in a few taps.
-- 📈 **Watch the line go up** — every lift charted against your previous sessions.
-- 🏆 **Catch your PRs** — personal records surface automatically, no digging.
-- 📅 **Never lose your streak** — a calendar of everything you've done.
-- 🎯 **Know what's next** — each session suggests a target based on your own history.
-
-No account required. No ads. Your workout data stays on your device.
-
----
-
 ## Screens
 
-| Screen | What you get |
-| --- | --- |
-| **Home** | Today's plan, a quick-start button, and a snapshot of recent activity and streaks. |
-| **Workout Details** | The full log for a session — exercises, sets, reps, weight — with progress charts and PRs per lift. |
-| **Calendar** | Browse past sessions and schedule upcoming ones; tap a day to see what you did. |
-| **Profile** | Your stats, goals, and settings — total workouts, longest streak, achievements. |
+<table>
+<tr>
+<td width="33%"><img src="docs/screenshots/01-welcome.png" alt="Welcome"><br><sub><b>Welcome</b> — three ways in, and the third one needs no account</sub></td>
+<td width="33%"><img src="docs/screenshots/04-home.png" alt="Home"><br><sub><b>Home</b> — today's session, the week, and what happened last</sub></td>
+<td width="33%"><img src="docs/screenshots/05-progress.png" alt="Progress"><br><sub><b>Progress</b> — records, volume and consistency from the log</sub></td>
+</tr>
+<tr>
+<td><img src="docs/screenshots/06-library.png" alt="Library"><br><sub><b>Library</b> — your rotation, and a catalogue you can search</sub></td>
+<td><img src="docs/screenshots/07-profile.png" alt="Profile"><br><sub><b>Profile</b> — your week, your body metrics, your account</sub></td>
+<td><img src="docs/screenshots/02-sign-in.png" alt="Sign in"><br><sub><b>Sign in</b> — and <a href="docs/screenshots/03-create-account.png">create account</a></sub></td>
+</tr>
+</table>
 
-<!-- TODO: add screenshots here once the UI is final
-| Home | Details |
-| --- | --- |
-| ![Home](docs/screenshots/home.png) | ![Details](docs/screenshots/details.png) |
--->
+The screenshots are the app's own widgets, rendered against a **sample account**
+by `tool/screenshot_test.dart` and written to `docs/screenshots/`:
+
+```bash
+flutter test tool/screenshot_test.dart --update-goldens
+```
+
+It lives outside `test/` because it is a documentation tool, not an assertion: as
+a test it would fail the suite every time the UI changed on purpose. FORM ships
+with no training data — a fresh install opens on an empty account, and the empty
+states are part of the design.
 
 ---
 
-## Features
+## Why FORM?
 
-- **Workout logging** — record exercises, sets, reps, and weight as you go
-- **Exercise library** — pick from common lifts or add your own
-- **Progress charts** — strength trends over weeks and months
-- **Personal records** — automatic PR detection and display
-- **Workout calendar** — history and scheduling in one view
-- **Streaks & stats** — consistency at a glance
-- **Goals & body metrics** — body weight, targets, and units
-- **Flexible data** — works offline, syncs with a public exercise REST API
-- **Empty, loading & error states** — the app tells you what's happening, always
+Tracking your lifts shouldn't feel like homework. Most apps either bury your
+numbers under five layers of menus or lock them behind a subscription. FORM does
+one thing and does it well: **it remembers what you lifted so you can see
+yourself getting stronger.**
+
+- **Log in seconds** — sets, reps and weight in a few taps, with the last set's
+  numbers already in place.
+- **Watch the line go up** — volume per week, compared against the week before.
+- **Catch your PRs** — records ranked by estimated one-rep max, not by the
+  biggest number on the bar.
+- **Keep the streak** — consecutive days with a finished session.
+- **Know what's next** — the week's plan, a rotation, and a catalogue to pull
+  from.
+
+No ads, no account required, and **your training never leaves the device** unless
+you export it.
+
+---
+
+## What is actually implemented
+
+| Area | Behaviour |
+| --- | --- |
+| **Logging** | Sessions hold exercises, each with sets of reps and weight. Ticking the last set finishes the session; unticking one reopens it. |
+| **CRUD** | Create, rename, reschedule, edit and delete sessions; edit profile and body metrics; save and unsave exercises. Every write goes to SQLite and survives a restart. |
+| **Accounts** | A local account with a PBKDF2-hashed password, or the device account with none. Each account owns its sessions, saved exercises and profile. See **[docs/AUTH.md](docs/AUTH.md)**. |
+| **Catalogue** | `Discover` reads the wger REST API over `http`, shows loading, success and error states, and falls back to a bundled catalogue when the device is offline. |
+| **Progress** | Records, volume with a week-on-week change, and a 30-day consistency figure - all derived from finished sessions, in one file. |
+| **Empty states** | An empty account gets a first-session panel, not a scoreboard of zeros. |
+
+Everything the app reports can be traced to a session in the database. There is
+no placeholder content and no seeded training data in `lib/`.
+
+---
+
+## Accounts, briefly
+
+FORM has no server. Sign-in is a **local account behind a seam that is shaped
+like a server** - `AuthRepository` - so a real backend can replace the
+implementation without the UI noticing.
+
+- **Continue offline** → the device account: no password, everything works.
+- **Create account** → its own user id, its own empty store.
+- **Sign out** → back to the welcome screen; your data stays.
+- **Delete account** → one confirmation, then the account's rows go.
+
+Passwords are hashed with PBKDF2-HMAC-SHA256 (per-account salt, iteration count
+stored in the verifier so it can be raised later) **off the UI isolate**, and the
+UI never sees a hash. There are no credentials in the APK, no network call, and
+no Firebase configuration file that a public repo would have to carry.
+**[docs/AUTH.md](docs/AUTH.md)** explains the seam, the flow, the measurements
+behind the iteration count, and what was deliberately left out.
+
+---
+
+## The network
+
+The exercise catalogue comes from [wger.de](https://wger.de)'s public REST API
+(`https://wger.de/api/v2/`) through `package:http`.
+
+```
+ExerciseApiClient  ──►  ExerciseCatalog  ──►  ExerciseLibrary.loadAll()
+   (http, JSON)          (network-first,          (bundled fallback,
+                          offline fallback)        parsed once)
+```
+
+- **Network-first**: a fresh catalogue is fetched, then shown.
+- **Offline fallback**: on timeout, a socket error or an unparseable payload,
+  the bundled catalogue is used and the UI says so. Failures collapse into one
+  `ExerciseApiException`, so no screen deals in socket errors.
+- **Loading / success / error / empty** states are all rendered, including the
+  empty search result.
+
+Attribution for the data is shown in the app and collected in
+**[docs/ATTRIBUTION.md](docs/ATTRIBUTION.md)** (wger is CC BY-SA; the bundled
+fallbacks are MIT and Unlicense).
 
 ---
 
 ## Tech stack
 
-| Layer | Choice |
-| --- | --- |
-| Framework | Flutter |
-| Language | Dart |
-| State management | `provider` (`ChangeNotifier`) |
-| Networking | `http` + JSON model classes |
-| Charts | `fl_chart` |
-| Storage | `shared_preferences` / `sqflite` |
+| Layer | Choice | Why |
+| --- | --- | --- |
+| Framework | Flutter 3.47 / Dart 3.13 | One codebase, first-class animation, good tooling. |
+| State | `provider` 6.1 (`ChangeNotifier`) | Small enough to read in one sitting; no code generation. |
+| Storage | `sqflite` 2.4 + `path` | Real SQL: the app queries by day, by week and by exercise. |
+| Network | `http` 1.6 | The assignment's requirement, and enough for one JSON API. |
+| Crypto | `crypto` 3.0 | HMAC-SHA256 for PBKDF2, no platform channel required. |
+| Dates | `intl` 0.20 | Weekday and month formatting without a locale bundle. |
+| Type | `google_fonts` 9.0 | Inter + Barlow Condensed, **bundled** so nothing is fetched at runtime. |
+| Equality | `equatable` 2.1 | Value equality on models, so `==` in tests means what it looks like. |
+| Vectors | `flutter_svg` 2.3 | Lucide icons without shipping a bitmap per size. |
+| Tests | `flutter_test`, `sqflite_common_ffi` | The real schema runs against a real SQLite file in tests. |
+| Build tools | `flutter_launcher_icons`, `flutter_native_splash` | Icon and splash generated from checked-in artwork. |
 
-Architecture follows a clean separation: `models/` holds plain data classes, `services/` talks to the API, `providers/` owns app state, `screens/` renders pages, and `widgets/` holds reusable UI.
+---
+
+## Architecture
+
+```
+lib/
+├── main.dart                 # gate: splash → welcome/sign-in → app, routes
+├── auth/                     # AuthRepository seam, local implementation, hasher
+├── data/                     # AppDatabase (schema v4), repositories, session stats
+├── models/                   # Workout, ExerciseLog, ExerciseSet, Profile, Account, Session
+├── providers/                # AuthProvider, WorkoutProvider
+├── screens/                  # welcome, sign in, create account, shell, home,
+│                             # progress, workout, library, profile
+├── theme/                    # colours, typography (one text scale)
+└── widgets/                  # nav bar, section header, cards, auth fields…
+```
+
+Three rules the code keeps:
+
+1. **Screens read state; providers write it.** A screen never touches the
+   database.
+2. **Writes go through one repository per account**, constructed with a
+   `userId`; a row cannot be read or written without an owner.
+3. **Derived numbers are derived.** Records, volume and streaks are computed from
+   sessions on read, never stored, so they cannot go stale.
 
 ---
 
@@ -79,8 +173,9 @@ Architecture follows a clean separation: `models/` holds plain data classes, `se
 
 ### Prerequisites
 
-- [Flutter SDK](https://docs.flutter.dev/get-started/install) 3.x
-- An Android emulator, iOS simulator, or Chrome for web
+- [Flutter SDK](https://docs.flutter.dev/get-started/install) **3.47+** (Dart
+  **3.13+**; both floors are declared in `pubspec.yaml`)
+- Android SDK / a device or emulator
 
 ### Run it
 
@@ -91,58 +186,72 @@ flutter pub get
 flutter run
 ```
 
+### Check it
+
+```bash
+dart format --output=none --set-exit-if-changed lib test tool
+flutter analyze
+flutter test
+```
+
 ### Build a release APK
 
 ```bash
-flutter build apk --release
-# output: build/app/outputs/flutter-apk/app-release.apk
+flutter build apk --release --split-per-abi
+# build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
 ```
 
-Release builds need a keystore to be signed as your own. Without one the build
-falls back to the Android debug keys, so it still runs but is not a
-distributable release. The keystore lives in a gitignored `android/key.properties`
-and there are no signing secrets in this repository — see
-**[docs/BUILD.md](docs/BUILD.md)** for the debug/release differences, the one-off
-`keytool` command, and how to verify a build's signature.
+Signing, the one-off `keytool` command and how to verify a build's signature are
+in **[docs/BUILD.md](docs/BUILD.md)**. No signing secret is in this repository:
+the keystore lives in a gitignored `android/key.properties`.
 
 ---
 
-## Project structure
+## How this was built
 
-```
-lib/
-├── main.dart          # app entry, theme, routes, providers
-├── models/            # Workout, Exercise, Set, Profile
-├── services/          # API client, local storage
-├── providers/         # ChangeNotifiers for shared state
-├── screens/           # Home, WorkoutDetails, Calendar, Profile
-└── widgets/           # reusable cards, charts, inputs
-```
-
----
-
-## Roadmap
-
-- [x] Project scaffold and setup
-- [ ] Workout logging with CRUD
-- [ ] Provider-based shared state
-- [ ] REST API integration
-- [ ] Progress charts and PR detection
-- [ ] Custom icon, splash screen, release build
-- [ ] Documentation paper
+- **Pipeline**: `feat/<name>` → `dev` → `staging` → `master`. Promotion merges
+  carry a message describing what the promotion delivers; the branch line goes in
+  the body.
+- **Commits**: [Conventional Commits](https://www.conventionalcommits.org/), one
+  concern each, and **every commit is green on its own** - `dart format`,
+  `flutter analyze` and the full suite were run before each one.
+- **Review**: every PR got inline review comments on the lines that carried a
+  decision (identity, schema, lifecycle), not a rubber stamp, and was merged only
+  with the suite green on the merged tree.
+- **Tests**: 284 widget, provider and database tests. The dangerous parts are
+  covered directly: the v3 → v4 migration builds an old database by hand, signing
+  in as somebody else asserts the old store is disposed, and the counting rules
+  have their own tests.
 
 ---
 
-## Contributing
+## Debugging
 
-Issues and pull requests are welcome. Please use feature branches (`feature/<name>`) and open a PR against `master` rather than pushing directly.
+Two DevTools cases are written up in **[docs/DEVTOOLS.md](docs/DEVTOOLS.md)**: the
+release APK's size budget, read from the App Size tool, and the frame that a
+password hash blocked, found in the Performance view and moved off the UI
+isolate.
 
-```bash
-git checkout -b feature/my-feature
-# ...make changes...
-git commit -m "Add clear description of what changed"
-git push origin feature/my-feature
-```
+Golden tests are the other half of the debugging story: `flutter test
+--update-goldens` renders the real screens, and the weekly-goal disagreement
+(`4/4` on the dashboard, `0 of 4` in the library) was found by looking at two
+screenshots side by side rather than by reading either screen's code.
+
+---
+
+## Course requirements
+
+| Requirement | Where |
+| --- | --- |
+| REST API over `http`, JSON, loading/success/error | `lib/exercise_library.dart` + `Discover` |
+| 4+ screens | 8: welcome, sign in, create account, home, progress, workout, library, profile |
+| 3+ reusable widgets | `AuthField`, `AuthAction`, `AppNavBar`, `WorkoutCard`, `SectionHeader`, `EmptyState`… |
+| Provider state management | `AuthProvider`, `WorkoutProvider` |
+| CRUD | Sessions, exercises, sets, profile, saved exercises |
+| Empty / offline / failed API / validation | Empty account panel, bundled catalogue fallback, banners, field errors |
+| Public repository with PRs and review comments | [github.com/swcidd/form](https://github.com/swcidd/form/pulls) |
+| Icon, splash, app name, release APK | `assets/branding/`, `flutter_launcher_icons`, `flutter_native_splash`, `docs/BUILD.md` |
+| Documentation | README, [AUTH](docs/AUTH.md), [BUILD](docs/BUILD.md), [DEVTOOLS](docs/DEVTOOLS.md), [ATTRIBUTION](docs/ATTRIBUTION.md) |
 
 ---
 
@@ -150,7 +259,7 @@ git push origin feature/my-feature
 
 | Member | Role |
 | --- | --- |
-| **Sherwin Sid S. Sañol** ([@swcidd](https://github.com/swcidd)) | UI, state management, API/data layer, Git, documentation |
+| **Sherwin Sid S. Sañol** ([@swcidd](https://github.com/swcidd)) | Design mapping (Figma), Flutter UI, state management, data layer and schema, auth, tests, Git pipeline, documentation |
 
 Built for **SE2142 — Software Engineering Tools and Practices**.
 
@@ -172,6 +281,18 @@ texts and the two font licences.
 The interface icons are [Lucide](https://lucide.dev) (ISC). Inter and Barlow
 Condensed are bundled with the app under the SIL Open Font License 1.1, so no
 font is fetched at runtime.
+
+AI assistance is disclosed in the report and in each commit's own words; the
+design decisions, measurements and tests are the author's.
+
+---
+
+## Deliberately not here
+
+A calendar year view, social features and cloud sync were cut on purpose, not
+forgotten: they would have added surfaces with nothing behind them. Vitals,
+calories and step counts are absent for the same reason — FORM counts training,
+and nothing else. `docs/AUTH.md` lists the same kind of decisions for accounts.
 
 ---
 
