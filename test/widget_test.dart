@@ -182,8 +182,10 @@ void main() {
       await tester.tap(find.byType(ElevatedButton).first);
       await tester.pumpAndSettle();
 
-      // New pre-workout screen shows the hardcoded workout title and "THE LINEUP"
-      expect(find.textContaining('LOWER BODY'), findsWidgets);
+      // The screen shows the session that was tapped, by id, rather than the
+      // canned example it used to build for every route.
+      expect(find.text('Upper Body Hypertrophy & Core'), findsOneWidget);
+      expect(find.textContaining('LOWER BODY'), findsNothing);
       expect(find.text('THE LINEUP'), findsOneWidget);
     });
   });
@@ -226,15 +228,14 @@ void main() {
       await tester.pumpWidget(seededApp());
       await tester.pumpAndSettle();
 
-      // Not _tapDestination: the catalogue makes real-I/O hops (the HTTP
-      // probe, then the bundled assets) that the fake clock cannot advance,
-      // so each wait grants real time and then pumps the fake one.
-      await tester.tap(
-        find.descendant(
-          of: find.byType(AppNavBar),
-          matching: find.text('Library'),
-        ),
-      );
+      await _tapDestination(tester, 'Library');
+      expect(find.text('THE TRAINING LIBRARY'), findsOneWidget);
+
+      // The catalogue sits behind the Discover pill rather than on the first
+      // screen, and it makes real-I/O hops (the HTTP probe, then the bundled
+      // assets) that the fake clock cannot advance, so each wait grants real
+      // time and then pumps the fake one.
+      await tester.tap(find.text('Discover'));
       for (var i = 0; i < 10; i++) {
         await tester.pump(const Duration(milliseconds: 100));
         if (!tester.any(find.byType(CircularProgressIndicator))) break;
@@ -244,7 +245,6 @@ void main() {
       }
       await tester.pumpAndSettle();
 
-      expect(find.text('THE TRAINING LIBRARY'), findsOneWidget);
       expect(find.byType(CircularProgressIndicator), findsNothing);
       // Widget tests stub HTTP into a failure, so this run is the offline
       // path - the same one a phone with no signal takes.
@@ -337,7 +337,11 @@ void main() {
       expect(provider.workouts, hasLength(1));
       expect(provider.workouts.single.title, 'Leg Day');
       expect(provider.workouts.single.status, WorkoutStatus.planned);
-      expect(find.text('THE LINEUP'), findsOneWidget);
+
+      // A session created a moment ago has nothing on it yet, so the screen
+      // says that instead of showing a line-up it does not have.
+      expect(find.text('THE LINEUP'), findsNothing);
+      expect(find.textContaining('no exercises yet'), findsOneWidget);
     });
 
     testWidgets('an empty name falls back to the date', (tester) async {

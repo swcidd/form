@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../auth/auth_messages.dart';
 import '../models/profile_stats.dart';
 import '../models/workout.dart';
+import '../providers/auth_provider.dart';
 import '../providers/workout_provider.dart';
+import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/brand_app_bar.dart';
 import '../widgets/progress_bar.dart';
@@ -67,6 +70,10 @@ class ProfileScreen extends StatelessWidget {
           const SectionHeader(label: 'Achievements'),
           const SizedBox(height: 12),
           _achievements(context, profile),
+          const SizedBox(height: 28),
+          const SectionHeader(label: 'Account'),
+          const SizedBox(height: 12),
+          _account(context),
         ],
       ),
     );
@@ -221,7 +228,7 @@ class ProfileScreen extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final text = context.text;
     final goal = provider.weeklyGoal;
-    final done = provider.workoutsThisWeek;
+    final done = provider.sessionsDoneThisWeek;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -403,6 +410,184 @@ class ProfileScreen extends StatelessWidget {
   /// fact the app has not been told.
   static String _decimal(num value, int places) =>
       value == 0 ? '—' : value.toStringAsFixed(places);
+
+  // ------------------------------------------------------------------ account
+
+  /// Who is signed in, and the two ways out of it.
+  ///
+  /// A section of its own rather than a control in the corner, because the
+  /// device account has to be able to say what it is: somebody who never made an
+  /// account should be able to find out that they never made one, and that their
+  /// training is on this device and nowhere else.
+  ///
+  /// Signing out asks nothing, because nothing is lost by it and the way back in
+  /// is the welcome screen. Deleting asks once, and says what goes.
+  Widget _account(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final text = context.text;
+    final auth = context.watch<AuthProvider>();
+    final session = auth.session;
+    final busy = auth.busy;
+
+    final guest = session == null || session.isGuest;
+    final email = session?.email?.trim() ?? '';
+    final name = session?.displayName?.trim() ?? '';
+
+    final title = guest
+        ? 'Offline account'
+        : (name.isNotEmpty
+              ? name
+              : (email.isNotEmpty ? email : 'Your account'));
+    final detail = guest
+        ? 'No email, no password: this device is the account.'
+        : (name.isNotEmpty && email.isNotEmpty ? email : 'Signed in');
+
+    return Container(
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLowest,
+        borderRadius: AppRadius.card,
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 14, 12, 14),
+            child: Row(
+              children: [
+                Icon(
+                  guest ? Icons.phonelink_lock_outlined : Icons.person_outline,
+                  size: 20,
+                  color: scheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: text.exerciseMeta.copyWith(
+                          color: scheme.onSurface,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        detail,
+                        style: text.annotation.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Divider(height: 1, color: scheme.outlineVariant),
+          _AccountAction(
+            icon: Icons.logout,
+            label: 'Sign out',
+            onPressed: busy ? null : () => _signOut(context, auth),
+          ),
+          if (!guest) ...[
+            Divider(height: 1, color: scheme.outlineVariant),
+            _AccountAction(
+              icon: Icons.delete_outline,
+              label: 'Delete account',
+              destructive: true,
+              onPressed: busy ? null : () => _confirmDelete(context, auth),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// Ends the session. Nothing is deleted, so nothing needs confirming.
+  Future<void> _signOut(BuildContext context, AuthProvider auth) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await auth.signOut();
+      // The gate swaps the window and this screen goes with it, so there is
+      // nothing to say afterwards and nowhere on this screen to say it.
+    } catch (error) {
+      debugPrint('Could not sign out: $error');
+      if (!context.mounted) return;
+      messenger.showSnackBar(
+        const SnackBar(content: Text(AuthMessages.unexpected)),
+      );
+    }
+  }
+
+  /// Asks once more, and names what is about to go.
+  ///
+  /// Counted off the store rather than described in general terms: "delete your
+  /// account" invites the question of what that includes, and the app knows the
+  /// answer to the session and the exercise.
+  Future<void> _confirmDelete(BuildContext context, AuthProvider auth) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final provider = context.read<WorkoutProvider>();
+
+    final going = _and([
+      if (provider.workouts.isNotEmpty)
+        _count(provider.workouts.length, 'session'),
+      'your profile',
+      if (provider.savedExercises.isNotEmpty)
+        _count(provider.savedExercises.length, 'saved exercise'),
+    ]);
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialog) {
+        final scheme = Theme.of(dialog).colorScheme;
+        return AlertDialog(
+          title: const Text('Delete this account?'),
+          content: Text(
+            'This removes $going from this device, and cannot be undone. There '
+            'is no copy anywhere else: the app has no server to keep one on.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialog).pop(false),
+              child: const Text('Keep my account'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialog).pop(true),
+              style: FilledButton.styleFrom(
+                backgroundColor: scheme.error,
+                foregroundColor: scheme.onError,
+              ),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirmed != true) return;
+
+    try {
+      await auth.deleteAccount();
+    } catch (error) {
+      debugPrint('Could not delete the account: $error');
+      if (!context.mounted) return;
+      messenger.showSnackBar(
+        const SnackBar(content: Text(AuthMessages.unexpected)),
+      );
+    }
+  }
+
+  /// "12 sessions", "1 session" — one place, so the sentence cannot disagree
+  /// with itself about the plural.
+  static String _count(int count, String noun) =>
+      count == 1 ? '1 $noun' : '$count ${noun}s';
+
+  /// "a, b and c", so a list inside a sentence reads as one.
+  static String _and(List<String> parts) {
+    if (parts.length <= 1) return parts.join();
+    return '${parts.sublist(0, parts.length - 1).join(', ')} and ${parts.last}';
+  }
 }
 
 /// One step of the weekly target, disabled at the ends of the accepted range.
@@ -480,8 +665,60 @@ class _RecordRow extends StatelessWidget {
   }
 }
 
-/// Says what is missing and why, in the space a list would have taken.
+/// One row inside the account card: an icon, a label, and the chevron that says
+/// it does something.
 ///
+/// A [ListTile] would bring its own padding, tap target and idea of how big a
+/// leading icon is, and this has to sit inside a bordered card whose dividers
+/// run the full width.
+class _AccountAction extends StatelessWidget {
+  const _AccountAction({
+    required this.icon,
+    required this.label,
+    this.onPressed,
+    this.destructive = false,
+  });
+
+  final IconData icon;
+  final String label;
+
+  /// Null while the account is busy, which is also what greys the row out.
+  final VoidCallback? onPressed;
+
+  /// Paints it in the error colour, for the one row that cannot be undone.
+  final bool destructive;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final enabled = onPressed != null;
+    final colour = destructive ? scheme.error : scheme.onSurface;
+    final shade = enabled ? colour : scheme.onSurfaceVariant;
+
+    return InkWell(
+      onTap: onPressed,
+      borderRadius: AppRadius.card,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 14, 12, 14),
+        child: Row(
+          children: [
+            Icon(icon, size: 20, color: shade),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: context.text.exerciseMeta.copyWith(color: shade),
+              ),
+            ),
+            Icon(Icons.chevron_right, size: 18, color: scheme.onSurfaceVariant),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Says what is missing and why, in the space a list would have taken.///
 /// Deliberately not an [EmptyState]: these sit inside a scrolling column of
 /// real sections, where a full-height centred block would read as the screen
 /// having failed rather than one section having nothing in it yet.
