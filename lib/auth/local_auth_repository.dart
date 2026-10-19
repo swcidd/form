@@ -167,10 +167,17 @@ class LocalAuthRepository implements AuthRepository {
   @override
   Future<void> deleteAccount(String userId) async {
     final db = await _db;
-    // The account and the session that pointed at it go together: an account
-    // that no longer exists with a session still naming it is not a state to
-    // leave anyone in.
+    // Everything, in one transaction: the account's own training goes with it,
+    // and so does the session that named it — an account that no longer exists
+    // with a session still pointing at it is not a state to leave anyone in,
+    // and rows left behind would be invisible to every query forever.
+    //
+    // The training tables come from the schema's own list of what has an owner,
+    // so a table added later is deleted rather than orphaned.
     await db.transaction((txn) async {
+      for (final table in AppDatabase.accountScopedTables) {
+        await txn.delete(table, where: 'userId = ?', whereArgs: [userId]);
+      }
       await txn.delete(
         AppDatabase.accountsTable,
         where: 'id = ?',

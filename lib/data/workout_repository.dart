@@ -10,7 +10,7 @@ import '../models/saved_exercise.dart';
 import '../models/workout.dart';
 import 'app_database.dart';
 
-/// Reads and writes workouts, exercises, sets and the profile.
+/// Reads and writes one account's workouts, exercises, sets and profile.
 ///
 /// Writes go through [replaceWorkout] rather than a set of granular verbs so a
 /// workout is always persisted as one consistent unit. Ticking a single set
@@ -18,12 +18,20 @@ import 'app_database.dart';
 /// and irrelevant in practice at this size, and it removes the possibility of
 /// a crash half way through leaving a session that mixes old and new.
 ///
+/// Scoped to an account at construction rather than per call: every row in the
+/// store belongs to somebody, so a repository *is* "the store as one account
+/// sees it", and there is no query here that could forget to say whose. A
+/// different account is a different repository over the same database.
+///
 /// Nothing here knows about widgets. [WorkoutProvider] owns the in-memory
 /// state the UI observes; this owns the durable copy.
 class WorkoutRepository {
-  WorkoutRepository(this._app);
+  WorkoutRepository(this._app, {required this.userId});
 
   final AppDatabase _app;
+
+  /// The account every row this repository reads or writes belongs to.
+  final String userId;
 
   Future<Database> get _db => _app.open();
 
@@ -38,6 +46,8 @@ class WorkoutRepository {
     final db = await _db;
     final rows = await db.query(
       AppDatabase.savedExercisesTable,
+      where: 'userId = ?',
+      whereArgs: [userId],
       orderBy: 'savedAt DESC',
     );
 
@@ -72,19 +82,26 @@ class WorkoutRepository {
     final db = await _db;
     final workoutRows = await db.query(
       AppDatabase.workoutsTable,
+      where: 'userId = ?',
+      whereArgs: [userId],
       orderBy: 'date ASC',
     );
     if (workoutRows.isEmpty) return [];
 
     // One query for every exercise in every workout, then one for every set,
     // rather than two queries per workout. At a few hundred sessions the naive
-    // version issues thousands of round trips; this issues two.
+    // version issues thousands of round trips; this issues two. The children
+    // carry the owner too, so a filter here is a filter and not a join.
     final logRows = await db.query(
       AppDatabase.exerciseLogsTable,
+      where: 'userId = ?',
+      whereArgs: [userId],
       orderBy: 'workoutId ASC, position ASC',
     );
     final setRows = await db.query(
       AppDatabase.setsTable,
+      where: 'userId = ?',
+      whereArgs: [userId],
       orderBy: 'workoutId ASC, logIndex ASC, position ASC',
     );
 
@@ -140,7 +157,8 @@ class WorkoutRepository {
     final db = await _db;
     final rows = await db.query(
       AppDatabase.profileTable,
-      where: 'id = 1',
+      where: 'userId = ?',
+      whereArgs: [userId],
       limit: 1,
     );
     if (rows.isEmpty) return null;
@@ -176,9 +194,11 @@ class WorkoutRepository {
 
   Future<void> saveSavedExercise(SavedExercise saved) async {
     final db = await _db;
-    // Replace rather than insert: the key is the exercise, so keeping
-    // something already kept has one row, not two with different timestamps.
+    // Replace rather than insert: the key is the exercise and its owner, so
+    // keeping something already kept has one row, not two with different
+    // timestamps.
     await db.insert(AppDatabase.savedExercisesTable, {
+      'userId': userId,
       'id': saved.id,
       'savedAt': saved.savedAt.millisecondsSinceEpoch,
       'payload': jsonEncode(saved.exercise.toJson()),
@@ -189,8 +209,8 @@ class WorkoutRepository {
     final db = await _db;
     await db.delete(
       AppDatabase.savedExercisesTable,
-      where: 'id = ?',
-      whereArgs: [id],
+      where: 'userId = ? AND id = ?',
+      whereArgs: [userId, id],
     );
   }
 
@@ -199,11 +219,12 @@ class WorkoutRepository {
     await db.transaction((txn) async {
       // Delete-then-insert rather than an upsert per row. The cascade clears
       // the exercises and sets with the workout, and the FK pragma makes that
-      // happen; without it this would silently orphan every set.
+      // happen; without it this would silently orphan every set. The owner is
+      // part of the key, so this cannot reach another account's session.
       await txn.delete(
         AppDatabase.workoutsTable,
-        where: 'id = ?',
-        whereArgs: [workout.id],
+        where: 'userId = ? AND id = ?',
+        whereArgs: [userId, workout.id],
       );
 
       await txn.insert(AppDatabase.workoutsTable, _workoutToRow(workout));
@@ -211,6 +232,7 @@ class WorkoutRepository {
       for (var i = 0; i < workout.logs.length; i++) {
         final log = workout.logs[i];
         await txn.insert(AppDatabase.exerciseLogsTable, {
+          'userId': userId,
           'workoutId': workout.id,
           'position': i,
           'name': log.exercise.name,
@@ -221,6 +243,7 @@ class WorkoutRepository {
         for (var s = 0; s < log.sets.length; s++) {
           final set = log.sets[s];
           await txn.insert(AppDatabase.setsTable, {
+            'userId': userId,
             'workoutId': workout.id,
             'logIndex': i,
             'position': s,
@@ -239,18 +262,22 @@ class WorkoutRepository {
     // because the connection has foreign keys enabled.
     await db.delete(
       AppDatabase.workoutsTable,
-      where: 'id = ?',
-      whereArgs: [id],
+      where: 'userId = ? AND id = ?',
+      whereArgs: [userId, id],
     );
   }
 
   Future<void> saveProfile(ProfileStats profile) async {
     final db = await _db;
-    // Replace rather than insert-or-update: the row is keyed on a single
-    // constant id, so there is never a second profile to reconcile with.
-    await db.delete(AppDatabase.profileTable);
+    // Replace rather than insert-or-update: the row is keyed on the account,
+    // so there is never a second profile of theirs to reconcile with.
+    await db.delete(
+      AppDatabase.profileTable,
+      where: 'userId = ?',
+      whereArgs: [userId],
+    );
     await db.insert(AppDatabase.profileTable, {
-      'id': 1,
+      'userId': userId,
       'name': profile.name,
       'handle': profile.handle,
       'role': profile.role,
@@ -274,24 +301,26 @@ class WorkoutRepository {
     });
   }
 
-  /// Discards every workout, the profile and the saved exercises. Used by tests
-  /// and by a future "clear my data" action.
+  /// Discards this account's workouts, profile and saved exercises. Used by
+  /// tests and by the "start over" action.
   ///
-  /// Accounts and the session deliberately stay: clearing training is not
-  /// deleting the account, and an account whose password went with its
-  /// workouts would leave nobody a way back in.
+  /// Only theirs: another account on the same device is another repository and
+  /// keeps its training. Accounts and the session deliberately stay too —
+  /// clearing training is not deleting the account, and an account whose
+  /// password went with its workouts would leave nobody a way back in.
   Future<void> clear() async {
     final db = await _db;
-    await db.delete(AppDatabase.setsTable);
-    await db.delete(AppDatabase.exerciseLogsTable);
-    await db.delete(AppDatabase.workoutsTable);
-    await db.delete(AppDatabase.profileTable);
-    await db.delete(AppDatabase.savedExercisesTable);
+    // Children first, from the schema's own list of what has an owner, so a
+    // table added later is cleared rather than left behind.
+    for (final table in AppDatabase.accountScopedTables) {
+      await db.delete(table, where: 'userId = ?', whereArgs: [userId]);
+    }
   }
 
   // --- Mapping --------------------------------------------------------------
 
   Map<String, Object?> _workoutToRow(Workout workout) => {
+    'userId': userId,
     'id': workout.id,
     'title': workout.title,
     // Stored as epoch milliseconds so date comparisons stay numeric. ISO

@@ -483,7 +483,7 @@ void main() {
       // still be usable rather than take the launch down with it.
       final provider = WorkoutProvider(
         today: today,
-        repository: WorkoutRepository(AppDatabase()),
+        repository: WorkoutRepository(AppDatabase(), userId: 'local'),
       );
 
       await provider.load();

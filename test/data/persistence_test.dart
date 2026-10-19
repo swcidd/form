@@ -4,6 +4,7 @@ import 'package:plus_one/data/workout_repository.dart';
 import 'package:plus_one/exercise_library.dart';
 import 'package:plus_one/models/exercise.dart';
 import 'package:plus_one/models/profile_stats.dart';
+import 'package:plus_one/models/session.dart';
 import 'package:plus_one/models/workout.dart';
 import 'package:plus_one/providers/workout_provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -33,8 +34,13 @@ void main() {
 
   final today = DateTime(2026, 10, 6);
 
-  WorkoutProvider launch() =>
-      WorkoutProvider(today: today, repository: WorkoutRepository(app));
+  /// The account every one of these launches signs in as.
+  const device = Session.deviceUserId;
+
+  WorkoutProvider launch() => WorkoutProvider(
+    today: today,
+    repository: WorkoutRepository(app, userId: device),
+  );
 
   /// A catalogue entry, the shape Discover hands the bookmark.
   const barbellCurl = LibraryExercise(

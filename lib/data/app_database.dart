@@ -1,6 +1,8 @@
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
 
+import '../models/session.dart';
+
 /// Opens and owns the app's SQLite file.
 ///
 /// Held as a single instance for the life of the process: `sqflite` serialises
@@ -18,7 +20,7 @@ class AppDatabase {
   final String fileName;
 
   /// Current schema version. Increment with every migration.
-  static const int version = 3;
+  static const int version = 4;
 
   static const String workoutsTable = 'workouts';
   static const String exerciseLogsTable = 'exercise_logs';
@@ -68,108 +70,155 @@ class AppDatabase {
   Future<void> _create(Database db, int version) async {
     final batch = db.batch();
 
-    batch.execute('''
-      CREATE TABLE $workoutsTable (
-        id                 TEXT    PRIMARY KEY,
-        title              TEXT    NOT NULL,
-        date               INTEGER NOT NULL,
-        status             TEXT    NOT NULL,
-        startTime          TEXT    NOT NULL DEFAULT '',
-        place              TEXT    NOT NULL DEFAULT '',
-        durationMin        INTEGER NOT NULL DEFAULT 0,
-        estimatedKcal      INTEGER NOT NULL DEFAULT 0,
-        targetMuscleGroups TEXT    NOT NULL DEFAULT '[]',
-        equipment          TEXT    NOT NULL DEFAULT '[]'
-      )
-    ''');
-
-    // Exercises are a child of a workout, keyed by position rather than a
-    // surrogate key. The order they were logged in is meaningful and is
-    // therefore part of the identity, which keeps a row from drifting if the
-    // list is reordered.
-    batch.execute('''
-      CREATE TABLE $exerciseLogsTable (
-        workoutId   TEXT    NOT NULL,
-        position    INTEGER NOT NULL,
-        name        TEXT    NOT NULL,
-        equipment   TEXT    NOT NULL DEFAULT '',
-        muscleGroups TEXT   NOT NULL DEFAULT '[]',
-        PRIMARY KEY (workoutId, position),
-        FOREIGN KEY (workoutId) REFERENCES $workoutsTable (id) ON DELETE CASCADE
-      )
-    ''');
-
-    batch.execute('''
-      CREATE TABLE $setsTable (
-        workoutId TEXT    NOT NULL,
-        logIndex  INTEGER NOT NULL,
-        position  INTEGER NOT NULL,
-        reps      INTEGER NOT NULL DEFAULT 0,
-        weightKg  REAL    NOT NULL DEFAULT 0,
-        completed INTEGER NOT NULL DEFAULT 0,
-        PRIMARY KEY (workoutId, logIndex, position),
-        FOREIGN KEY (workoutId, logIndex)
-          REFERENCES $exerciseLogsTable (workoutId, position) ON DELETE CASCADE
-      )
-    ''');
-
-    // One row, keyed on a constant. A table rather than a key-value blob
-    // because these are columns the profile screen filters on, and SQLite can
-    // index and type-check them.
-    batch.execute('''
-      CREATE TABLE $profileTable (
-        id             INTEGER PRIMARY KEY CHECK (id = 1),
-        name           TEXT    NOT NULL DEFAULT '',
-        handle         TEXT    NOT NULL DEFAULT '',
-        role           TEXT    NOT NULL DEFAULT '',
-        memberSince    TEXT    NOT NULL DEFAULT '',
-        isPro          INTEGER NOT NULL DEFAULT 0,
-        weightKg       REAL    NOT NULL DEFAULT 0,
-        heightCm       REAL    NOT NULL DEFAULT 0,
-        bodyFatPct     REAL    NOT NULL DEFAULT 0,
-        restingHrBpm   INTEGER NOT NULL DEFAULT 0,
-        totalWorkouts  INTEGER NOT NULL DEFAULT 0,
-        totalKcal      INTEGER NOT NULL DEFAULT 0,
-        totalHours     INTEGER NOT NULL DEFAULT 0,
-        streakDays     INTEGER NOT NULL DEFAULT 0,
-        badgeCount     INTEGER NOT NULL DEFAULT 0,
-        records        TEXT    NOT NULL DEFAULT '[]',
-        achievements   TEXT    NOT NULL DEFAULT '[]'
-      )
-    ''');
-
-    // The calendar queries by date on every month render, and the dashboard
-    // sorts the recent list by it. Without these the whole workout table is
-    // scanned per query.
-    batch.execute('CREATE INDEX idx_workouts_date ON $workoutsTable (date)');
-
-    batch.execute(_savedExercisesDdl);
+    batch.execute(_workoutsDdl(workoutsTable));
+    batch.execute(_exerciseLogsDdl(exerciseLogsTable, workoutsTable));
+    batch.execute(_setsDdl(setsTable, exerciseLogsTable));
+    batch.execute(_profileDdl(profileTable));
+    batch.execute(_savedExercisesDdl(savedExercisesTable));
     batch.execute(_accountsDdl);
     batch.execute(_sessionDdl);
+    batch.execute(_workoutsIndexDdl(workoutsTable));
 
     await batch.commit(noResult: true);
   }
 
-  /// The saved-exercises table's DDL, shared by a fresh install and the
-  /// migration.
+  /// Every table whose rows belong to one account, children before parents.
   ///
-  /// One payload column rather than a column per field: a saved entry is a
-  /// copy of a catalogue record the app cannot ask for again while offline,
-  /// and nothing queries inside it — the list reads and deletes whole rows.
-  static const String _savedExercisesDdl =
+  /// The schema's own statement of what has an owner. Anything that deletes an
+  /// account walks this list, so a table added later cannot be missed by a
+  /// delete written earlier.
+  static const List<String> accountScopedTables = [
+    setsTable,
+    exerciseLogsTable,
+    workoutsTable,
+    profileTable,
+    savedExercisesTable,
+  ];
+
+  /// The name v4 stages a rebuilt table under, before renaming it into place.
+  static const String _staged = '_v4';
+
+  /// The workouts table, under whatever name it is being created.
+  ///
+  /// The name is a parameter because the v4 migration stages a copy of every
+  /// table and renames it. Writing the shape down twice — once for a new install
+  /// and once for the migration — is how a migration ends up disagreeing with a
+  /// new install about what a row looks like.
+  ///
+  /// Keyed on `(userId, id)` rather than on `id`: every account numbers its own
+  /// sessions from one, so two accounts both have a `w1`, and neither of them is
+  /// the other's.
+  static String _workoutsDdl(String table) =>
       '''
-    CREATE TABLE $savedExercisesTable (
-      id      TEXT    PRIMARY KEY,
-      savedAt INTEGER NOT NULL,
-      payload TEXT    NOT NULL
+    CREATE TABLE $table (
+      userId             TEXT    NOT NULL,
+      id                 TEXT    NOT NULL,
+      title              TEXT    NOT NULL,
+      date               INTEGER NOT NULL,
+      status             TEXT    NOT NULL,
+      startTime          TEXT    NOT NULL DEFAULT '',
+      place              TEXT    NOT NULL DEFAULT '',
+      durationMin        INTEGER NOT NULL DEFAULT 0,
+      estimatedKcal      INTEGER NOT NULL DEFAULT 0,
+      targetMuscleGroups TEXT    NOT NULL DEFAULT '[]',
+      equipment          TEXT    NOT NULL DEFAULT '[]',
+      PRIMARY KEY (userId, id)
     )
   ''';
+
+  /// Exercises are a child of a workout, keyed by position rather than by a
+  /// surrogate id. The order they were logged in is meaningful and so is part
+  /// of the identity, and the owner travels with the row, so the cascade finds
+  /// the right account's exercises.
+  static String _exerciseLogsDdl(String table, String workouts) =>
+      '''
+    CREATE TABLE $table (
+      userId       TEXT    NOT NULL,
+      workoutId    TEXT    NOT NULL,
+      position     INTEGER NOT NULL,
+      name         TEXT    NOT NULL,
+      equipment    TEXT    NOT NULL DEFAULT '',
+      muscleGroups TEXT    NOT NULL DEFAULT '[]',
+      PRIMARY KEY (userId, workoutId, position),
+      FOREIGN KEY (userId, workoutId) REFERENCES $workouts (userId, id)
+        ON DELETE CASCADE
+    )
+  ''';
+
+  static String _setsDdl(String table, String logs) =>
+      '''
+    CREATE TABLE $table (
+      userId    TEXT    NOT NULL,
+      workoutId TEXT    NOT NULL,
+      logIndex  INTEGER NOT NULL,
+      position  INTEGER NOT NULL,
+      reps      INTEGER NOT NULL DEFAULT 0,
+      weightKg  REAL    NOT NULL DEFAULT 0,
+      completed INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (userId, workoutId, logIndex, position),
+      FOREIGN KEY (userId, workoutId, logIndex)
+        REFERENCES $logs (userId, workoutId, position) ON DELETE CASCADE
+    )
+  ''';
+
+  /// One row per account, keyed on the account.
+  ///
+  /// A table rather than a key-value blob because these are columns the profile
+  /// screen reads and the summary totals are computed from, and SQLite can type
+  /// check them. The key used to be a constant `1` while the device had one
+  /// account; it is the owner now, so two accounts have two profiles instead of
+  /// taking turns at one.
+  static String _profileDdl(String table) =>
+      '''
+    CREATE TABLE $table (
+      userId        TEXT    PRIMARY KEY,
+      name          TEXT    NOT NULL DEFAULT '',
+      handle        TEXT    NOT NULL DEFAULT '',
+      role          TEXT    NOT NULL DEFAULT '',
+      memberSince   TEXT    NOT NULL DEFAULT '',
+      isPro         INTEGER NOT NULL DEFAULT 0,
+      weightKg      REAL    NOT NULL DEFAULT 0,
+      heightCm      REAL    NOT NULL DEFAULT 0,
+      bodyFatPct    REAL    NOT NULL DEFAULT 0,
+      restingHrBpm  INTEGER NOT NULL DEFAULT 0,
+      totalWorkouts INTEGER NOT NULL DEFAULT 0,
+      totalKcal     INTEGER NOT NULL DEFAULT 0,
+      totalHours    INTEGER NOT NULL DEFAULT 0,
+      streakDays    INTEGER NOT NULL DEFAULT 0,
+      badgeCount    INTEGER NOT NULL DEFAULT 0,
+      records       TEXT    NOT NULL DEFAULT '[]',
+      achievements  TEXT    NOT NULL DEFAULT '[]'
+    )
+  ''';
+
+  /// The saved-exercises table.
+  ///
+  /// One payload column rather than a column per field: a saved entry is a copy
+  /// of a catalogue record the app cannot ask for again while offline, and
+  /// nothing queries inside it — the list reads and deletes whole rows. Keyed on
+  /// the owner and the exercise, so two accounts can both keep the same one.
+  static String _savedExercisesDdl(String table) =>
+      '''
+    CREATE TABLE $table (
+      userId  TEXT    NOT NULL,
+      id      TEXT    NOT NULL,
+      savedAt INTEGER NOT NULL,
+      payload TEXT    NOT NULL,
+      PRIMARY KEY (userId, id)
+    )
+  ''';
+
+  /// The calendar queries by owner and date on every month render, and the
+  /// dashboard sorts the recent list by date. Without this the whole workout
+  /// table is scanned per query.
+  static String _workoutsIndexDdl(String table) =>
+      'CREATE INDEX idx_workouts_user_date ON $table (userId, date)';
 
   /// An account that lives on this device.
   ///
   /// Keyed on a generated id rather than the address, because every other table
-  /// will attribute its rows to this id, and an address is the thing a person is
-  /// most likely to want to change. The email is unique so the same address
+  /// attributes its rows to this id and an address is the thing a person is
+  /// most likely to want to change. The email is unique, so the same address
   /// cannot end up with two accounts; it is stored already normalised, which is
   /// what makes that constraint mean "the same address" rather than "the same
   /// spelling". The password column holds a verifier, never a password.
@@ -186,10 +235,10 @@ class AppDatabase {
 
   /// Who is signed in, as one row keyed on a constant.
   ///
-  /// A table rather than a preference because the session is part of the same
-  /// story as the account it points at, and a foreign key here would be wrong:
-  /// the device session belongs to no account, and signing out has to be able
-  /// to leave the account behind intact.
+  /// A table rather than a preference because the session belongs to the same
+  /// story as the account it names, and there is deliberately no foreign key
+  /// here: the device session names no account, and signing out has to leave
+  /// the account standing.
   static const String _sessionDdl =
       '''
     CREATE TABLE $sessionTable (
@@ -202,7 +251,7 @@ class AppDatabase {
   ''';
 
   static void _createSavedExercises(DatabaseExecutor db) {
-    db.execute(_savedExercisesDdl);
+    db.execute(_savedExercisesDdl(savedExercisesTable));
   }
 
   static void _createAccounts(DatabaseExecutor db) {
@@ -211,19 +260,116 @@ class AppDatabase {
   }
 
   Future<void> _upgrade(Database db, int from, int to) async {
-    // v2 adds saved exercises. Added as its own table, never as a recreate:
-    // dropping the others would throw away the user's training history to gain
-    // one feature.
+    // v2 adds saved exercises, v3 accounts and the session.
+    //
+    // Both steps add their own tables and nothing else, never a recreate:
+    // dropping what is already there would throw away the user's training
+    // history to gain one feature. Each step creates the shape of its own time
+    // for the same reason the v4 step rebuilds rather than trusts — a step that
+    // wrote the newest shape would leave v4 rebuilding a table that has never
+    // been written to.
     if (from < 2) {
       _createSavedExercises(db);
     }
 
-    // v3 adds accounts and the session. Two more new tables for the same
-    // reason: the training history predates sign-in and is not sign-in's to
-    // throw away. Rows written before this point are the device account's, and
-    // the v4 migration is where that becomes explicit.
     if (from < 3) {
       _createAccounts(db);
     }
+
+    // v4 gives every row an owner.
+    if (from < 4) {
+      await _ownEverything(db);
+    }
+  }
+
+  /// Fills in the `userId` column of everything written before there were
+  /// accounts, and makes it part of each row's identity.
+  ///
+  /// Rebuilt rather than altered. The owner is part of what identifies a row —
+  /// a workout is `(userId, id)`, because each account numbers its own sessions
+  /// from one — and SQLite cannot change a primary key in place. So each table
+  /// is copied into a staged one with the owner filled in and then renamed into
+  /// place, which is also the only way to move a child's foreign key from a
+  /// single column onto a pair.
+  ///
+  /// The rows that predate accounts belong to [Session.deviceUserId] — the
+  /// device account that "continue offline" signs in as. An upgraded install
+  /// therefore opens on its own training rather than on an empty app, and the
+  /// named accounts a person makes afterwards start empty, which is what the
+  /// app does for them on a fresh install too.
+  ///
+  /// The order is load-bearing. The copies go parent first, because a child's
+  /// foreign key is checked against rows that have to be there by the time it is
+  /// written. The old tables go children first, so no drop cascades onto a table
+  /// that is about to be dropped anyway. And the renames go last, parents first,
+  /// because renaming a table rewrites the references to it in the children
+  /// still waiting to be renamed themselves.
+  static Future<void> _ownEverything(Database db) async {
+    final workouts = '$workoutsTable$_staged';
+    final logs = '$exerciseLogsTable$_staged';
+    final sets = '$setsTable$_staged';
+    final profile = '$profileTable$_staged';
+    final saved = '$savedExercisesTable$_staged';
+
+    await db.execute(_workoutsDdl(workouts));
+    await db.execute(_exerciseLogsDdl(logs, workouts));
+    await db.execute(_setsDdl(sets, logs));
+    await db.execute(_profileDdl(profile));
+    await db.execute(_savedExercisesDdl(saved));
+
+    final owner = Session.deviceUserId;
+
+    await db.execute(
+      'INSERT INTO $workouts '
+      '(userId, id, title, date, status, startTime, place, durationMin, '
+      'estimatedKcal, targetMuscleGroups, equipment) '
+      'SELECT ?, id, title, date, status, startTime, place, durationMin, '
+      'estimatedKcal, targetMuscleGroups, equipment FROM $workoutsTable',
+      [owner],
+    );
+    await db.execute(
+      'INSERT INTO $logs '
+      '(userId, workoutId, position, name, equipment, muscleGroups) '
+      'SELECT ?, workoutId, position, name, equipment, muscleGroups '
+      'FROM $exerciseLogsTable',
+      [owner],
+    );
+    await db.execute(
+      'INSERT INTO $sets '
+      '(userId, workoutId, logIndex, position, reps, weightKg, completed) '
+      'SELECT ?, workoutId, logIndex, position, reps, weightKg, completed '
+      'FROM $setsTable',
+      [owner],
+    );
+    await db.execute(
+      'INSERT INTO $profile '
+      '(userId, name, handle, role, memberSince, isPro, weightKg, heightCm, '
+      'bodyFatPct, restingHrBpm, totalWorkouts, totalKcal, totalHours, '
+      'streakDays, badgeCount, records, achievements) '
+      'SELECT ?, name, handle, role, memberSince, isPro, weightKg, heightCm, '
+      'bodyFatPct, restingHrBpm, totalWorkouts, totalKcal, totalHours, '
+      'streakDays, badgeCount, records, achievements FROM $profileTable',
+      [owner],
+    );
+    // Columns named rather than selected wholesale, because this table may be
+    // the one v2 made, with no owner column, or the one this version makes,
+    // which a v1 file gets from the step above before this step rebuilds it.
+    await db.execute(
+      'INSERT INTO $saved (userId, id, savedAt, payload) '
+      'SELECT ?, id, savedAt, payload FROM $savedExercisesTable',
+      [owner],
+    );
+
+    for (final table in accountScopedTables) {
+      await db.execute('DROP TABLE $table');
+    }
+
+    await db.execute('ALTER TABLE $workouts RENAME TO $workoutsTable');
+    await db.execute('ALTER TABLE $logs RENAME TO $exerciseLogsTable');
+    await db.execute('ALTER TABLE $sets RENAME TO $setsTable');
+    await db.execute('ALTER TABLE $profile RENAME TO $profileTable');
+    await db.execute('ALTER TABLE $saved RENAME TO $savedExercisesTable');
+
+    await db.execute(_workoutsIndexDdl(workoutsTable));
   }
 }

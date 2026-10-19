@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'auth/local_auth_repository.dart';
 import 'data/app_database.dart';
 import 'data/workout_repository.dart';
+import 'models/session.dart';
 import 'navigation/app_tab.dart';
 import 'providers/auth_provider.dart';
 import 'providers/workout_provider.dart';
@@ -34,7 +35,9 @@ Future<void> main() async {
   // than on a welcome screen that a moment later turns out to be wrong.
   final database = AppDatabase();
   final auth = AuthProvider(repository: LocalAuthRepository(database));
-  final provider = WorkoutProvider(repository: WorkoutRepository(database));
+  final provider = WorkoutProvider(
+    repository: WorkoutRepository(database, userId: Session.deviceUserId),
+  );
 
   await auth.restore();
   await provider.load();
