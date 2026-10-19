@@ -2,12 +2,15 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
+import 'package:plus_one/auth/local_auth_repository.dart';
+import 'package:plus_one/auth/password_hasher.dart';
 import 'package:plus_one/data/app_database.dart';
 import 'package:plus_one/data/workout_repository.dart';
 import 'package:plus_one/exercise_library.dart';
 import 'package:plus_one/models/exercise.dart';
 import 'package:plus_one/models/profile_stats.dart';
 import 'package:plus_one/models/saved_exercise.dart';
+import 'package:plus_one/models/session.dart';
 import 'package:plus_one/models/workout.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -26,9 +29,12 @@ void main() {
   late AppDatabase app;
   late WorkoutRepository repository;
 
+  /// The account the app signs into when a file predates accounts.
+  const device = Session.deviceUserId;
+
   setUp(() async {
     app = AppDatabase();
-    repository = WorkoutRepository(app);
+    repository = WorkoutRepository(app, userId: device);
     // One in-memory database per test. A file would persist across cases and
     // leak rows between them, so "an empty store" would only be true for the
     // first test to run.
@@ -84,6 +90,8 @@ void main() {
           AppDatabase.setsTable,
           AppDatabase.profileTable,
           AppDatabase.savedExercisesTable,
+          AppDatabase.accountsTable,
+          AppDatabase.sessionTable,
         ]),
       );
     });
@@ -93,10 +101,15 @@ void main() {
 
       // The calendar renders a month at a time and the dashboard sorts recent
       // sessions by date; without this the whole table is scanned per query.
+      // The index leads with the owner, because every one of those queries
+      // reads one account's sessions.
       final indexes = await db.rawQuery(
         "SELECT name FROM sqlite_master WHERE type='index' AND name NOT LIKE 'sqlite_%'",
       );
-      expect(indexes.map((row) => row['name']), contains('idx_workouts_date'));
+      expect(
+        indexes.map((row) => row['name']),
+        contains('idx_workouts_user_date'),
+      );
     });
 
     test(
@@ -118,23 +131,279 @@ void main() {
         });
 
         final oldDb = AppDatabase();
-        final old = WorkoutRepository(oldDb);
+        final old = WorkoutRepository(oldDb, userId: device);
         await oldDb.open(path: path);
         await old.replaceWorkout(sampleWorkout());
         final db = await oldDb.open();
+        // Everything the two migrations after v1 added, so the next open has
+        // to put all of it back rather than finding it already there.
         await db.execute('DROP TABLE ${AppDatabase.savedExercisesTable}');
+        await db.execute('DROP TABLE ${AppDatabase.accountsTable}');
+        await db.execute('DROP TABLE ${AppDatabase.sessionTable}');
         await db.execute('PRAGMA user_version = 1');
         await oldDb.close();
 
         // The next launch: same file, current version.
         final nextDb = AppDatabase();
-        final next = WorkoutRepository(nextDb);
+        final next = WorkoutRepository(nextDb, userId: device);
         await nextDb.open(path: path);
         expect(await next.loadWorkouts(), hasLength(1));
         expect(await next.loadSavedExercises(), isEmpty);
         await nextDb.close();
       },
     );
+
+    test(
+      'migrating from version 2 keeps the training and adds sign-in',
+      () async {
+        // A file a v2 app left behind: training and saved exercises, no
+        // accounts. Same reasoning as above about a file rather than the
+        // in-memory path.
+        final path = p.join(
+          Directory.systemTemp.path,
+          'form_auth_migration_test.db',
+        );
+        final file = File(path);
+        if (file.existsSync()) file.deleteSync();
+        addTearDown(() {
+          if (file.existsSync()) file.deleteSync();
+        });
+
+        final oldDb = AppDatabase();
+        final old = WorkoutRepository(oldDb, userId: device);
+        await oldDb.open(path: path);
+        await old.replaceWorkout(sampleWorkout());
+        final db = await oldDb.open();
+        await db.execute('DROP TABLE IF EXISTS ${AppDatabase.accountsTable}');
+        await db.execute('DROP TABLE IF EXISTS ${AppDatabase.sessionTable}');
+        await db.execute('PRAGMA user_version = 2');
+        await oldDb.close();
+
+        // The next launch: same file, current version.
+        final nextDb = AppDatabase();
+        final next = WorkoutRepository(nextDb, userId: device);
+        await nextDb.open(path: path);
+
+        // The migration adds sign-in; it does not cost anyone their history.
+        expect(await next.loadWorkouts(), hasLength(1));
+
+        // And the new tables are usable, not merely present.
+        final auth = LocalAuthRepository(
+          nextDb,
+          hasher: const PasswordHasher(iterations: 50),
+        );
+        final session = await auth.createAccount(
+          email: 'sam@example.com',
+          password: 'one-rep-more',
+        );
+        expect(session.isGuest, isFalse);
+        expect((await auth.restoreSession())?.userId, session.userId);
+        await nextDb.close();
+      },
+    );
+
+    test('migrating from version 3 gives every row an owner', () async {
+      // A file a v3 app left behind. Opened once by the current code — so the
+      // tables v4 does not touch are real — and then the training tables are
+      // replaced with the shape v3 gave them. Written out rather than produced
+      // by rewinding the version on a current file: that file's tables are
+      // already the new shape, and the rebuild would pass whether or not it
+      // worked.
+      final path = p.join(
+        Directory.systemTemp.path,
+        'form_owner_migration_test.db',
+      );
+      final file = File(path);
+      if (file.existsSync()) file.deleteSync();
+      addTearDown(() {
+        if (file.existsSync()) file.deleteSync();
+      });
+
+      final oldDb = AppDatabase();
+      final db = await oldDb.open(path: path);
+      for (final table in AppDatabase.accountScopedTables) {
+        await db.execute('DROP TABLE $table');
+      }
+      for (final ddl in _v3TrainingTables) {
+        await db.execute(ddl);
+      }
+
+      await db.insert(AppDatabase.workoutsTable, {
+        'id': 'w1',
+        'title': 'Upper Body',
+        'date': DateTime(2026, 10, 6).millisecondsSinceEpoch,
+        'status': 'planned',
+        'targetMuscleGroups': '["Chest"]',
+        'equipment': '["Barbell"]',
+        'durationMin': 45,
+        'estimatedKcal': 420,
+      });
+      await db.insert(AppDatabase.exerciseLogsTable, {
+        'workoutId': 'w1',
+        'position': 0,
+        'name': 'Bench Press',
+        'equipment': 'Barbell',
+        'muscleGroups': '["Chest"]',
+      });
+      await db.insert(AppDatabase.setsTable, {
+        'workoutId': 'w1',
+        'logIndex': 0,
+        'position': 0,
+        'reps': 8,
+        'weightKg': 60.0,
+        'completed': 1,
+      });
+      await db.insert(AppDatabase.profileTable, {'id': 1, 'name': 'Sam'});
+      await db.insert(AppDatabase.savedExercisesTable, {
+        'id': 'barbell-curl',
+        'savedAt': DateTime(2026, 10, 5).millisecondsSinceEpoch,
+        'payload': '{"name":"Barbell Curl"}',
+      });
+      await db.execute('PRAGMA user_version = 3');
+      await oldDb.close();
+
+      // The next launch: same file, current version.
+      final nextDb = AppDatabase();
+      final mine = WorkoutRepository(nextDb, userId: device);
+      await nextDb.open(path: path);
+
+      // Everything is where it was, and it is the device account's: the person
+      // who trained before there were accounts is the one "continue offline"
+      // signs in as.
+      final workouts = await mine.loadWorkouts();
+      expect(workouts, hasLength(1));
+      expect(workouts.single.id, 'w1');
+      expect(workouts.single.logs.single.exercise.name, 'Bench Press');
+      expect(workouts.single.logs.single.sets.single.reps, 8);
+      expect(await mine.loadSavedExercises(), hasLength(1));
+      expect((await mine.loadProfile())?.name, 'Sam');
+
+      // And the children came with their parent rather than being orphaned by
+      // the rebuild.
+      expect(await mine.loadWorkouts(), hasLength(1));
+
+      // A named account made afterwards starts empty. The owner the migration
+      // writes is the device account specifically, not everybody.
+      final someoneElse = WorkoutRepository(nextDb, userId: 'someone-else');
+      expect(await someoneElse.loadWorkouts(), isEmpty);
+      expect(await someoneElse.loadSavedExercises(), isEmpty);
+      expect(await someoneElse.loadProfile(), isNull);
+      await nextDb.close();
+    });
+  });
+
+  group('accounts keep their own rows', () {
+    test('one account cannot read another\'s training', () async {
+      final sam = WorkoutRepository(app, userId: 'sam');
+      final alex = WorkoutRepository(app, userId: 'alex');
+      await sam.replaceWorkout(sampleWorkout(title: 'Sam\'s push day'));
+
+      expect(await sam.loadWorkouts(), hasLength(1));
+      expect(await alex.loadWorkouts(), isEmpty);
+    });
+
+    test('the same workout id in two accounts is two sessions', () async {
+      final sam = WorkoutRepository(app, userId: 'sam');
+      final alex = WorkoutRepository(app, userId: 'alex');
+
+      // Both accounts number their own sessions from one, so this is the
+      // ordinary case rather than a conflict: with the key on the id alone the
+      // second of these would replace the first.
+      await sam.replaceWorkout(sampleWorkout(title: 'Sam\'s push day'));
+      await alex.replaceWorkout(sampleWorkout(title: 'Alex\'s push day'));
+
+      expect((await sam.loadWorkouts()).single.title, 'Sam\'s push day');
+      expect((await alex.loadWorkouts()).single.title, 'Alex\'s push day');
+    });
+
+    test('deleting a workout leaves the other account\'s alone', () async {
+      final sam = WorkoutRepository(app, userId: 'sam');
+      final alex = WorkoutRepository(app, userId: 'alex');
+      await sam.replaceWorkout(sampleWorkout(title: 'Sam\'s push day'));
+      await alex.replaceWorkout(sampleWorkout(title: 'Alex\'s push day'));
+
+      await sam.deleteWorkout('w1');
+
+      expect(await sam.loadWorkouts(), isEmpty);
+      expect((await alex.loadWorkouts()).single.title, 'Alex\'s push day');
+    });
+
+    test('two accounts can keep the same exercise', () async {
+      final sam = WorkoutRepository(app, userId: 'sam');
+      final alex = WorkoutRepository(app, userId: 'alex');
+      final saved = SavedExercise(
+        exercise: const LibraryExercise(
+          name: 'Barbell Curl',
+          primaryMuscle: 'biceps',
+          instructions: 'Curl the bar.',
+          equipment: ['Barbell'],
+          category: 'strength',
+        ),
+        savedAt: DateTime(2026, 10, 5),
+      );
+
+      await sam.saveSavedExercise(saved);
+      await alex.saveSavedExercise(saved);
+
+      expect(await sam.loadSavedExercises(), hasLength(1));
+      expect(await alex.loadSavedExercises(), hasLength(1));
+
+      await sam.deleteSavedExercise(saved.id);
+      expect(await sam.loadSavedExercises(), isEmpty);
+      expect(await alex.loadSavedExercises(), hasLength(1));
+    });
+
+    test('two accounts have two profiles', () async {
+      final sam = WorkoutRepository(app, userId: 'sam');
+      final alex = WorkoutRepository(app, userId: 'alex');
+
+      await sam.saveProfile(ProfileStats.empty().copyWith(name: 'Sam'));
+      await alex.saveProfile(ProfileStats.empty().copyWith(name: 'Alex'));
+
+      expect((await sam.loadProfile())?.name, 'Sam');
+      expect((await alex.loadProfile())?.name, 'Alex');
+    });
+
+    test('clearing one account leaves the other standing', () async {
+      final sam = WorkoutRepository(app, userId: 'sam');
+      final alex = WorkoutRepository(app, userId: 'alex');
+      await sam.replaceWorkout(sampleWorkout(title: 'Sam\'s push day'));
+      await alex.replaceWorkout(sampleWorkout(title: 'Alex\'s push day'));
+      await sam.saveProfile(ProfileStats.empty().copyWith(name: 'Sam'));
+
+      await sam.clear();
+
+      expect(await sam.loadWorkouts(), isEmpty);
+      expect(await sam.loadProfile(), isNull);
+      expect(await alex.loadWorkouts(), hasLength(1));
+    });
+
+    test('removing an account takes its training with it', () async {
+      final sam = WorkoutRepository(app, userId: 'sam');
+      final alex = WorkoutRepository(app, userId: 'alex');
+      await sam.replaceWorkout(sampleWorkout(title: 'Sam\'s push day'));
+      await alex.replaceWorkout(sampleWorkout(title: 'Alex\'s push day'));
+
+      final auth = LocalAuthRepository(
+        app,
+        hasher: const PasswordHasher(iterations: 50),
+      );
+      final session = await auth.createAccount(
+        email: 'sam@example.com',
+        password: 'one-rep-more',
+      );
+      final owned = WorkoutRepository(app, userId: session.userId);
+      await owned.replaceWorkout(sampleWorkout(title: 'Sam\'s push day'));
+      expect(await owned.loadWorkouts(), hasLength(1));
+
+      await auth.deleteAccount(session.userId);
+
+      // The rows are gone, not merely hidden: an account nobody can sign into
+      // again should not leave its training behind.
+      expect(await owned.loadWorkouts(), isEmpty);
+      expect(await auth.restoreSession(), isNull);
+      expect((await alex.loadWorkouts()).single.title, 'Alex\'s push day');
+    });
   });
 
   group('round trip', () {
@@ -439,7 +708,7 @@ void main() {
   });
 
   group('clear', () {
-    test('empties every table', () async {
+    test('empties every training table', () async {
       await repository.replaceWorkout(sampleWorkout());
       await repository.saveProfile(seedProfile());
       await repository.saveSavedExercise(
@@ -461,5 +730,101 @@ void main() {
       expect(await repository.loadProfile(), isNull);
       expect(await repository.loadSavedExercises(), isEmpty);
     });
+
+    test('leaves the account and the session standing', () async {
+      final auth = LocalAuthRepository(
+        app,
+        hasher: const PasswordHasher(iterations: 50),
+      );
+      final session = await auth.createAccount(
+        email: 'sam@example.com',
+        password: 'one-rep-more',
+      );
+      await repository.replaceWorkout(sampleWorkout());
+
+      await repository.clear();
+
+      // Clearing training is not deleting the account. An account that lost
+      // its password along with its workouts would be a trap: the way back in
+      // would be gone at the moment someone cleaned up.
+      expect(await repository.loadWorkouts(), isEmpty);
+      expect((await auth.restoreSession())?.userId, session.userId);
+    });
   });
 }
+
+/// The training tables as v3 built them: no owner column, and a primary key on
+/// the row's own id rather than on it and the account.
+///
+/// Written out here rather than imported from the app, because reading this
+/// shape is the v4 migration's whole job. A fixture produced by the current code
+/// would be the new shape wearing an old version number, and the rebuild would
+/// pass whether or not it worked.
+const List<String> _v3TrainingTables = [
+  '''
+  CREATE TABLE workouts (
+    id                 TEXT    PRIMARY KEY,
+    title              TEXT    NOT NULL,
+    date               INTEGER NOT NULL,
+    status             TEXT    NOT NULL,
+    startTime          TEXT    NOT NULL DEFAULT '',
+    place              TEXT    NOT NULL DEFAULT '',
+    durationMin        INTEGER NOT NULL DEFAULT 0,
+    estimatedKcal      INTEGER NOT NULL DEFAULT 0,
+    targetMuscleGroups TEXT    NOT NULL DEFAULT '[]',
+    equipment          TEXT    NOT NULL DEFAULT '[]'
+  )
+  ''',
+  '''
+  CREATE TABLE exercise_logs (
+    workoutId    TEXT    NOT NULL,
+    position     INTEGER NOT NULL,
+    name         TEXT    NOT NULL,
+    equipment    TEXT    NOT NULL DEFAULT '',
+    muscleGroups TEXT    NOT NULL DEFAULT '[]',
+    PRIMARY KEY (workoutId, position),
+    FOREIGN KEY (workoutId) REFERENCES workouts (id) ON DELETE CASCADE
+  )
+  ''',
+  '''
+  CREATE TABLE sets (
+    workoutId TEXT    NOT NULL,
+    logIndex  INTEGER NOT NULL,
+    position  INTEGER NOT NULL,
+    reps      INTEGER NOT NULL DEFAULT 0,
+    weightKg  REAL    NOT NULL DEFAULT 0,
+    completed INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (workoutId, logIndex, position),
+    FOREIGN KEY (workoutId, logIndex)
+      REFERENCES exercise_logs (workoutId, position) ON DELETE CASCADE
+  )
+  ''',
+  '''
+  CREATE TABLE profile (
+    id           INTEGER PRIMARY KEY CHECK (id = 1),
+    name         TEXT    NOT NULL DEFAULT '',
+    handle       TEXT    NOT NULL DEFAULT '',
+    role         TEXT    NOT NULL DEFAULT '',
+    memberSince  TEXT    NOT NULL DEFAULT '',
+    isPro        INTEGER NOT NULL DEFAULT 0,
+    weightKg     REAL    NOT NULL DEFAULT 0,
+    heightCm     REAL    NOT NULL DEFAULT 0,
+    bodyFatPct   REAL    NOT NULL DEFAULT 0,
+    restingHrBpm INTEGER NOT NULL DEFAULT 0,
+    totalWorkouts INTEGER NOT NULL DEFAULT 0,
+    totalKcal    INTEGER NOT NULL DEFAULT 0,
+    totalHours   INTEGER NOT NULL DEFAULT 0,
+    streakDays   INTEGER NOT NULL DEFAULT 0,
+    badgeCount   INTEGER NOT NULL DEFAULT 0,
+    records      TEXT    NOT NULL DEFAULT '[]',
+    achievements TEXT    NOT NULL DEFAULT '[]'
+  )
+  ''',
+  '''
+  CREATE TABLE saved_exercises (
+    id      TEXT    PRIMARY KEY,
+    savedAt INTEGER NOT NULL,
+    payload TEXT    NOT NULL
+  )
+  ''',
+];

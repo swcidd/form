@@ -4,6 +4,7 @@ import 'package:plus_one/data/workout_repository.dart';
 import 'package:plus_one/exercise_library.dart';
 import 'package:plus_one/models/exercise.dart';
 import 'package:plus_one/models/profile_stats.dart';
+import 'package:plus_one/models/session.dart';
 import 'package:plus_one/models/workout.dart';
 import 'package:plus_one/providers/workout_provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -33,8 +34,32 @@ void main() {
 
   final today = DateTime(2026, 10, 6);
 
-  WorkoutProvider launch() =>
-      WorkoutProvider(today: today, repository: WorkoutRepository(app));
+  /// The account every one of these launches signs in as.
+  const device = Session.deviceUserId;
+
+  WorkoutProvider launch() => WorkoutProvider(
+    today: today,
+    repository: WorkoutRepository(app, userId: device),
+  );
+
+  test('a launch is not loaded until the store has been read', () async {
+    final provider = launch();
+
+    // The gate holds the app window on this. False means an answer is coming,
+    // and a shell before it would be an empty account with a true-looking zero
+    // on it.
+    expect(provider.isLoaded, isFalse);
+
+    await provider.load();
+
+    expect(provider.isLoaded, isTrue);
+  });
+
+  test('a provider with no store behind it is loaded from the start', () {
+    // Nothing to read is nothing to wait for, which is what keeps the widget
+    // tests' fixture providers from sitting on a splash.
+    expect(WorkoutProvider(today: today).isLoaded, isTrue);
+  });
 
   /// A catalogue entry, the shape Discover hands the bookmark.
   const barbellCurl = LibraryExercise(
