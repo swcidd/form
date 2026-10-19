@@ -231,7 +231,7 @@ the keystore lives in a gitignored `android/key.properties`.
 - **Review**: every PR got inline review comments on the lines that carried a
   decision (identity, schema, lifecycle), not a rubber stamp, and was merged only
   with the suite green on the merged tree.
-- **Tests**: 284 widget, provider and database tests. The dangerous parts are
+- **Tests**: 286 widget, provider and database tests. The dangerous parts are
   covered directly: the v3 → v4 migration builds an old database by hand, signing
   in as somebody else asserts the old store is disposed, and the counting rules
   have their own tests.
