@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:plus_one/data/app_database.dart';
 import 'package:plus_one/data/workout_repository.dart';
 import 'package:plus_one/exercise_library.dart';
+import 'package:plus_one/models/exercise.dart';
 import 'package:plus_one/models/metric.dart';
 import 'package:plus_one/models/saved_exercise.dart';
 import 'package:plus_one/models/workout.dart';
@@ -169,6 +170,66 @@ void main() {
       // second number, so a week of plans cannot read as a week of training.
       expect(provider.workoutsInCurrentWeek, hasLength(2));
       expect(provider.sessionsDoneThisWeek, 1);
+    });
+
+    test('previous sets come from the last finished session before it', () {
+      ExerciseLog logAt(double weight, {bool completed = true}) => ExerciseLog(
+        exercise: const Exercise(
+          name: 'Barbell Bench Press',
+          equipment: 'Barbell',
+          muscleGroups: ['Chest'],
+        ),
+        sets: [WorkoutSet(reps: 5, weightKg: weight, completed: completed)],
+      );
+
+      Workout session(
+        String id,
+        DateTime date,
+        WorkoutStatus status,
+        double weight,
+      ) => Workout(
+        id: id,
+        title: 'Push Day',
+        date: date,
+        status: status,
+        durationMin: 45,
+        estimatedKcal: 400,
+        targetMuscleGroups: const ['Chest'],
+        equipment: const [],
+        logs: [logAt(weight)],
+      );
+
+      final provider = WorkoutProvider(
+        today: today,
+        workouts: [
+          session(
+            'old',
+            today.subtract(const Duration(days: 7)),
+            WorkoutStatus.completed,
+            80,
+          ),
+          session(
+            'recent',
+            today.subtract(const Duration(days: 2)),
+            WorkoutStatus.completed,
+            90,
+          ),
+          // Planned, so it is not something to beat.
+          session('planned', today, WorkoutStatus.planned, 120),
+        ],
+      );
+
+      final previous = provider.previousSetsFor(
+        'Barbell Bench Press',
+        before: today,
+      );
+      expect(previous, hasLength(1));
+      expect(previous.single.weightKg, 90);
+      expect(
+        provider.previousSetsFor('Cable Fly', before: today),
+        isEmpty,
+        reason: 'an exercise nobody has done has nothing to compare with',
+      );
     });
 
     test('a week of plans has nothing done', () {

@@ -200,6 +200,13 @@ class _ExerciseWorkspace extends StatelessWidget {
       (log) => log.sets.any((s) => !s.completed),
     );
     final currentIndex = firstUnfinished >= 0 ? firstUnfinished : 0;
+    final current = workout.logs[currentIndex];
+    // Read once for the header and the table: both describe the same exercise,
+    // and asking twice would be two scans for one answer.
+    final previous = context.read<WorkoutProvider>().previousSetsFor(
+      current.exercise.name,
+      before: workout.date,
+    );
 
     return SliverToBoxAdapter(
       child: Padding(
@@ -212,6 +219,7 @@ class _ExerciseWorkspace extends StatelessWidget {
               index: currentIndex,
               total: workout.logs.length,
               log: workout.logs[currentIndex],
+              previous: previous,
             ),
             const SizedBox(height: 16),
             // Set log table
@@ -219,6 +227,7 @@ class _ExerciseWorkspace extends StatelessWidget {
               log: workout.logs[currentIndex],
               workoutId: workout.id,
               logIndex: currentIndex,
+              previous: previous,
             ),
             const SizedBox(height: 24),
             // Other exercises (collapsed)
@@ -241,11 +250,22 @@ class _CurrentExerciseHeader extends StatelessWidget {
     required this.index,
     required this.total,
     required this.log,
+    required this.previous,
   });
 
   final int index;
   final int total;
   final ExerciseLog log;
+
+  /// What the exercise was last logged at, oldest session first.
+  final List<WorkoutSet> previous;
+
+  /// The heaviest set of the last session, in the form a lifter writes it down.
+  String? get _lastTime {
+    if (previous.isEmpty) return null;
+    final best = previous.reduce((a, b) => b.weightKg > a.weightKg ? b : a);
+    return 'Last time: ${best.weightKg.toStringAsFixed(1)} kg × ${best.reps}';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -283,10 +303,7 @@ class _CurrentExerciseHeader extends StatelessWidget {
               color: scheme.onSurfaceVariant,
             ),
             const SizedBox(width: 6),
-            Text(
-              log.previousBest ?? 'No previous data',
-              style: text.previousPerf,
-            ),
+            Text(_lastTime ?? 'No previous data', style: text.previousPerf),
           ],
         ),
       ],
@@ -300,11 +317,16 @@ class _SetLog extends StatelessWidget {
     required this.log,
     required this.workoutId,
     required this.logIndex,
+    required this.previous,
   });
 
   final ExerciseLog log;
   final String workoutId;
   final int logIndex;
+
+  /// The same exercise, last time it was logged. Shorter than this session's
+  /// list when the last session did fewer sets.
+  final List<WorkoutSet> previous;
 
   @override
   Widget build(BuildContext context) {
@@ -342,6 +364,7 @@ class _SetLog extends StatelessWidget {
             workoutId: workoutId,
             logIndex: logIndex,
             setIndex: i,
+            previous: i < previous.length ? previous[i] : null,
           ),
         ],
       ],
@@ -362,12 +385,16 @@ class _SetRow extends StatelessWidget {
     required this.workoutId,
     required this.logIndex,
     required this.setIndex,
+    required this.previous,
   });
 
   final ExerciseLog log;
   final String workoutId;
   final int logIndex;
   final int setIndex;
+
+  /// The matching set from the last session, or null when there was none.
+  final WorkoutSet? previous;
 
   @override
   Widget build(BuildContext context) {
@@ -377,10 +404,7 @@ class _SetRow extends StatelessWidget {
     final set = log.sets[setIndex];
     final canRemove = log.sets.length > 1;
 
-    // Previous value for this set index
-    final prev = log.previousSets.length > setIndex
-        ? log.previousSets[setIndex]
-        : null;
+    final prev = previous;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),

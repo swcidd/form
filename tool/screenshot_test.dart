@@ -140,6 +140,70 @@ void main() {
     await settle(tester);
     await shot(tester, '07-profile');
   });
+  testWidgets('08 workout detail', (tester) async {
+    phone(tester);
+    await tester.pumpWidget(seededApp());
+    await settle(tester);
+    await tap(tester, 'Push Day');
+    await settle(tester);
+    await shot(tester, '08-workout-detail');
+  });
+
+  testWidgets('09 logging', (tester) async {
+    phone(tester);
+    await tester.pumpWidget(seededApp());
+    await settle(tester);
+    await tap(tester, 'Push Day');
+    await settle(tester);
+    await tester.ensureVisible(find.text('Start Push Day'));
+    await settle(tester);
+    await tap(tester, 'Start Push Day');
+    await settle(tester);
+    await shot(tester, '09-logging');
+  });
+
+  testWidgets('10 summary', (tester) async {
+    phone(tester);
+    await tester.pumpWidget(seededApp());
+    await settle(tester);
+    await tap(tester, 'Push Day');
+    await settle(tester);
+    await tester.ensureVisible(find.text('Start Push Day'));
+    await settle(tester);
+    await tap(tester, 'Start Push Day');
+    await settle(tester);
+    await tap(tester, 'Finish Workout');
+    await settle(tester);
+    await shot(tester, '10-summary');
+  });
+
+  testWidgets('11 empty account', (tester) async {
+    phone(tester);
+    await tester.pumpWidget(emptyApp());
+    await settle(tester);
+    await shot(tester, '11-empty-account');
+  });
+
+  testWidgets('12 discover', (tester) async {
+    phone(tester);
+    await tester.pumpWidget(seededApp());
+    await settle(tester);
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AppNavBar),
+        matching: find.text('Library'),
+      ),
+    );
+    await settle(tester);
+    await tester.tap(find.text('Discover'));
+    // Bounded pumps rather than `settle`: the catalogue screen runs a progress
+    // indicator while it asks for the network, and an indeterminate spinner
+    // never settles.
+    for (var i = 0; i < 40; i++) {
+      await tester.pump(const Duration(seconds: 1));
+    }
+    await shot(tester, '12-discover');
+  });
 }
 
 /// The SDK's Material icon font, if this machine has one.

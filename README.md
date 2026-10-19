@@ -30,6 +30,19 @@
 </tr>
 </table>
 
+<table>
+<tr>
+<td width="33%"><img src="docs/screenshots/08-workout-detail.png" alt="Workout detail"><br><sub><b>Workout</b> — the plan, the sets and who owns the session</sub></td>
+<td width="33%"><img src="docs/screenshots/09-logging.png" alt="Logging"><br><sub><b>Logging</b> — one set at a time, with last time's numbers beside it</sub></td>
+<td width="33%"><img src="docs/screenshots/10-summary.png" alt="Summary"><br><sub><b>Summary</b> — what the session was worth, and a record only if it beat one</sub></td>
+</tr>
+<tr>
+<td><img src="docs/screenshots/11-empty-account.png" alt="Empty account"><br><sub><b>Empty account</b> — what a fresh install actually shows</sub></td>
+<td><img src="docs/screenshots/12-discover.png" alt="Discover"><br><sub><b>Discover</b> — the wger catalogue, with the offline fallback called out</sub></td>
+<td></td>
+</tr>
+</table>
+
 The screenshots are the app's own widgets, rendered against a **sample account**
 by `tool/screenshot_test.dart` and written to `docs/screenshots/`:
 
