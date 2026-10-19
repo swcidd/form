@@ -258,8 +258,11 @@ class WorkoutProvider extends ChangeNotifier {
     return _dayOnly(monday);
   }
 
-  /// Sessions dated inside the current week, planned and completed alike, so a
-  /// scheduled session already counts toward the weekly target.
+  /// Sessions dated inside the current week, planned and completed alike,
+  /// because the library lists the week and needs the next one still to do.
+  ///
+  /// This is not the number the weekly goal is measured against - that is
+  /// [sessionsDoneThisWeek].
   ///
   /// Bounded at both ends: the window is the seven days from [weekStart], not
   /// "Monday and everything after". Without the upper bound a plan made for
@@ -296,7 +299,18 @@ class WorkoutProvider extends ChangeNotifier {
     return null;
   }
 
-  int get workoutsThisWeek => workoutsInCurrentWeek.length;
+  /// How many of the week's sessions are finished.
+  ///
+  /// The number the weekly goal is measured against, and the only one that means
+  /// progress: a session still sitting on the calendar is work the user has not
+  /// done. Every screen counting toward the goal reads this one, so the home
+  /// tile, the profile's target and the library's week card cannot disagree.
+  /// They did: the tile counted plans and the card counted finishes, so a week
+  /// holding four plans and no training read "4/4" on one screen and "0 of 4"
+  /// on another.
+  int get sessionsDoneThisWeek => workoutsInCurrentWeek
+      .where((workout) => workout.status == WorkoutStatus.completed)
+      .length;
 
   /// Sessions the user is aiming for each week.
   ///

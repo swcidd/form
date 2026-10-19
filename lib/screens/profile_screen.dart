@@ -228,7 +228,7 @@ class ProfileScreen extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final text = context.text;
     final goal = provider.weeklyGoal;
-    final done = provider.workoutsThisWeek;
+    final done = provider.sessionsDoneThisWeek;
 
     return Container(
       padding: const EdgeInsets.all(16),

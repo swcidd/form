@@ -363,10 +363,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
   Widget _weekCard(WorkoutProvider provider) {
     final text = context.text;
 
-    final week = provider.workoutsInCurrentWeek;
-    final done = week
-        .where((workout) => workout.status == WorkoutStatus.completed)
-        .length;
+    final done = provider.sessionsDoneThisWeek;
     final target = provider.weeklyGoal;
     // Scoped to the week, not the account: the panel is labelled THIS WEEK.
     final next = provider.focusWorkoutThisWeek;
