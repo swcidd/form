@@ -18,13 +18,15 @@ class AppDatabase {
   final String fileName;
 
   /// Current schema version. Increment with every migration.
-  static const int version = 2;
+  static const int version = 3;
 
   static const String workoutsTable = 'workouts';
   static const String exerciseLogsTable = 'exercise_logs';
   static const String setsTable = 'sets';
   static const String profileTable = 'profile';
   static const String savedExercisesTable = 'saved_exercises';
+  static const String accountsTable = 'accounts';
+  static const String sessionTable = 'session';
 
   Database? _database;
 
@@ -142,6 +144,8 @@ class AppDatabase {
     batch.execute('CREATE INDEX idx_workouts_date ON $workoutsTable (date)');
 
     batch.execute(_savedExercisesDdl);
+    batch.execute(_accountsDdl);
+    batch.execute(_sessionDdl);
 
     await batch.commit(noResult: true);
   }
@@ -161,8 +165,49 @@ class AppDatabase {
     )
   ''';
 
+  /// An account that lives on this device.
+  ///
+  /// Keyed on a generated id rather than the address, because every other table
+  /// will attribute its rows to this id, and an address is the thing a person is
+  /// most likely to want to change. The email is unique so the same address
+  /// cannot end up with two accounts; it is stored already normalised, which is
+  /// what makes that constraint mean "the same address" rather than "the same
+  /// spelling". The password column holds a verifier, never a password.
+  static const String _accountsDdl =
+      '''
+    CREATE TABLE $accountsTable (
+      id           TEXT    PRIMARY KEY,
+      email        TEXT    NOT NULL UNIQUE,
+      displayName  TEXT    NOT NULL DEFAULT '',
+      passwordHash TEXT    NOT NULL,
+      createdAt    INTEGER NOT NULL
+    )
+  ''';
+
+  /// Who is signed in, as one row keyed on a constant.
+  ///
+  /// A table rather than a preference because the session is part of the same
+  /// story as the account it points at, and a foreign key here would be wrong:
+  /// the device session belongs to no account, and signing out has to be able
+  /// to leave the account behind intact.
+  static const String _sessionDdl =
+      '''
+    CREATE TABLE $sessionTable (
+      id          INTEGER PRIMARY KEY CHECK (id = 1),
+      userId      TEXT    NOT NULL,
+      email       TEXT,
+      displayName TEXT,
+      issuedAt    INTEGER NOT NULL
+    )
+  ''';
+
   static void _createSavedExercises(DatabaseExecutor db) {
     db.execute(_savedExercisesDdl);
+  }
+
+  static void _createAccounts(DatabaseExecutor db) {
+    db.execute(_accountsDdl);
+    db.execute(_sessionDdl);
   }
 
   Future<void> _upgrade(Database db, int from, int to) async {
@@ -171,6 +216,14 @@ class AppDatabase {
     // one feature.
     if (from < 2) {
       _createSavedExercises(db);
+    }
+
+    // v3 adds accounts and the session. Two more new tables for the same
+    // reason: the training history predates sign-in and is not sign-in's to
+    // throw away. Rows written before this point are the device account's, and
+    // the v4 migration is where that becomes explicit.
+    if (from < 3) {
+      _createAccounts(db);
     }
   }
 }

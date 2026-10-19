@@ -274,7 +274,12 @@ class WorkoutRepository {
     });
   }
 
-  /// Discards everything. Used by tests and by a future "clear my data" action.
+  /// Discards every workout, the profile and the saved exercises. Used by tests
+  /// and by a future "clear my data" action.
+  ///
+  /// Accounts and the session deliberately stay: clearing training is not
+  /// deleting the account, and an account whose password went with its
+  /// workouts would leave nobody a way back in.
   Future<void> clear() async {
     final db = await _db;
     await db.delete(AppDatabase.setsTable);

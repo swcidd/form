@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
+import 'package:plus_one/auth/local_auth_repository.dart';
+import 'package:plus_one/auth/password_hasher.dart';
 import 'package:plus_one/data/app_database.dart';
 import 'package:plus_one/data/workout_repository.dart';
 import 'package:plus_one/exercise_library.dart';
@@ -84,6 +86,8 @@ void main() {
           AppDatabase.setsTable,
           AppDatabase.profileTable,
           AppDatabase.savedExercisesTable,
+          AppDatabase.accountsTable,
+          AppDatabase.sessionTable,
         ]),
       );
     });
@@ -122,7 +126,11 @@ void main() {
         await oldDb.open(path: path);
         await old.replaceWorkout(sampleWorkout());
         final db = await oldDb.open();
+        // Everything the two migrations after v1 added, so the next open has
+        // to put all of it back rather than finding it already there.
         await db.execute('DROP TABLE ${AppDatabase.savedExercisesTable}');
+        await db.execute('DROP TABLE ${AppDatabase.accountsTable}');
+        await db.execute('DROP TABLE ${AppDatabase.sessionTable}');
         await db.execute('PRAGMA user_version = 1');
         await oldDb.close();
 
@@ -132,6 +140,55 @@ void main() {
         await nextDb.open(path: path);
         expect(await next.loadWorkouts(), hasLength(1));
         expect(await next.loadSavedExercises(), isEmpty);
+        await nextDb.close();
+      },
+    );
+
+    test(
+      'migrating from version 2 keeps the training and adds sign-in',
+      () async {
+        // A file a v2 app left behind: training and saved exercises, no
+        // accounts. Same reasoning as above about a file rather than the
+        // in-memory path.
+        final path = p.join(
+          Directory.systemTemp.path,
+          'form_auth_migration_test.db',
+        );
+        final file = File(path);
+        if (file.existsSync()) file.deleteSync();
+        addTearDown(() {
+          if (file.existsSync()) file.deleteSync();
+        });
+
+        final oldDb = AppDatabase();
+        final old = WorkoutRepository(oldDb);
+        await oldDb.open(path: path);
+        await old.replaceWorkout(sampleWorkout());
+        final db = await oldDb.open();
+        await db.execute('DROP TABLE IF EXISTS ${AppDatabase.accountsTable}');
+        await db.execute('DROP TABLE IF EXISTS ${AppDatabase.sessionTable}');
+        await db.execute('PRAGMA user_version = 2');
+        await oldDb.close();
+
+        // The next launch: same file, current version.
+        final nextDb = AppDatabase();
+        final next = WorkoutRepository(nextDb);
+        await nextDb.open(path: path);
+
+        // The migration adds sign-in; it does not cost anyone their history.
+        expect(await next.loadWorkouts(), hasLength(1));
+
+        // And the new tables are usable, not merely present.
+        final auth = LocalAuthRepository(
+          nextDb,
+          hasher: const PasswordHasher(iterations: 50),
+        );
+        final session = await auth.createAccount(
+          email: 'sam@example.com',
+          password: 'one-rep-more',
+        );
+        expect(session.isGuest, isFalse);
+        expect((await auth.restoreSession())?.userId, session.userId);
         await nextDb.close();
       },
     );
@@ -439,7 +496,7 @@ void main() {
   });
 
   group('clear', () {
-    test('empties every table', () async {
+    test('empties every training table', () async {
       await repository.replaceWorkout(sampleWorkout());
       await repository.saveProfile(seedProfile());
       await repository.saveSavedExercise(
@@ -460,6 +517,26 @@ void main() {
       expect(await repository.loadWorkouts(), isEmpty);
       expect(await repository.loadProfile(), isNull);
       expect(await repository.loadSavedExercises(), isEmpty);
+    });
+
+    test('leaves the account and the session standing', () async {
+      final auth = LocalAuthRepository(
+        app,
+        hasher: const PasswordHasher(iterations: 50),
+      );
+      final session = await auth.createAccount(
+        email: 'sam@example.com',
+        password: 'one-rep-more',
+      );
+      await repository.replaceWorkout(sampleWorkout());
+
+      await repository.clear();
+
+      // Clearing training is not deleting the account. An account that lost
+      // its password along with its workouts would be a trap: the way back in
+      // would be gone at the moment someone cleaned up.
+      expect(await repository.loadWorkouts(), isEmpty);
+      expect((await auth.restoreSession())?.userId, session.userId);
     });
   });
 }
