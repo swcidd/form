@@ -102,6 +102,29 @@ void main() {
     );
   });
 
+  testWidgets('the logging screen shows what the last session did', (
+    tester,
+  ) async {
+    final provider = seededProvider();
+    final workout = provider.focusWorkout!;
+
+    await tester.pumpWidget(
+      _withProvider(
+        provider,
+        SetLoggingScreen(
+          route: RouteSettings(name: SetLoggingScreen.routeFor(workout.id)),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    // The seeded history holds the same exercise yesterday at 40 kg, so the
+    // header names it and the PREVIOUS column fills in instead of a dash.
+    expect(find.text('No previous data'), findsNothing);
+    expect(find.text('Last time: 40.0 kg × 10'), findsOneWidget);
+    expect(find.text('40.0 × 10'), findsWidgets);
+  });
+
   testWidgets('the summary renders its session without mock chrome', (
     tester,
   ) async {
@@ -123,8 +146,12 @@ void main() {
   });
 
   testWidgets('the summary counts the session it was given', (tester) async {
-    final provider = seededProvider();
-    final workout = provider.focusWorkout!;
+    final seeded = seededProvider();
+    final workout = seeded.focusWorkout!;
+
+    // Only this session, with no history behind it: the figures below are about
+    // the session's own sets, and the record claim has its own test.
+    final provider = WorkoutProvider(today: workout.date, workouts: [workout]);
 
     await tester.pumpWidget(
       _withProvider(

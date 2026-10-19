@@ -92,6 +92,63 @@ Workout _emptyLogWorkout({
   );
 }
 
+/// The exercises a session of each kind actually holds.
+///
+/// Fixtures read like a training log rather than "Push Day Movement 4", which
+/// matters in the two places these sessions are looked at by eye: a screenshot
+/// and a demo. Sessions longer than the list cycle through it.
+const _exercisesFor = <String, List<String>>{
+  'Push Day': [
+    'Barbell Bench Press',
+    'Incline Dumbbell Press',
+    'Seated Cable Fly',
+    'Overhead Press',
+    'Lateral Raise',
+    'Triceps Pushdown',
+    'Dips',
+    'Cable Crunch',
+  ],
+  'Pull Day': [
+    'Deadlift',
+    'Pull-Up',
+    'Barbell Row',
+    'Seated Cable Row',
+    'Face Pull',
+    'Barbell Curl',
+    'Hammer Curl',
+    'Barbell Shrug',
+    'Hanging Leg Raise',
+  ],
+  'Leg Day': [
+    'Barbell Back Squat',
+    'Romanian Deadlift',
+    'Leg Press',
+    'Walking Lunge',
+    'Leg Extension',
+    'Leg Curl',
+    'Standing Calf Raise',
+    'Hip Thrust',
+    'Ab Wheel Rollout',
+    'Back Extension',
+  ],
+  'HIIT Cardio': [
+    'Assault Bike Sprint',
+    'Kettlebell Swing',
+    'Burpee',
+    'Box Jump',
+  ],
+  'Lower Body & Mobility': [
+    'Goblet Squat',
+    'Glute Bridge',
+    'Hip Hinge Drill',
+    'Cossack Squat',
+    'Bulgarian Split Squat',
+    'Bird Dog',
+    'Side Plank',
+    'Hamstring Stretch',
+  ],
+};
+
 /// Rotating completed sessions behind the calendar.
 ///
 /// Counts are drawn from real training patterns rather than round numbers so
@@ -152,7 +209,8 @@ List<Workout> pastSessions(DateTime today) {
           for (var s = 0; s < spec.sets; s++)
             ExerciseLog(
               exercise: _ex(
-                '${spec.title} Movement ${s + 1}',
+                _exercisesFor[spec.title]![s %
+                    _exercisesFor[spec.title]!.length],
                 'Barbell',
                 spec.muscles,
               ),

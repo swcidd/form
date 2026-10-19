@@ -312,6 +312,41 @@ class WorkoutProvider extends ChangeNotifier {
       .where((workout) => workout.status == WorkoutStatus.completed)
       .length;
 
+  /// The sets the user logged for [exercise] the last time they trained it.
+  ///
+  /// Only finished sessions count, and only those before [before]: the logging
+  /// screen compares the session in front of it with the work that came before
+  /// it, not with itself. Only completed sets are returned, because a set that
+  /// was planned and never done is not a number to beat.
+  ///
+  /// Empty means the exercise is new, which is a different sentence on screen
+  /// from a previous weight of zero.
+  List<WorkoutSet> previousSetsFor(
+    String exercise, {
+    required DateTime before,
+  }) {
+    final key = LibraryExercise.keyFor(exercise);
+    final cutoff = _dayOnly(before);
+    ExerciseLog? latest;
+    var latestDay = cutoff;
+
+    for (final workout in _workouts) {
+      if (workout.status != WorkoutStatus.completed) continue;
+      final day = _dayOnly(workout.date);
+      if (!day.isBefore(cutoff)) continue;
+      if (latest != null && !day.isAfter(latestDay)) continue;
+      for (final log in workout.logs) {
+        if (LibraryExercise.keyFor(log.exercise.name) != key) continue;
+        final done = log.sets.where((set) => set.completed).toList();
+        if (done.isEmpty) continue;
+        latest = log;
+        latestDay = day;
+      }
+    }
+
+    return latest?.sets.where((set) => set.completed).toList() ?? const [];
+  }
+
   /// Sessions the user is aiming for each week.
   ///
   /// Lives beside the counter it is measured against so the dashboard tile and
