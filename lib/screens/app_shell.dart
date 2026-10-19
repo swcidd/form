@@ -4,26 +4,26 @@ import 'package:provider/provider.dart';
 import '../navigation/app_tab.dart';
 import '../providers/workout_provider.dart';
 import '../widgets/app_nav_bar.dart';
-import '../widgets/brand_app_bar.dart';
-import '../widgets/empty_state.dart';
 import '../widgets/new_workout_dialog.dart';
 import 'home_screen.dart';
+import 'library_screen.dart';
+import 'profile_screen.dart';
 import 'progress_screen.dart';
 import 'workout_detail_screen.dart';
 
-/// Hosts the four tabs and owns which one is visible.
+/// Hosts the root tabs and owns which one is visible.
 ///
 /// Tabs live in an [IndexedStack] rather than being rebuilt on each tap, so a
 /// tab keeps whatever the user left on it. Rebuilding on tap would silently
 /// discard that state every time they came back.
 ///
 /// Each tab is built lazily and kept once built. The stack alone would construct
-/// all four on first paint, running work for screens the user may never open.
+/// all of them on first paint, running work for screens the user may never open.
 class AppShell extends StatefulWidget {
   const AppShell({super.key, this.tab = AppTab.home});
 
-  /// Which tab to show first. Taken from the route so `/calendar` opens the
-  /// calendar rather than the home tab wearing a calendar URL.
+  /// Which tab to show first. Taken from the route so `/library` opens the
+  /// library rather than the home tab wearing a library URL.
   final AppTab tab;
 
   @override
@@ -119,7 +119,8 @@ class _LazyTabState extends State<_LazyTab> {
       AppTab.home => HomeScreen(onSelectTab: widget.select),
       AppTab.progress => const ProgressScreen(),
       AppTab.workout => const WorkoutTabScreen(),
-      AppTab.profile => const PlaceholderTabScreen(tab: AppTab.profile),
+      AppTab.library => const LibraryScreen(),
+      AppTab.profile => const ProfileScreen(),
     };
   }
 }
@@ -138,39 +139,4 @@ class WorkoutTabScreen extends StatelessWidget {
 
     return const SizedBox.shrink();
   }
-}
-
-/// Stands in for a tab that is routed and reachable but not built yet.
-///
-/// Exists so the bar can be demonstrated without shipping three dead controls
-/// that do nothing on tap. Each one states plainly what it will do, which is
-/// more honest than a spinner or a blank page, and gives the destination a
-/// real name in the UI so the navigation is reviewable before the screens land.
-///
-/// The next slice replaces these one at a time; nothing else has to change.
-class PlaceholderTabScreen extends StatelessWidget {
-  const PlaceholderTabScreen({super.key, required this.tab});
-
-  final AppTab tab;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: const BrandAppBar(),
-      body: EmptyState(
-        icon: Icons.fitness_center_outlined,
-        title: '${tab.label} is next',
-        message: _messageFor(tab),
-      ),
-    );
-  }
-
-  static String _messageFor(AppTab tab) => switch (tab) {
-    AppTab.progress =>
-      'Your strength progress, personal records and volume trends.',
-    AppTab.profile =>
-      'Your training totals, personal records and the settings behind them.',
-    AppTab.home => 'The dashboard.',
-    AppTab.workout => 'Your workout session.',
-  };
 }

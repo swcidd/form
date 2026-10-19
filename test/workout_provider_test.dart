@@ -1,6 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:plus_one/data/app_database.dart';
+import 'package:plus_one/data/workout_repository.dart';
+import 'package:plus_one/exercise_library.dart';
 import 'package:plus_one/models/metric.dart';
+import 'package:plus_one/models/saved_exercise.dart';
 import 'package:plus_one/models/workout.dart';
 import 'package:plus_one/providers/workout_provider.dart';
 
@@ -28,6 +32,24 @@ void main() {
     );
     return provider;
   }
+
+  /// A minimal session on [date], for the questions that only care about when
+  /// it is and whether it counts as training.
+  Workout workoutOn(
+    DateTime date, {
+    String id = 'session',
+    WorkoutStatus status = WorkoutStatus.planned,
+  }) => Workout(
+    id: id,
+    title: 'Session $id',
+    date: date,
+    status: status,
+    durationMin: 45,
+    estimatedKcal: 400,
+    targetMuscleGroups: const ['Chest'],
+    equipment: const [],
+    logs: const [],
+  );
 
   group('reads', () {
     test('seeds a resumable plan for today', () {
@@ -62,6 +84,103 @@ void main() {
 
     test('byId returns null for an unknown session', () {
       expect(build().byId('nope'), isNull);
+    });
+
+    test('the week focus is today\'s plan, not one further out', () {
+      final provider = build();
+
+      final next = provider.focusWorkoutThisWeek;
+      expect(next, isNotNull);
+      expect(next!.id, 'upper-body');
+      expect(next.date, today);
+    });
+
+    test('the week focus is null when the week has nothing left', () {
+      // Three weeks out: `focusWorkout` answers "what comes next" and returns
+      // it, but it is not this week's session and the library's week card -
+      // labelled THIS WEEK - must not name it as one.
+      final provider = WorkoutProvider(
+        today: today,
+        workouts: [
+          Workout(
+            id: 'far',
+            title: 'Session Three Weeks Out',
+            date: today.add(const Duration(days: 21)),
+            status: WorkoutStatus.planned,
+            durationMin: 45,
+            estimatedKcal: 400,
+            targetMuscleGroups: const ['Chest'],
+            equipment: const [],
+            logs: const [],
+          ),
+        ],
+      );
+
+      expect(provider.focusWorkout, isNotNull);
+      expect(provider.focusWorkoutThisWeek, isNull);
+    });
+
+    test('the week focus skips what is behind and what is not training', () {
+      final provider = WorkoutProvider(
+        today: today,
+        workouts: [
+          workoutOn(
+            today.add(const Duration(days: -1)),
+            status: WorkoutStatus.completed,
+          ),
+          workoutOn(
+            today.add(const Duration(days: 1)),
+            status: WorkoutStatus.rest,
+          ),
+          workoutOn(today.add(const Duration(days: 2)), id: 'later'),
+        ],
+      );
+
+      // This file's today is a Tuesday, so the week runs Monday to Sunday and
+      // +1 and +2 are both inside it. The finished session and the rest day
+      // are in the week too, but neither is a session to walk into.
+      expect(provider.focusWorkoutThisWeek?.id, 'later');
+    });
+
+    test('the week focus is the soonest of several still to do', () {
+      final provider = WorkoutProvider(
+        today: today,
+        workouts: [
+          workoutOn(today.add(const Duration(days: 4)), id: 'fourth'),
+          workoutOn(today.add(const Duration(days: 2)), id: 'second'),
+          workoutOn(today.add(const Duration(days: 3)), id: 'third'),
+        ],
+      );
+
+      expect(provider.focusWorkoutThisWeek?.id, 'second');
+    });
+
+    test('the weekly goal counts finishes, not plans', () {
+      final provider = WorkoutProvider(
+        today: today,
+        workouts: [
+          workoutOn(today, status: WorkoutStatus.completed),
+          workoutOn(today.add(const Duration(days: 1)), id: 'planned'),
+        ],
+      );
+
+      // Both are in the week, but only one is work the user has done. The home
+      // tile, the profile target and the library's week card all read the
+      // second number, so a week of plans cannot read as a week of training.
+      expect(provider.workoutsInCurrentWeek, hasLength(2));
+      expect(provider.sessionsDoneThisWeek, 1);
+    });
+
+    test('a week of plans has nothing done', () {
+      final provider = WorkoutProvider(
+        today: today,
+        workouts: [
+          workoutOn(today),
+          workoutOn(today.add(const Duration(days: 2)), id: 'later'),
+        ],
+      );
+
+      expect(provider.sessionsDoneThisWeek, 0);
     });
   });
 
@@ -260,6 +379,163 @@ void main() {
 
       expect(metric.copyWith(value: 250).target, 10000);
       expect(metric.copyWith(value: 250).label, 'Steps');
+    });
+  });
+
+  group('saved exercises', () {
+    const barbellCurl = LibraryExercise(
+      name: 'Barbell Curl',
+      primaryMuscle: 'biceps',
+      instructions: 'Curl the bar.',
+      equipment: ['Barbell'],
+      category: 'strength',
+    );
+    const inclineCurl = LibraryExercise(
+      name: 'Incline Dumbbell Curl',
+      primaryMuscle: 'biceps',
+      instructions: 'Curl on an incline.',
+      equipment: ['Dumbbells'],
+      category: 'strength',
+    );
+
+    test('starts with nothing saved', () {
+      final provider = WorkoutProvider(today: today);
+
+      expect(provider.savedExercises, isEmpty);
+      expect(provider.isSaved(barbellCurl.id), isFalse);
+    });
+
+    test('keeps an exercise, then drops it', () {
+      final provider = WorkoutProvider(today: today);
+
+      provider.toggleSavedExercise(barbellCurl, at: today);
+      expect(provider.isSaved(barbellCurl.id), isTrue);
+      expect(provider.savedExercises.single.exercise.name, 'Barbell Curl');
+      expect(provider.savedExercises.single.savedAt, today);
+
+      provider.toggleSavedExercise(barbellCurl, at: today);
+      expect(provider.isSaved(barbellCurl.id), isFalse);
+      expect(provider.savedExercises, isEmpty);
+    });
+
+    test('lists the newest first', () {
+      final provider = WorkoutProvider(today: today);
+
+      provider.toggleSavedExercise(barbellCurl, at: today);
+      provider.toggleSavedExercise(
+        inclineCurl,
+        at: today.add(const Duration(minutes: 5)),
+      );
+
+      expect(provider.savedExercises.map((saved) => saved.exercise.name), [
+        'Incline Dumbbell Curl',
+        'Barbell Curl',
+      ]);
+    });
+
+    test('keeps the store\'s order when the times arrive out of order', () {
+      final provider = WorkoutProvider(today: today);
+
+      provider.toggleSavedExercise(inclineCurl, at: today);
+      provider.toggleSavedExercise(
+        barbellCurl,
+        at: today.subtract(const Duration(days: 6)),
+      );
+
+      // "Newest first" is the moment it was kept, which is also the order the
+      // store reads back on the next launch - not the order the buttons were
+      // pressed in.
+      expect(provider.savedExercises.map((saved) => saved.exercise.name), [
+        'Incline Dumbbell Curl',
+        'Barbell Curl',
+      ]);
+    });
+
+    test('keeping the same exercise twice does not make it newly kept', () {
+      final provider = WorkoutProvider(today: today);
+
+      provider.toggleSavedExercise(barbellCurl, at: today);
+      // The second call drops it rather than re-inserting, so a bookmark that
+      // is on turns off instead of moving the entry to the top.
+      provider.toggleSavedExercise(barbellCurl, at: today);
+
+      expect(provider.savedExercises, isEmpty);
+    });
+
+    test('two spellings of one exercise are one entry', () {
+      final provider = WorkoutProvider(today: today);
+
+      provider.toggleSavedExercise(barbellCurl, at: today);
+      provider.toggleSavedExercise(
+        const LibraryExercise(
+          name: 'barbell  curl',
+          primaryMuscle: 'biceps',
+          instructions: 'Curl the bar.',
+          equipment: ['Barbell'],
+          category: 'strength',
+        ),
+        at: today,
+      );
+
+      expect(provider.savedExercises, isEmpty);
+    });
+
+    test('notifies once per change', () {
+      final provider = WorkoutProvider(today: today);
+      var notifications = 0;
+      provider.addListener(() => notifications++);
+
+      provider.toggleSavedExercise(barbellCurl, at: today);
+      provider.toggleSavedExercise(barbellCurl, at: today);
+
+      expect(notifications, 2);
+    });
+
+    test('an injected provider reads and writes nothing', () {
+      final provider = WorkoutProvider(
+        today: today,
+        saved: [SavedExercise(exercise: barbellCurl, savedAt: today)],
+      );
+
+      // The constructor fixtures are the whole world without a repository.
+      expect(provider.isSaved(barbellCurl.id), isTrue);
+      expect(provider.savedExercises, hasLength(1));
+    });
+  });
+
+  group('persistence seam', () {
+    test('a store that cannot open leaves the app running in memory', () async {
+      // This file never installs a sqflite factory, so opening the database
+      // fails the way it would on a device whose file is unreadable. The
+      // provider runs before the first frame, so it has to survive that and
+      // still be usable rather than take the launch down with it.
+      final provider = WorkoutProvider(
+        today: today,
+        repository: WorkoutRepository(AppDatabase(), userId: 'local'),
+      );
+
+      await provider.load();
+
+      expect(provider.workouts, isEmpty);
+      // Unreadable is still read: the app opens on an empty account rather
+      // than on a splash that never leaves.
+      expect(provider.isLoaded, isTrue);
+
+      final stored = provider.addWorkout(
+        Workout(
+          id: '',
+          title: 'Test Session',
+          date: today,
+          status: WorkoutStatus.planned,
+          durationMin: 0,
+          estimatedKcal: 0,
+          targetMuscleGroups: const [],
+          equipment: const [],
+          logs: const [],
+        ),
+      );
+
+      expect(provider.byId(stored.id), isNotNull);
     });
   });
 }

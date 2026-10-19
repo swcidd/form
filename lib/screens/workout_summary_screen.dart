@@ -1,12 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../data/session_stats.dart';
 import '../models/workout.dart';
 import '../providers/workout_provider.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 
-/// Post-workout summary screen with completion headline, metrics, and PR moment.
+/// Post-workout summary: what the session added up to, counted from the sets
+/// the user actually ticked.
+///
+/// Nothing here is stated in advance. The date is the session's own, the
+/// duration is what the plan recorded, and a personal record is only claimed
+/// when this session's best set beats the best set for the same exercise in an
+/// earlier finished session - both of which are in the log, so the claim can be
+/// checked against it.
 class WorkoutSummaryScreen extends StatelessWidget {
   const WorkoutSummaryScreen({super.key, this.route});
 
@@ -56,11 +65,20 @@ class WorkoutSummaryScreen extends StatelessWidget {
       );
     }
 
+    final stats = SessionStats(provider.workouts, today: provider.today);
+    final topSet = stats.topSetIn(workout);
+    final previous = topSet == null
+        ? null
+        : stats.previousBestOf(topSet.exercise, before: workout.date);
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: CustomScrollView(
         slivers: [
-          _StatusBar(),
+          // Top inset only — the OS draws the phone's status bar, not the app.
+          SliverToBoxAdapter(
+            child: SafeArea(bottom: false, child: SizedBox(height: 8)),
+          ),
           SliverToBoxAdapter(
             child: Padding(
               padding: AppSpacing.pageHorizontal,
@@ -69,11 +87,12 @@ class WorkoutSummaryScreen extends StatelessWidget {
                 children: [
                   _CompletionHeadline(workout: workout),
                   const SizedBox(height: 24),
-                  _PerformanceMetrics(workout: workout),
+                  _PerformanceMetrics(workout: workout, stats: stats),
                   const SizedBox(height: 24),
-                  _SessionTotals(workout: workout),
-                  const SizedBox(height: 24),
-                  if (workout.hasNewPR) _PersonalRecordCard(workout: workout),
+                  if (topSet != null &&
+                      previous != null &&
+                      topSet.estimatedOneRepMax > previous.estimatedOneRepMax)
+                    _PersonalRecordCard(record: topSet, previous: previous),
                   const SizedBox(height: 24),
                   _SaveSummaryButton(workout: workout),
                   const SizedBox(height: 32),
@@ -94,54 +113,7 @@ class WorkoutSummaryScreen extends StatelessWidget {
   }
 }
 
-/// iOS-style status bar (light variant).
-class _StatusBar extends StatelessWidget {
-  const _StatusBar();
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return SliverToBoxAdapter(
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(26, 8, 26, 0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '9:41',
-                style: Theme.of(
-                  context,
-                ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600),
-              ),
-              Row(
-                children: [
-                  Icon(
-                    Icons.signal_cellular_4_bar_rounded,
-                    size: 17,
-                    color: scheme.onSurface,
-                  ),
-                  const SizedBox(width: 5),
-                  Icon(Icons.wifi_rounded, size: 17, color: scheme.onSurface),
-                  const SizedBox(width: 5),
-                  Icon(
-                    Icons.battery_full_rounded,
-                    size: 17,
-                    color: scheme.onSurface,
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Completion headline with date, "WORK.\nBANKED.", and supportive copy.
+/// Completion headline with the session's own date.
 class _CompletionHeadline extends StatelessWidget {
   const _CompletionHeadline({required this.workout});
 
@@ -155,7 +127,8 @@ class _CompletionHeadline extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'MON, OCT 12 / ${workout.title}',
+          '${DateFormat('EEE, MMM d').format(workout.date).toUpperCase()} / '
+          '${workout.title}',
           style: text.labelCaps.copyWith(color: AppColors.lime),
         ),
         const SizedBox(height: 8),
@@ -167,11 +140,13 @@ class _CompletionHeadline extends StatelessWidget {
   }
 }
 
-/// Performance metrics: Total Volume with change %, divider, session totals.
+/// Performance metrics: total volume with the change against the last session,
+/// divider, session totals.
 class _PerformanceMetrics extends StatelessWidget {
-  const _PerformanceMetrics({required this.workout});
+  const _PerformanceMetrics({required this.workout, required this.stats});
 
   final Workout workout;
+  final SessionStats stats;
 
   @override
   Widget build(BuildContext context) {
@@ -181,7 +156,7 @@ class _PerformanceMetrics extends StatelessWidget {
       0,
       (sum, log) => sum + log.volume,
     );
-    final volumeChangePct = 12; // Placeholder: vs last session
+    final previous = stats.lastVolumeOf(workout.title, before: workout.date);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -211,16 +186,24 @@ class _PerformanceMetrics extends StatelessWidget {
                 ],
               ),
             ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  '+$volumeChangePct%',
-                  style: text.dataChange.copyWith(color: AppColors.lime),
-                ),
-                Text('vs. last session', style: text.annotation),
-              ],
-            ),
+            // Only printed when there is a session to compare with; the first
+            // time a title is used there is no baseline to report against.
+            if (previous != null && previous > 0 && totalVolume > 0)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '${totalVolume >= previous ? '+' : ''}'
+                    '${((totalVolume - previous) / previous * 100).round()}%',
+                    style: text.dataChange.copyWith(
+                      color: totalVolume >= previous
+                          ? AppColors.lime
+                          : Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  Text('vs. last session', style: text.annotation),
+                ],
+              ),
           ],
         ),
         const SizedBox(height: 16),
@@ -229,7 +212,12 @@ class _PerformanceMetrics extends StatelessWidget {
         // Session totals
         Row(
           children: [
-            _MetricChip(label: 'DURATION', value: '52:18'),
+            _MetricChip(
+              label: 'DURATION',
+              value: workout.durationMin > 0
+                  ? '${workout.durationMin} min'
+                  : '—',
+            ),
             const SizedBox(width: 12),
             _MetricChip(label: 'SETS', value: '${workout.totalSets}'),
             const SizedBox(width: 12),
@@ -264,24 +252,16 @@ class _MetricChip extends StatelessWidget {
   }
 }
 
-/// Session totals row.
-class _SessionTotals extends StatelessWidget {
-  const _SessionTotals({required this.workout});
-
-  final Workout workout;
-
-  @override
-  Widget build(BuildContext context) {
-    // Already covered in _PerformanceMetrics, keeping for structure
-    return const SizedBox.shrink();
-  }
-}
-
-/// Personal record celebration card (lime background).
+/// Personal record card (lime background).
+///
+/// Only drawn when the session's best set actually beat the previous best for
+/// the same exercise, and it names both numbers, so the claim is checkable
+/// against the log rather than asserted.
 class _PersonalRecordCard extends StatelessWidget {
-  const _PersonalRecordCard({required this.workout});
+  const _PersonalRecordCard({required this.record, required this.previous});
 
-  final Workout workout;
+  final SetRecord record;
+  final SetRecord previous;
 
   @override
   Widget build(BuildContext context) {
@@ -312,7 +292,6 @@ class _PersonalRecordCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          // Exercise record
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -321,10 +300,9 @@ class _PersonalRecordCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'BARBELL BACK SQUAT',
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: scheme.onSurface,
-                      ),
+                      record.exercise.toUpperCase(),
+                      style: Theme.of(context).textTheme.labelMedium
+                          ?.copyWith(color: scheme.onSurface),
                     ),
                     const SizedBox(height: 8),
                     Row(
@@ -332,14 +310,18 @@ class _PersonalRecordCard extends StatelessWidget {
                       textBaseline: TextBaseline.alphabetic,
                       children: [
                         Text(
-                          '100',
+                          record.weightKg.toStringAsFixed(
+                            record.weightKg == record.weightKg.roundToDouble()
+                                ? 0
+                                : 1,
+                          ),
                           style: text.dataLarge.copyWith(
                             color: scheme.onSurface,
                           ),
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          'kg',
+                          'kg × ${record.reps}',
                           style: text.exerciseMeta.copyWith(
                             color: scheme.onSurface,
                           ),
@@ -353,11 +335,12 @@ class _PersonalRecordCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    '+5 kg',
+                    previous.label,
                     style: text.dataChange.copyWith(color: scheme.onSurface),
                   ),
                   Text(
-                    'vs. previous best',
+                    'previous best · '
+                    '${DateFormat('MMM d').format(previous.date)}',
                     style: text.annotation.copyWith(
                       color: scheme.onSurface.withValues(alpha: 0.8),
                     ),
