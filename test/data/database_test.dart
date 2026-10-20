@@ -15,6 +15,7 @@ import 'package:plus_one/models/workout.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import '../support/seed_data.dart';
+import '../support/sign_up.dart';
 
 void main() {
   // sqflite's default factory talks to the platform channel, which does not
@@ -192,7 +193,8 @@ void main() {
           nextDb,
           hasher: const PasswordHasher(iterations: 50),
         );
-        final session = await auth.createAccount(
+        final session = await signUp(
+          auth,
           email: 'sam@example.com',
           password: 'one-rep-more',
         );
@@ -388,7 +390,8 @@ void main() {
         app,
         hasher: const PasswordHasher(iterations: 50),
       );
-      final session = await auth.createAccount(
+      final session = await signUp(
+        auth,
         email: 'sam@example.com',
         password: 'one-rep-more',
       );
@@ -736,7 +739,8 @@ void main() {
         app,
         hasher: const PasswordHasher(iterations: 50),
       );
-      final session = await auth.createAccount(
+      final session = await signUp(
+        auth,
         email: 'sam@example.com',
         password: 'one-rep-more',
       );
