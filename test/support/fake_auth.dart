@@ -53,8 +53,12 @@ class FakeAuth implements AuthRepository {
     return session;
   }
 
+  /// Whether a sign-up has to be confirmed by email before it can be used —
+  /// the answer a server-backed store gives by default.
+  bool confirmationRequired = false;
+
   @override
-  Future<Session> createAccount({
+  Future<SignUpOutcome> createAccount({
     required String email,
     required String password,
     String? displayName,
@@ -65,11 +69,14 @@ class FakeAuth implements AuthRepository {
     lastEmail = email;
     lastPassword = password;
     lastDisplayName = displayName;
-    return session = Session(
-      userId: 'acct_new',
-      issuedAt: DateTime(2026, 10, 19),
-      email: email,
-      displayName: displayName,
+    if (confirmationRequired) return ConfirmationSent(email);
+    return SignedUp(
+      session = Session(
+        userId: 'acct_new',
+        issuedAt: DateTime(2026, 10, 19),
+        email: email,
+        displayName: displayName,
+      ),
     );
   }
 

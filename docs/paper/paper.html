@@ -262,7 +262,7 @@
   </tr>
   <tr>
     <td><strong>Quality assurance</strong></td>
-    <td>286 automated tests across models, providers, persistence and widgets; a hand-built v3 database for the migration test; screenshots rendered as golden files; <code>dart format</code> and <code>flutter analyze</code> kept clean at every commit.</td>
+    <td>293 automated tests across models, providers, persistence and widgets; a hand-built v3 database for the migration test; screenshots rendered as golden files; <code>dart format</code> and <code>flutter analyze</code> kept clean at every commit.</td>
     <td><code>test/</code>, <code>tool/screenshot_test.dart</code></td>
   </tr>
   <tr>
@@ -517,7 +517,9 @@
 <p>
   Sign-in is local, behind an interface shaped like a server
   (<code>AuthRepository</code>). Passwords are hashed with PBKDF2-HMAC-SHA256 on
-  a worker isolate. A real backend could replace the implementation without a
+  a worker isolate, a sign-up answers either signed in or awaiting a
+  confirmation link (the shape Supabase Auth returns), and the account card can
+  change the password. A real backend could replace the implementation without a
   screen changing, and the project avoids shipping a Firebase configuration file
   in a public repository, which would be a credential in the APK.
 </p>
@@ -575,7 +577,7 @@
   <tr>
     <td class="n">6</td>
     <td><strong>Practise the engineering, not only the programming.</strong> Branches, reviewed pull requests, issues, tests, a DevTools case, and documentation a stranger can follow.</td>
-    <td>More than thirty merged pull requests with inline review comments, ten issues closed, 286 tests, <code>docs/DEVTOOLS.md</code>.</td>
+    <td>More than thirty merged pull requests with inline review comments, ten issues closed, 293 tests, <code>docs/DEVTOOLS.md</code>.</td>
   </tr>
 </table>
 
@@ -607,7 +609,7 @@
   <tr><td><strong>Last time's numbers</strong></td><td>The logger shows the best set from the most recent finished session containing that exercise, and each row shows the matching set.</td><td><code>previousSetsFor</code></td></tr>
   <tr><td><strong>Weekly goal and streak</strong></td><td>Finished sessions against a target the user can raise or lower; consecutive days with a finished session.</td><td><code>sessionsDoneThisWeek</code>, <code>streakDays</code></td></tr>
   <tr><td><strong>Exercise catalogue</strong></td><td>Live wger data over <code>http</code> with search, muscle filters and a saved list; bundled fallback offline.</td><td><code>exercise_catalog.dart</code>, <code>library_screen.dart</code></td></tr>
-  <tr><td><strong>Accounts</strong></td><td>A local account with a hashed password or the device account; per-account training; sign out; delete with confirmation.</td><td><code>lib/auth/</code>, schema v4</td></tr>
+  <tr><td><strong>Accounts</strong></td><td>A local account with a hashed password or the device account; per-account training; change the password; sign out; delete with confirmation.</td><td><code>lib/auth/</code>, schema v4</td></tr>
 </table>
 
 <h2>Supporting behaviour</h2>
@@ -895,7 +897,7 @@ timeout: 8 s</pre>
 
 <h2>7.4 Tests and verification</h2>
 <p>
-  The suite holds <strong>286 tests</strong>. Three of them are worth naming
+  The suite holds <strong>293 tests</strong>. Three of them are worth naming
   because they test the parts that would be expensive to get wrong:
 </p>
 <ul>

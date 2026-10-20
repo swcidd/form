@@ -61,7 +61,7 @@ class LocalAuthRepository implements AuthRepository {
   // --- Writes ----------------------------------------------------------------
 
   @override
-  Future<Session> createAccount({
+  Future<SignUpOutcome> createAccount({
     required String email,
     required String password,
     String? displayName,
@@ -96,7 +96,7 @@ class LocalAuthRepository implements AuthRepository {
       rethrow;
     }
 
-    return _writeSession(db, _sessionFor(account));
+    return SignedUp(await _writeSession(db, _sessionFor(account)));
   }
 
   @override
