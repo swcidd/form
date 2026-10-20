@@ -4,6 +4,7 @@ import '../models/workout.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import 'progress_bar.dart';
+import 'pressable.dart';
 import 'stat_pill.dart';
 
 /// A session rendered as a card.
@@ -153,13 +154,10 @@ class WorkoutCard extends StatelessWidget {
 
     if (onTap == null) return card;
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: card,
-      ),
+    return Pressable(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: card,
     );
   }
 }
