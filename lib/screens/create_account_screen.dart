@@ -44,6 +44,14 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
   String? _passwordError;
   String? _banner;
 
+  /// The address a confirmation link was sent to, or null while the form is
+  /// still the thing to show.
+  ///
+  /// Not a route: the account exists but nobody is signed in, so leaving this
+  /// screen would put a form for the same account back under the thumb. The
+  /// same screen turns into the answer instead.
+  String? _confirmationEmail;
+
   @override
   void dispose() {
     _name.dispose();
@@ -70,11 +78,20 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
     final auth = context.read<AuthProvider>();
     final messenger = ScaffoldMessenger.of(context);
     try {
-      await auth.createAccount(
+      final outcome = await auth.createAccount(
         email: email,
         password: password,
         displayName: name,
       );
+      if (!mounted) return;
+      switch (outcome) {
+        // The gate swaps the whole window out from under this screen, so there
+        // is nothing left to navigate to and nobody left to tell.
+        case SignedUp():
+          break;
+        case ConfirmationSent(:final email):
+          setState(() => _confirmationEmail = email);
+      }
     } on AuthException catch (error) {
       if (!mounted) return;
       setState(() => _showRefusal(error.failure));
@@ -100,12 +117,52 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
       case AuthFailure.weakPassword:
         _passwordError = AuthMessages.forFailure(failure);
       case AuthFailure.invalidCredentials:
+      case AuthFailure.unavailable:
+      case AuthFailure.emailNotConfirmed:
         _banner = AuthMessages.forFailure(failure);
     }
   }
 
+  /// The answer when the store wants the address confirmed first.
+  ///
+  /// One screen rather than two, because the account has just been made and the
+  /// only useful next act is to go and confirm it. The address is named so
+  /// somebody who mistyped it can see that now, rather than waiting for mail
+  /// that is going to a stranger.
+  Widget _confirmation(BuildContext context, String email) {
+    return Scaffold(
+      body: Column(
+        children: [
+          AuthHero(
+            kicker: 'ONE MORE STEP / CHECK YOUR INBOX',
+            headline: 'CHECK YOUR\nINBOX.',
+            onBack: () => Navigator.of(context).maybePop(),
+            height: 300,
+          ),
+          AuthFormArea(
+            top: AuthIntro(
+              title: 'CONFIRM YOUR EMAIL.',
+              subtitle:
+                  'The account is made. Open the link sent to $email, then '
+                  'log in.',
+            ),
+            bottom: AuthAction(
+              label: 'Back to log in',
+              onPressed: () =>
+                  Navigator.of(context)
+                      .pushReplacementNamed(SignInScreen.routeName),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final confirmation = _confirmationEmail;
+    if (confirmation != null) return _confirmation(context, confirmation);
+
     final scheme = Theme.of(context).colorScheme;
     final text = context.text;
     final auth = context.watch<AuthProvider>();
