@@ -237,8 +237,8 @@
   </tr>
   <tr>
     <td><strong>Design and interface</strong></td>
-    <td>Translated the Figma design system into a Flutter theme (colour, type scale, control shapes), laid out eleven screens, and built the reusable widgets they share. Kept one voice for empty, loading and error states.</td>
-    <td><code>lib/screens/</code>, <code>lib/widgets/</code>, <code>lib/theme/</code></td>
+    <td>Translated the Figma design system into a Flutter theme (colour, type scale, control shapes), laid out eleven screens, and built the reusable widgets they share. Kept motion to one token file — page and sheet timing, and a press scale on the four surfaces where the whole card is the target — rather than per-screen animation. Kept one voice for empty, loading and error states.</td>
+    <td><code>lib/screens/</code>, <code>lib/widgets/</code>, <code>lib/theme/</code>, <code>docs/MOTION.md</code></td>
   </tr>
   <tr>
     <td><strong>State management</strong></td>
@@ -262,7 +262,7 @@
   </tr>
   <tr>
     <td><strong>Quality assurance</strong></td>
-    <td>293 automated tests across models, providers, persistence and widgets; a hand-built v3 database for the migration test; screenshots rendered as golden files; <code>dart format</code> and <code>flutter analyze</code> kept clean at every commit.</td>
+    <td>301 automated tests across models, providers, persistence and widgets; a hand-built v3 database for the migration test; screenshots rendered as golden files; <code>dart format</code> and <code>flutter analyze</code> kept clean at every commit.</td>
     <td><code>test/</code>, <code>tool/screenshot_test.dart</code></td>
   </tr>
   <tr>
@@ -577,7 +577,7 @@
   <tr>
     <td class="n">6</td>
     <td><strong>Practise the engineering, not only the programming.</strong> Branches, reviewed pull requests, issues, tests, a DevTools case, and documentation a stranger can follow.</td>
-    <td>More than thirty merged pull requests with inline review comments, ten issues closed, 293 tests, <code>docs/DEVTOOLS.md</code>.</td>
+    <td>More than thirty merged pull requests with inline review comments, ten issues closed, 301 tests, <code>docs/DEVTOOLS.md</code>.</td>
   </tr>
 </table>
 
@@ -897,7 +897,7 @@ timeout: 8 s</pre>
 
 <h2>7.4 Tests and verification</h2>
 <p>
-  The suite holds <strong>293 tests</strong>. Three of them are worth naming
+  The suite holds <strong>301 tests</strong>. Three of them are worth naming
   because they test the parts that would be expensive to get wrong:
 </p>
 <ul>

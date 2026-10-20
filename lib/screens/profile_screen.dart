@@ -12,6 +12,7 @@ import '../theme/app_typography.dart';
 import '../widgets/brand_app_bar.dart';
 import '../widgets/change_password_sheet.dart';
 import '../widgets/progress_bar.dart';
+import '../widgets/pressable.dart';
 import '../widgets/section_header.dart';
 import '../widgets/stat_tile.dart';
 
@@ -704,7 +705,7 @@ class _AccountAction extends StatelessWidget {
     final colour = destructive ? scheme.error : scheme.onSurface;
     final shade = enabled ? colour : scheme.onSurfaceVariant;
 
-    return InkWell(
+    return Pressable(
       onTap: onPressed,
       borderRadius: AppRadius.card,
       child: Padding(

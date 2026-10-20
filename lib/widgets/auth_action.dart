@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
+import 'pressable.dart';
 
 /// The full-width action at the foot of a sign-in screen.
 ///
@@ -41,49 +42,42 @@ class AuthAction extends StatelessWidget {
 
     return Opacity(
       opacity: busy ? 0.72 : 1,
-      child: Material(
-        color: background,
+      child: Pressable(
+        onTap: busy ? null : onPressed,
         borderRadius: AppRadius.control,
-        child: InkWell(
-          onTap: busy ? null : onPressed,
-          borderRadius: AppRadius.control,
-          child: Container(
-            height: 56,
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            decoration: BoxDecoration(
-              borderRadius: AppRadius.control,
-              border: filled ? null : Border.all(color: scheme.outline),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    label,
-                    style: text.labelCaps.copyWith(
-                      fontSize: 14,
-                      letterSpacing: 0,
-                      color: foreground,
-                      fontWeight: FontWeight.w700,
-                    ),
+        color: background,
+        child: Container(
+          height: 56,
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          decoration: BoxDecoration(
+            borderRadius: AppRadius.control,
+            border: filled ? null : Border.all(color: scheme.outline),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  label,
+                  style: text.labelCaps.copyWith(
+                    fontSize: 14,
+                    letterSpacing: 0,
+                    color: foreground,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
-                if (busy)
-                  SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: foreground,
-                    ),
-                  )
-                else
-                  Icon(
-                    Icons.arrow_forward_rounded,
-                    size: 22,
+              ),
+              if (busy)
+                SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
                     color: foreground,
                   ),
-              ],
-            ),
+                )
+              else
+                Icon(Icons.arrow_forward_rounded, size: 22, color: foreground),
+            ],
           ),
         ),
       ),
