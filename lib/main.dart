@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import 'auth/local_auth_repository.dart';
 import 'data/app_database.dart';
+import 'data/database_factory.dart';
 import 'data/workout_repository.dart';
 import 'navigation/app_tab.dart';
 import 'providers/auth_provider.dart';
@@ -29,6 +30,10 @@ Future<void> main() async {
   // every launch, and a font that fails to arrive renders the app in the wrong
   // face. See pubspec.yaml for the files and their weights.
   GoogleFonts.config.allowRuntimeFetching = false;
+
+  // Android and iOS have this through the sqflite plugin; a desktop run does
+  // not, and would otherwise fail to read the session at all.
+  usePlatformDatabaseFactory();
 
   // Whoever is signed in is read first, and on purpose: it decides which
   // account's training the app opens on, and a launch that showed the sign-in

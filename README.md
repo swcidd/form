@@ -152,14 +152,14 @@ fallbacks are MIT and Unlicense).
 | --- | --- | --- |
 | Framework | Flutter 3.47 / Dart 3.13 | One codebase, first-class animation, good tooling. |
 | State | `provider` 6.1 (`ChangeNotifier`) | Small enough to read in one sitting; no code generation. |
-| Storage | `sqflite` 2.4 + `path` | Real SQL: the app queries by day, by week and by exercise. |
+| Storage | `sqflite` 2.4 + `sqflite_common_ffi` + `path` | Real SQL: the app queries by day, by week and by exercise. The FFI factory makes the same store run on desktop, where the plugin has no implementation. |
 | Network | `http` 1.6 | The assignment's requirement, and enough for one JSON API. |
 | Crypto | `crypto` 3.0 | HMAC-SHA256 for PBKDF2, no platform channel required. |
 | Dates | `intl` 0.20 | Weekday and month formatting without a locale bundle. |
 | Type | `google_fonts` 9.0 | Inter + Barlow Condensed, **bundled** so nothing is fetched at runtime. |
 | Equality | `equatable` 2.1 | Value equality on models, so `==` in tests means what it looks like. |
 | Vectors | `flutter_svg` 2.3 | Lucide icons without shipping a bitmap per size. |
-| Tests | `flutter_test`, `sqflite_common_ffi` | The real schema runs against a real SQLite file in tests. |
+| Tests | `flutter_test`, `sqflite_common_ffi` | The real schema runs against a real SQLite file in tests, on the same factory. |
 | Build tools | `flutter_launcher_icons`, `flutter_native_splash` | Icon and splash generated from checked-in artwork. |
 
 ---
