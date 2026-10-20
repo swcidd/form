@@ -173,9 +173,13 @@ lib/
 ├── providers/                # AuthProvider, WorkoutProvider
 ├── screens/                  # welcome, sign in, create account, shell, home,
 │                             # progress, workout, library, profile
-├── theme/                    # colours, typography (one text scale)
+├── theme/                    # colours, typography, motion tokens, page transitions
 └── widgets/                  # nav bar, section header, cards, auth fields…
 ```
+
+Motion is four decisions — a page, a sheet, a press and a state change — and it
+lives in the theme rather than in the screens. **[docs/MOTION.md](docs/MOTION.md)**
+lists the tokens, the four surfaces that answer a press, and what was left out.
 
 Three rules the code keeps:
 
@@ -237,7 +241,7 @@ the keystore lives in a gitignored `android/key.properties`.
 - **Review**: every PR got inline review comments on the lines that carried a
   decision (identity, schema, lifecycle), not a rubber stamp, and was merged only
   with the suite green on the merged tree.
-- **Tests**: 293 widget, provider and database tests. The dangerous parts are
+- **Tests**: 301 widget, provider and database tests. The dangerous parts are
   covered directly: the v3 → v4 migration builds an old database by hand, signing
   in as somebody else asserts the old store is disposed, and the counting rules
   have their own tests.
@@ -270,7 +274,7 @@ screenshots side by side rather than by reading either screen's code.
 | Empty / offline / failed API / validation | Empty account panel, bundled catalogue fallback, banners, field errors |
 | Public repository with PRs and review comments | [github.com/swcidd/form](https://github.com/swcidd/form/pulls) |
 | Icon, splash, app name, release APK | `assets/branding/`, `flutter_launcher_icons`, `flutter_native_splash`, `docs/BUILD.md` |
-| Documentation | README, [AUTH](docs/AUTH.md), [BUILD](docs/BUILD.md), [DEVTOOLS](docs/DEVTOOLS.md), [ATTRIBUTION](docs/ATTRIBUTION.md) |
+| Documentation | README, [AUTH](docs/AUTH.md), [BUILD](docs/BUILD.md), [DEVTOOLS](docs/DEVTOOLS.md), [MOTION](docs/MOTION.md), [ATTRIBUTION](docs/ATTRIBUTION.md) |
 
 ---
 

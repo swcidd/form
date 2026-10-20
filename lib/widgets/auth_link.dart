@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
+import 'pressable.dart';
 
 /// The quiet line at the foot of a form, offering the other screen.
 ///
@@ -27,7 +28,7 @@ class AuthLink extends StatelessWidget {
     final enabled = onPressed != null;
 
     return Center(
-      child: InkWell(
+      child: Pressable(
         onTap: onPressed,
         borderRadius: AppRadius.pill,
         child: Padding(

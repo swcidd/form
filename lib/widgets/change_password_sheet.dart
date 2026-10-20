@@ -5,6 +5,7 @@ import '../auth/auth_messages.dart';
 import '../auth/auth_repository.dart';
 import '../auth/credentials.dart';
 import '../providers/auth_provider.dart';
+import '../theme/app_theme.dart';
 import '../theme/app_typography.dart';
 import 'auth_action.dart';
 import 'auth_failure_banner.dart';
@@ -17,10 +18,19 @@ import 'auth_field.dart';
 /// same [AuthField] the sign-in screens use, so a password is entered into the
 /// same control everywhere it is asked for.
 Future<void> showChangePasswordSheet(BuildContext context) {
+  final reduceMotion = MediaQuery.disableAnimationsOf(context);
+  final animationStyle = reduceMotion
+      ? AnimationStyle.noAnimation
+      : const AnimationStyle(
+          duration: AppMotion.sheetIn,
+          reverseDuration: AppMotion.sheetOut,
+        );
+
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
+    sheetAnimationStyle: animationStyle,
     backgroundColor: Theme.of(context).colorScheme.surface,
     builder: (_) => const ChangePasswordSheet(),
   );

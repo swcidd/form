@@ -1,18 +1,37 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import 'app_colors.dart';
+import 'app_page_transitions.dart';
 import 'app_typography.dart';
 
 /// Timing and easing shared by every transition in the app.
+///
+/// Four movements — a press, a change inside a screen, a page and a sheet —
+/// cover everything the app animates. The tokens are named for what they move
+/// rather than for how long they take, so a screen asks for "a press" instead
+/// of inventing another number between 90 and 300.
 abstract final class AppMotion {
-  /// Fast response for presses and toggles.
-  static const Duration press = Duration(milliseconds: 160);
+  /// Pointer down. Short enough that the surface answers the thumb.
+  static const Duration pressDown = Duration(milliseconds: 90);
+
+  /// Pointer up. Slower than the press, so the release has weight.
+  static const Duration pressUp = Duration(milliseconds: 160);
 
   /// Default for state changes inside a screen.
   static const Duration ui = Duration(milliseconds: 200);
 
-  /// Route transitions and sheet entrances.
-  static const Duration route = Duration(milliseconds: 250);
+  /// Page arrival. Longer than the exit, so leaving feels decided.
+  static const Duration routeIn = Duration(milliseconds: 260);
+
+  /// Page departure.
+  static const Duration routeOut = Duration(milliseconds: 200);
+
+  /// Sheet arrival.
+  static const Duration sheetIn = Duration(milliseconds: 300);
+
+  /// Sheet departure.
+  static const Duration sheetOut = Duration(milliseconds: 220);
 
   /// Starts fast, settles gently. Entering elements.
   static const Cubic easeOut = Cubic(0.23, 1, 0.32, 1);
@@ -43,6 +62,19 @@ abstract final class AppTheme {
           ? AppColors.canvas
           : AppColors.canvasDark,
       splashFactory: InkSparkle.splashFactory,
+      // Android defaults to a zoom that belongs to the platform's own chrome.
+      // FORM arrives with a fade and a short rise instead, and keeps Apple's
+      // builder where the back-swipe is part of the contract.
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: AppPageTransitionsBuilder(),
+          TargetPlatform.fuchsia: AppPageTransitionsBuilder(),
+          TargetPlatform.linux: AppPageTransitionsBuilder(),
+          TargetPlatform.windows: AppPageTransitionsBuilder(),
+          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
+        },
+      ),
       appBarTheme: AppBarTheme(
         backgroundColor: isLight ? AppColors.canvas : AppColors.canvasDark,
         foregroundColor: scheme.onSurface,
