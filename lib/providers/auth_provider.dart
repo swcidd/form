@@ -78,23 +78,28 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  /// Registers an account and signs it in.
+  /// Registers an account.
   ///
-  /// Throws [AuthException] — see [AuthRepository.createAccount] — for
-  /// everything that can be wrong with what was typed.
-  Future<void> createAccount({
+  /// Returns what came of it — [SignedUp] when there is a session now,
+  /// [ConfirmationSent] when the store wants the address confirmed first, in
+  /// which case nobody is signed in yet. Throws [AuthException] — see
+  /// [AuthRepository.createAccount] — for everything that can be wrong with
+  /// what was typed.
+  Future<SignUpOutcome> createAccount({
     required String email,
     required String password,
     String? displayName,
-  }) => _run(
-    () async => _apply(
-      await _auth.createAccount(
+  }) async {
+    final outcome = await _run(
+      () => _auth.createAccount(
         email: email,
         password: password,
         displayName: displayName,
       ),
-    ),
-  );
+    );
+    if (outcome case SignedUp(:final session)) _apply(session);
+    return outcome;
+  }
 
   /// Signs an existing account in. Throws [AuthException].
   Future<void> signIn({required String email, required String password}) =>
@@ -142,11 +147,15 @@ class AuthProvider extends ChangeNotifier {
   ///
   /// In a `finally`, so a refusal does not leave the form disabled for good —
   /// a validator that can wedge the screen is worse than the mistake it caught.
-  Future<void> _run(Future<void> Function() operation) async {
+  ///
+  /// Generic because a verb can have an answer worth returning — a sign-up
+  /// says whether it produced a session — and dropping that answer to fit a
+  /// `void` would push the same knowledge into a field.
+  Future<T> _run<T>(Future<T> Function() operation) async {
     _busy = true;
     notifyListeners();
     try {
-      await operation();
+      return await operation();
     } finally {
       _busy = false;
       notifyListeners();

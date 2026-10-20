@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
 import 'package:plus_one/exercise_library.dart';
+import 'package:plus_one/auth/auth_repository.dart';
 import 'package:plus_one/models/exercise.dart';
 import 'package:plus_one/models/saved_exercise.dart';
 import 'package:plus_one/models/session.dart';
@@ -11,6 +12,8 @@ import 'package:plus_one/providers/auth_provider.dart';
 import 'package:plus_one/providers/workout_provider.dart';
 import 'package:plus_one/screens/profile_screen.dart';
 import 'package:plus_one/theme/app_theme.dart';
+import 'package:plus_one/widgets/auth_field.dart';
+import 'package:plus_one/widgets/change_password_sheet.dart';
 import 'package:plus_one/widgets/stat_tile.dart';
 
 import 'support/fake_auth.dart';
@@ -247,6 +250,7 @@ void main() {
       await signedIn(tester, WorkoutProvider(today: today));
 
       expect(find.text('sam@example.com'), findsOneWidget);
+      expect(find.text('Change password'), findsOneWidget);
       expect(find.text('Sign out'), findsOneWidget);
       expect(find.text('Delete account'), findsOneWidget);
     });
@@ -265,6 +269,8 @@ void main() {
       // Nothing to delete: no password to lose and no address to be locked out
       // of. Signing out is the whole of the way back.
       expect(find.text('Delete account'), findsNothing);
+      // And no password to change: the device account has none.
+      expect(find.text('Change password'), findsNothing);
       expect(find.text('Sign out'), findsOneWidget);
     });
 
@@ -323,6 +329,87 @@ void main() {
 
       expect(fake.lastUserId, 'acct_1');
       expect(auth.session, isNull);
+    });
+
+    group('changing the password', () {
+      /// The field carrying [label] inside the sheet.
+      Finder passwordField(String label) => find.descendant(
+        of: find.ancestor(
+          of: find.text(label),
+          matching: find.byType(AuthField),
+        ),
+        matching: find.byType(TextField),
+      );
+
+      /// Taps a control inside the sheet.
+      ///
+      /// The account card behind it has a row with the same words, so a bare
+      /// `find.text` would be ambiguous once the sheet is up.
+      Future<void> tapInSheet(WidgetTester tester, String label) async {
+        final finder = find.descendant(
+          of: find.byType(ChangePasswordSheet),
+          matching: find.text(label),
+        );
+        await tester.ensureVisible(finder);
+        await tester.pumpAndSettle();
+        await tester.tap(finder);
+        await tester.pumpAndSettle();
+      }
+
+      Future<void> openSheet(WidgetTester tester) async {
+        await signedIn(tester, WorkoutProvider(today: today));
+        await tapRow(tester, 'Change password');
+        expect(find.byType(ChangePasswordSheet), findsOneWidget);
+      }
+
+      Future<void> fillIn(
+        WidgetTester tester, {
+        required String current,
+        required String updated,
+      }) async {
+        await tester.enterText(passwordField('CURRENT PASSWORD'), current);
+        await tester.enterText(passwordField('NEW PASSWORD'), updated);
+      }
+
+      testWidgets('asks for the current password and a new one', (
+        tester,
+      ) async {
+        await openSheet(tester);
+
+        await tapInSheet(tester, 'Change password');
+
+        expect(find.text('Enter your current password.'), findsOneWidget);
+        expect(find.text('Choose a password.'), findsOneWidget);
+        expect(fake.lastCurrentPassword, isNull);
+      });
+
+      testWidgets('a wrong current password is refused under that field', (
+        tester,
+      ) async {
+        await openSheet(tester);
+        fake.changeError = const AuthException(AuthFailure.invalidCredentials);
+
+        await fillIn(tester, current: 'old-password', updated: 'new-password');
+        await tapInSheet(tester, 'Change password');
+
+        // Not the sign-in screen's "that email and password do not match":
+        // there is no email here, and this form can say what is actually wrong.
+        expect(find.text('That is not your current password.'), findsOneWidget);
+        expect(find.byType(ChangePasswordSheet), findsOneWidget);
+      });
+
+      testWidgets('a good change closes the sheet and says so', (tester) async {
+        await openSheet(tester);
+
+        await fillIn(tester, current: 'old-password', updated: 'new-password');
+        await tapInSheet(tester, 'Change password');
+
+        expect(fake.lastUserId, 'acct_1');
+        expect(fake.lastCurrentPassword, 'old-password');
+        expect(fake.lastNewPassword, 'new-password');
+        expect(find.byType(ChangePasswordSheet), findsNothing);
+        expect(find.text('Password changed.'), findsOneWidget);
+      });
     });
   });
 }

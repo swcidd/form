@@ -164,6 +164,22 @@ void main() {
       expect(find.byType(AppShell), findsOneWidget);
     });
 
+    testWidgets('an address waiting to be confirmed is told what to do', (
+      tester,
+    ) async {
+      // What a store that verifies addresses answers in between: the password
+      // is right, and the account is not usable yet.
+      fake.signInError = const AuthException(AuthFailure.emailNotConfirmed);
+      await openSignIn(tester);
+
+      await tester.enterText(fieldFor('EMAIL ADDRESS'), 'sam@example.com');
+      await tester.enterText(fieldFor('PASSWORD'), 'one-rep-more');
+      await tapAction(tester, 'Log in');
+
+      expect(find.textContaining('Confirm your email first'), findsOneWidget);
+      expect(find.byType(SignInScreen), findsOneWidget);
+    });
+
     testWidgets('shows progress and locks the form while it waits', (
       tester,
     ) async {
@@ -294,6 +310,30 @@ void main() {
       expect(fake.lastEmail, 'sam@example.com');
       expect(auth.session?.isGuest, isFalse);
       expect(find.byType(AppShell), findsOneWidget);
+    });
+
+    testWidgets('a sign-up that needs confirmation says where the link went', (
+      tester,
+    ) async {
+      // What a server-backed store answers when it verifies addresses.
+      fake.confirmationRequired = true;
+      await openCreateAccount(tester);
+
+      await tester.enterText(fieldFor('EMAIL ADDRESS'), 'sam@example.com');
+      await tester.enterText(fieldFor('PASSWORD'), 'one-rep-more');
+      await tapAction(tester, 'Create account');
+
+      expect(find.text('CONFIRM YOUR EMAIL.'), findsOneWidget);
+      expect(find.textContaining('sam@example.com'), findsOneWidget);
+      // Nobody is signed in, so the app has not opened and the form is not
+      // claiming the account is ready.
+      expect(auth.isSignedIn, isFalse);
+      expect(find.byType(AppShell), findsNothing);
+      expect(find.byType(CreateAccountScreen), findsOneWidget);
+
+      await tapAction(tester, 'Back to log in');
+
+      expect(find.byType(SignInScreen), findsOneWidget);
     });
   });
 

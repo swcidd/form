@@ -10,6 +10,7 @@ import '../providers/workout_provider.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/brand_app_bar.dart';
+import '../widgets/change_password_sheet.dart';
 import '../widgets/progress_bar.dart';
 import '../widgets/section_header.dart';
 import '../widgets/stat_tile.dart';
@@ -486,6 +487,14 @@ class ProfileScreen extends StatelessWidget {
             ),
           ),
           Divider(height: 1, color: scheme.outlineVariant),
+          if (!guest) ...[
+            _AccountAction(
+              icon: Icons.lock_reset,
+              label: 'Change password',
+              onPressed: busy ? null : () => showChangePasswordSheet(context),
+            ),
+            Divider(height: 1, color: scheme.outlineVariant),
+          ],
           _AccountAction(
             icon: Icons.logout,
             label: 'Sign out',

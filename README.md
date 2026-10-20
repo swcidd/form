@@ -98,10 +98,16 @@ no placeholder content and no seeded training data in `lib/`.
 
 FORM has no server. Sign-in is a **local account behind a seam that is shaped
 like a server** - `AuthRepository` - so a real backend can replace the
-implementation without the UI noticing.
+implementation without the UI noticing. The verbs and their failure vocabulary
+are checked against Supabase Auth's API: a sign-up can answer "signed in" or
+"confirmation sent", and `unavailable` / `emailNotConfirmed` already exist as
+refusals.
 
 - **Continue offline** → the device account: no password, everything works.
-- **Create account** → its own user id, its own empty store.
+- **Create account** → its own user id, its own empty store. The sign-up answers
+  in the shape a verifying backend uses: signed in, or "check your inbox".
+- **Change password** → from the account card in the profile, with the current
+  password checked by the store.
 - **Sign out** → back to the welcome screen; your data stays.
 - **Delete account** → one confirmation, then the account's rows go.
 
@@ -231,7 +237,7 @@ the keystore lives in a gitignored `android/key.properties`.
 - **Review**: every PR got inline review comments on the lines that carried a
   decision (identity, schema, lifecycle), not a rubber stamp, and was merged only
   with the suite green on the merged tree.
-- **Tests**: 286 widget, provider and database tests. The dangerous parts are
+- **Tests**: 293 widget, provider and database tests. The dangerous parts are
   covered directly: the v3 → v4 migration builds an old database by hand, signing
   in as somebody else asserts the old store is disposed, and the counting rules
   have their own tests.

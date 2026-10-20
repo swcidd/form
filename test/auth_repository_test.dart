@@ -6,6 +6,8 @@ import 'package:plus_one/data/app_database.dart';
 import 'package:plus_one/models/session.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import 'support/sign_up.dart';
+
 void main() {
   // sqflite's default factory talks to the platform channel, which does not
   // exist in the test VM. The FFI build runs the real SQLite engine, so the
@@ -63,7 +65,8 @@ void main() {
 
   group('creating an account', () {
     test('signs the new account in', () async {
-      final session = await auth.createAccount(
+      final session = await signUp(
+        auth,
         email: 'sam@example.com',
         password: 'one-rep-more',
       );
@@ -77,11 +80,20 @@ void main() {
       expect((await auth.restoreSession())?.userId, session.userId);
     });
 
-    test('stores a verifier and not the password', () async {
-      await auth.createAccount(
+    test('answers with a session, because nothing needs confirming', () async {
+      final outcome = await auth.createAccount(
         email: 'sam@example.com',
         password: 'one-rep-more',
       );
+
+      // The device is the authority on its own accounts, so there is no inbox
+      // for a link to arrive in: the sign-up is also the sign-in.
+      expect(outcome, isA<SignedUp>());
+      expect((outcome as SignedUp).session.email, 'sam@example.com');
+    });
+
+    test('stores a verifier and not the password', () async {
+      await signUp(auth, email: 'sam@example.com', password: 'one-rep-more');
 
       final db = await app.open();
       final row = (await db.query(AppDatabase.accountsTable)).single;
@@ -94,7 +106,8 @@ void main() {
     test(
       'normalises the address, so it is found however it is typed',
       () async {
-        final session = await auth.createAccount(
+        final session = await signUp(
+          auth,
           email: '  Sam@Example.COM ',
           password: 'one-rep-more',
         );
@@ -112,10 +125,7 @@ void main() {
     );
 
     test('refuses an address that already has an account', () async {
-      await auth.createAccount(
-        email: 'sam@example.com',
-        password: 'one-rep-more',
-      );
+      await signUp(auth, email: 'sam@example.com', password: 'one-rep-more');
 
       expect(
         await failureOf(
@@ -132,7 +142,7 @@ void main() {
       for (final email in ['', '   ', 'sam', 'sam@example', '@example.com']) {
         expect(
           await failureOf(
-            () => auth.createAccount(email: email, password: 'one-rep-more'),
+            () => signUp(auth, email: email, password: 'one-rep-more'),
           ),
           AuthFailure.invalidEmail,
           reason: 'should refuse "$email"',
@@ -156,11 +166,13 @@ void main() {
     });
 
     test('gives two accounts two ids', () async {
-      final first = await auth.createAccount(
+      final first = await signUp(
+        auth,
         email: 'sam@example.com',
         password: 'one-rep-more',
       );
-      final second = await auth.createAccount(
+      final second = await signUp(
+        auth,
         email: 'alex@example.com',
         password: 'one-rep-more',
       );
@@ -169,12 +181,14 @@ void main() {
     });
 
     test('keeps a name, and falls back to the address', () async {
-      final named = await auth.createAccount(
+      final named = await signUp(
+        auth,
         email: 'sam@example.com',
         password: 'one-rep-more',
         displayName: '  Sam  ',
       );
-      final unnamed = await auth.createAccount(
+      final unnamed = await signUp(
+        auth,
         email: 'alex@example.com',
         password: 'one-rep-more',
       );
@@ -186,7 +200,8 @@ void main() {
 
   group('signing in', () {
     test('with the right password returns the account', () async {
-      final created = await auth.createAccount(
+      final created = await signUp(
+        auth,
         email: 'sam@example.com',
         password: 'one-rep-more',
       );
@@ -202,10 +217,7 @@ void main() {
     });
 
     test('with the wrong password is refused', () async {
-      await auth.createAccount(
-        email: 'sam@example.com',
-        password: 'one-rep-more',
-      );
+      await signUp(auth, email: 'sam@example.com', password: 'one-rep-more');
 
       expect(
         await failureOf(
@@ -218,10 +230,7 @@ void main() {
     });
 
     test('with an address nobody registered fails the same way', () async {
-      await auth.createAccount(
-        email: 'sam@example.com',
-        password: 'one-rep-more',
-      );
+      await signUp(auth, email: 'sam@example.com', password: 'one-rep-more');
 
       // The same failure as a wrong password on purpose: telling the two apart
       // would turn the sign-in screen into a way of finding out which
@@ -238,10 +247,7 @@ void main() {
     });
 
     test('a damaged verifier is a refusal, not a crash', () async {
-      await auth.createAccount(
-        email: 'sam@example.com',
-        password: 'one-rep-more',
-      );
+      await signUp(auth, email: 'sam@example.com', password: 'one-rep-more');
       final db = await app.open();
       await db.update(AppDatabase.accountsTable, {
         'passwordHash': 'half a row',
@@ -258,10 +264,7 @@ void main() {
 
   group('signing out', () {
     test('ends the session and keeps the account', () async {
-      await auth.createAccount(
-        email: 'sam@example.com',
-        password: 'one-rep-more',
-      );
+      await signUp(auth, email: 'sam@example.com', password: 'one-rep-more');
 
       await auth.signOut();
 
@@ -279,7 +282,8 @@ void main() {
 
   group('changing a password', () {
     test('takes the current one and swaps which password works', () async {
-      final session = await auth.createAccount(
+      final session = await signUp(
+        auth,
         email: 'sam@example.com',
         password: 'one-rep-more',
       );
@@ -308,7 +312,8 @@ void main() {
     });
 
     test('refuses a wrong current password', () async {
-      final session = await auth.createAccount(
+      final session = await signUp(
+        auth,
         email: 'sam@example.com',
         password: 'one-rep-more',
       );
@@ -326,7 +331,8 @@ void main() {
     });
 
     test('refuses a new password under the floor', () async {
-      final session = await auth.createAccount(
+      final session = await signUp(
+        auth,
         email: 'sam@example.com',
         password: 'one-rep-more',
       );
@@ -346,7 +352,8 @@ void main() {
 
   group('deleting an account', () {
     test('takes the account and the session with it', () async {
-      final session = await auth.createAccount(
+      final session = await signUp(
+        auth,
         email: 'sam@example.com',
         password: 'one-rep-more',
       );
@@ -363,11 +370,13 @@ void main() {
     });
 
     test('leaves the other accounts alone', () async {
-      final first = await auth.createAccount(
+      final first = await signUp(
+        auth,
         email: 'sam@example.com',
         password: 'one-rep-more',
       );
-      final second = await auth.createAccount(
+      final second = await signUp(
+        auth,
         email: 'alex@example.com',
         password: 'one-rep-more',
       );

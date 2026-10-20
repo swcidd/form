@@ -110,15 +110,36 @@ void main() {
     });
 
     test('creating an account signs the new one in', () async {
-      await auth.createAccount(
+      final outcome = await auth.createAccount(
         email: 'sam@example.com',
         password: 'one-rep-more',
         displayName: 'Sam',
       );
 
+      expect(outcome, isA<SignedUp>());
+      expect(auth.session, same((outcome as SignedUp).session));
       expect(auth.isSignedIn, isTrue);
       expect(auth.session?.name, 'Sam');
       expect(auth.session?.isGuest, isFalse);
+    });
+
+    test('a sign-up awaiting confirmation signs nobody in', () async {
+      // What a store that verifies addresses answers: the account exists, but
+      // there is no session until the link in the inbox is followed.
+      fake.confirmationRequired = true;
+
+      final outcome = await auth.createAccount(
+        email: 'sam@example.com',
+        password: 'one-rep-more',
+      );
+
+      expect(outcome, isA<ConfirmationSent>());
+      expect((outcome as ConfirmationSent).email, 'sam@example.com');
+      expect(auth.isSignedIn, isFalse);
+      expect(auth.session, isNull);
+      // And the form is free again: nobody is signed in, so the screen has to
+      // stay usable for the confirmation to be the next thing that happens.
+      expect(auth.busy, isFalse);
     });
 
     test('continuing offline signs in as the device account', () async {

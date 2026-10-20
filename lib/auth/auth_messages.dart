@@ -15,6 +15,11 @@ abstract final class AuthMessages {
     AuthFailure.emailInUse => 'That email already has an account. Log in.',
     AuthFailure.invalidCredentials =>
       'That email and password do not match. Check both and try again.',
+    AuthFailure.unavailable =>
+      'Could not reach your account. Check your connection and try again.',
+    AuthFailure.emailNotConfirmed =>
+      'Confirm your email first — the message has the link that finishes '
+          'sign-up.',
   };
 
   /// For anything the store did not describe — a file that cannot be written,
