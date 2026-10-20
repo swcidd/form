@@ -20,7 +20,7 @@ class AppDatabase {
   final String fileName;
 
   /// Current schema version. Increment with every migration.
-  static const int version = 4;
+  static const int version = 5;
 
   static const String workoutsTable = 'workouts';
   static const String exerciseLogsTable = 'exercise_logs';
@@ -228,6 +228,7 @@ class AppDatabase {
       id           TEXT    PRIMARY KEY,
       email        TEXT    NOT NULL UNIQUE,
       displayName  TEXT    NOT NULL DEFAULT '',
+      dateOfBirth  TEXT,
       passwordHash TEXT    NOT NULL,
       createdAt    INTEGER NOT NULL
     )
@@ -246,6 +247,7 @@ class AppDatabase {
       userId      TEXT    NOT NULL,
       email       TEXT,
       displayName TEXT,
+      dateOfBirth TEXT,
       issuedAt    INTEGER NOT NULL
     )
   ''';
@@ -279,6 +281,18 @@ class AppDatabase {
     // v4 gives every row an owner.
     if (from < 4) {
       await _ownEverything(db);
+    }
+
+    // v5 adds the date of birth the sign-up asks for. Nullable, not defaulted:
+    // an account made before the question existed has no answer, and a made-up
+    // one would be worse than the gap. The v3 step above creates the accounts
+    // table in its current shape, so only files that already had one need the
+    // column added.
+    if (from >= 3 && from < 5) {
+      await db.execute(
+        'ALTER TABLE $accountsTable ADD COLUMN dateOfBirth TEXT',
+      );
+      await db.execute('ALTER TABLE $sessionTable ADD COLUMN dateOfBirth TEXT');
     }
   }
 

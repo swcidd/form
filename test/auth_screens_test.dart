@@ -6,7 +6,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:plus_one/auth/auth_repository.dart';
 import 'package:plus_one/providers/auth_provider.dart';
 import 'package:plus_one/screens/app_shell.dart';
-import 'package:plus_one/screens/create_account_screen.dart';
+import 'package:plus_one/screens/sign_up_account_screen.dart';
+import 'package:plus_one/screens/sign_up_age_screen.dart';
+import 'package:plus_one/screens/sign_up_name_screen.dart';
 import 'package:plus_one/screens/sign_in_screen.dart';
 import 'package:plus_one/screens/welcome_screen.dart';
 import 'package:plus_one/widgets/auth_field.dart';
@@ -67,7 +69,7 @@ void main() {
 
       await tapAction(tester, 'Create an account');
 
-      expect(find.byType(CreateAccountScreen), findsOneWidget);
+      expect(find.byType(SignUpNameScreen), findsOneWidget);
     });
 
     testWidgets('continuing offline goes on to the app itself', (tester) async {
@@ -220,7 +222,7 @@ void main() {
 
       await tapAction(tester, 'Sign up');
 
-      expect(find.byType(CreateAccountScreen), findsOneWidget);
+      expect(find.byType(SignUpNameScreen), findsOneWidget);
     });
 
     testWidgets('goes back to the welcome screen', (tester) async {
@@ -242,14 +244,103 @@ void main() {
       await tapAction(tester, 'Create an account');
     }
 
+    Future<void> fillName(WidgetTester tester) async {
+      await tester.enterText(fieldFor('FIRST NAME'), 'Sam');
+      await tester.enterText(fieldFor('LAST NAME'), 'Rivera');
+    }
+
+    Future<void> continueToAge(WidgetTester tester) async {
+      await fillName(tester);
+      await tapAction(tester, 'Continue');
+    }
+
+    /// Opens a date dropdown and picks one of its entries.
+    Future<void> choose(WidgetTester tester, String hint, String value) async {
+      // Both the hint and the menu row sit inside a gesture detector, so the
+      // text itself is not the hit target; the tap still lands on the button
+      // or row, and the caller checks the result. `warnIfMissed` is off for
+      // the same reason.
+      final button = find.text(hint).last;
+      await tester.ensureVisible(button);
+      await tester.pumpAndSettle();
+      await tester.tap(button, warnIfMissed: false);
+      await tester.pumpAndSettle();
+
+      // The menu item, not the copy the button keeps hidden for its next
+      // selection — both carry the same text once a value is chosen.
+      final item = find.widgetWithText(DropdownMenuItem<int>, value).last;
+      await tester.ensureVisible(item);
+      await tester.pumpAndSettle();
+      await tester.tap(item, warnIfMissed: false);
+      await tester.pumpAndSettle();
+    }
+
+    /// January 2012 makes the age fourteen today, which is over the floor.
+    Future<void> continueToAccount(WidgetTester tester) async {
+      await choose(tester, 'Select month', 'January');
+      await choose(tester, 'Select day', '1');
+      await choose(tester, 'Select year', '2012');
+      await tapAction(tester, 'Continue');
+    }
+
+    Future<void> reachAccountStep(WidgetTester tester) async {
+      await openCreateAccount(tester);
+      await continueToAge(tester);
+      await continueToAccount(tester);
+    }
+
     setUp(() async {
       fake = FakeAuth();
       auth = AuthProvider(repository: fake);
       await auth.restore();
     });
 
-    testWidgets('an empty form says what is missing', (tester) async {
+    testWidgets('the first name is required before the next step', (
+      tester,
+    ) async {
       await openCreateAccount(tester);
+
+      await tapAction(tester, 'Continue');
+
+      expect(find.text('Tell us your first name.'), findsOneWidget);
+      expect(find.byType(SignUpAgeScreen), findsNothing);
+    });
+
+    testWidgets('the name survives going back from the age step', (
+      tester,
+    ) async {
+      await openCreateAccount(tester);
+      await continueToAge(tester);
+
+      expect(find.byType(SignUpAgeScreen), findsOneWidget);
+
+      await tapAction(tester, 'Back');
+
+      expect(find.byType(SignUpNameScreen), findsOneWidget);
+      expect(
+        tester.widget<TextField>(fieldFor('FIRST NAME')).controller?.text,
+        'Sam',
+      );
+      expect(
+        tester.widget<TextField>(fieldFor('LAST NAME')).controller?.text,
+        'Rivera',
+      );
+    });
+
+    testWidgets('the age step will not continue without a date', (
+      tester,
+    ) async {
+      await openCreateAccount(tester);
+      await continueToAge(tester);
+
+      await tapAction(tester, 'Continue');
+
+      expect(find.text('Choose your date of birth.'), findsOneWidget);
+      expect(find.byType(SignUpAccountScreen), findsNothing);
+    });
+
+    testWidgets('an empty account form says what is missing', (tester) async {
+      await reachAccountStep(tester);
 
       await tapAction(tester, 'Create account');
 
@@ -259,7 +350,7 @@ void main() {
     });
 
     testWidgets('a short password says what the floor is', (tester) async {
-      await openCreateAccount(tester);
+      await reachAccountStep(tester);
 
       await tester.enterText(fieldFor('EMAIL ADDRESS'), 'sam@example.com');
       await tester.enterText(fieldFor('PASSWORD'), 'seven!!');
@@ -273,7 +364,7 @@ void main() {
       tester,
     ) async {
       fake.createError = const AuthException(AuthFailure.emailInUse);
-      await openCreateAccount(tester);
+      await reachAccountStep(tester);
 
       await tester.enterText(fieldFor('EMAIL ADDRESS'), 'sam@example.com');
       await tester.enterText(fieldFor('PASSWORD'), 'one-rep-more');
@@ -283,32 +374,18 @@ void main() {
         find.text('That email already has an account. Log in.'),
         findsOneWidget,
       );
-      expect(find.byType(CreateAccountScreen), findsOneWidget);
+      expect(find.byType(SignUpAccountScreen), findsOneWidget);
     });
 
-    testWidgets('a name goes to the account, and the app opens without one', (
-      tester,
-    ) async {
-      await openCreateAccount(tester);
-
-      await tester.enterText(fieldFor('NAME'), 'Sam');
-      await tester.enterText(fieldFor('EMAIL ADDRESS'), 'sam@example.com');
-      await tester.enterText(fieldFor('PASSWORD'), 'one-rep-more');
-      await tapAction(tester, 'Create account');
-
-      expect(fake.lastDisplayName, 'Sam');
-      expect(find.byType(AppShell), findsOneWidget);
-    });
-
-    testWidgets('an account can be made without a name', (tester) async {
-      await openCreateAccount(tester);
+    testWidgets('both names become the account name', (tester) async {
+      await reachAccountStep(tester);
 
       await tester.enterText(fieldFor('EMAIL ADDRESS'), 'sam@example.com');
       await tester.enterText(fieldFor('PASSWORD'), 'one-rep-more');
       await tapAction(tester, 'Create account');
 
-      expect(fake.lastEmail, 'sam@example.com');
-      expect(auth.session?.isGuest, isFalse);
+      expect(fake.lastDisplayName, 'Sam Rivera');
+      expect(fake.lastDateOfBirth, DateTime(2012, 1, 1));
       expect(find.byType(AppShell), findsOneWidget);
     });
 
@@ -317,7 +394,7 @@ void main() {
     ) async {
       // What a server-backed store answers when it verifies addresses.
       fake.confirmationRequired = true;
-      await openCreateAccount(tester);
+      await reachAccountStep(tester);
 
       await tester.enterText(fieldFor('EMAIL ADDRESS'), 'sam@example.com');
       await tester.enterText(fieldFor('PASSWORD'), 'one-rep-more');
@@ -329,11 +406,27 @@ void main() {
       // claiming the account is ready.
       expect(auth.isSignedIn, isFalse);
       expect(find.byType(AppShell), findsNothing);
-      expect(find.byType(CreateAccountScreen), findsOneWidget);
+      expect(find.byType(SignUpAccountScreen), findsOneWidget);
 
       await tapAction(tester, 'Back to log in');
 
       expect(find.byType(SignInScreen), findsOneWidget);
+    });
+
+    testWidgets('logging in from a later step clears the steps', (
+      tester,
+    ) async {
+      await reachAccountStep(tester);
+
+      await tapAction(tester, 'Log in');
+
+      expect(find.byType(SignInScreen), findsOneWidget);
+
+      // Sign-in replaces the flow rather than sitting on top of it, so back
+      // returns to the welcome screen, not to a form for an existing account.
+      await tapAction(tester, 'Back');
+
+      expect(find.byType(WelcomeScreen), findsOneWidget);
     });
   });
 
@@ -409,10 +502,35 @@ void main() {
 
       await tapAction(tester, 'Back');
       await tapAction(tester, 'Create an account');
-      expect(find.byType(CreateAccountScreen), findsOneWidget);
-      // Four labels, three fields and a note on a 568-tall screen: the form
+      expect(find.byType(SignUpNameScreen), findsOneWidget);
+      expect(tester.takeException(), isNull, reason: 'Sign-up name');
+
+      await tester.enterText(fieldFor('FIRST NAME'), 'Sam');
+      await tapAction(tester, 'Continue');
+      expect(find.byType(SignUpAgeScreen), findsOneWidget);
+      expect(tester.takeException(), isNull, reason: 'Sign-up age');
+
+      Future<void> choose(int list, String value) async {
+        final button = find.byType(DropdownButton<int>).at(list);
+        await tester.ensureVisible(button);
+        await tester.pumpAndSettle();
+        await tester.tap(button, warnIfMissed: false);
+        await tester.pumpAndSettle();
+        final item = find.widgetWithText(DropdownMenuItem<int>, value).last;
+        await tester.ensureVisible(item);
+        await tester.pumpAndSettle();
+        await tester.tap(item, warnIfMissed: false);
+        await tester.pumpAndSettle();
+      }
+
+      await choose(0, 'January');
+      await choose(1, '1');
+      await choose(2, '2012');
+      await tapAction(tester, 'Continue');
+      expect(find.byType(SignUpAccountScreen), findsOneWidget);
+      // Two labels, two fields and a note on a 568-tall screen: the form
       // scrolls rather than overflowing.
-      expect(tester.takeException(), isNull, reason: 'Create account');
+      expect(tester.takeException(), isNull, reason: 'Sign-up account');
     });
   });
 

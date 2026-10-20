@@ -116,6 +116,7 @@ abstract interface class AuthRepository {
     required String email,
     required String password,
     String? displayName,
+    DateTime? dateOfBirth,
   });
 
   /// Signs an existing account in.

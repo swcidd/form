@@ -15,6 +15,7 @@ class Session {
     required this.issuedAt,
     this.email,
     this.displayName,
+    this.dateOfBirth,
   });
 
   /// The device account's id.
@@ -39,6 +40,9 @@ class Session {
   final String? email;
 
   final String? displayName;
+
+  /// The date of birth given at sign-up, or null when there was none to give.
+  final DateTime? dateOfBirth;
 
   /// Whether this is the device account rather than a named one.
   bool get isGuest => email == null;

@@ -11,7 +11,7 @@ import 'navigation/app_tab.dart';
 import 'providers/auth_provider.dart';
 import 'providers/workout_provider.dart';
 import 'screens/app_shell.dart';
-import 'screens/create_account_screen.dart';
+import 'screens/sign_up_name_screen.dart';
 import 'screens/set_logging_screen.dart';
 import 'screens/sign_in_screen.dart';
 import 'screens/welcome_screen.dart';
@@ -94,7 +94,7 @@ class PlusOneApp extends StatelessWidget {
   /// session, and the flow is a navigator of its own — see [_Gate].
   static Map<String, WidgetBuilder> get signInRoutes => {
     SignInScreen.routeName: (_) => const SignInScreen(),
-    CreateAccountScreen.routeName: (_) => const CreateAccountScreen(),
+    SignUpNameScreen.routeName: (_) => const SignUpNameScreen(),
   };
 
   /// Resolves the parameterised workout routes. Null for anything unrecognised,

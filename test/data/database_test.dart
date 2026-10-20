@@ -230,6 +230,15 @@ void main() {
         await db.execute(ddl);
       }
 
+      // The account tables were not rebuilt by v4, so this file keeps the
+      // shape v3 gave them. That is what makes the v5 step add a column
+      // instead of finding one the current code already made.
+      await db.execute('DROP TABLE ${AppDatabase.accountsTable}');
+      await db.execute('DROP TABLE ${AppDatabase.sessionTable}');
+      for (final ddl in _v3IdentityTables) {
+        await db.execute(ddl);
+      }
+
       await db.insert(AppDatabase.workoutsTable, {
         'id': 'w1',
         'title': 'Upper Body',
@@ -267,7 +276,7 @@ void main() {
       // The next launch: same file, current version.
       final nextDb = AppDatabase();
       final mine = WorkoutRepository(nextDb, userId: device);
-      await nextDb.open(path: path);
+      final next = await nextDb.open(path: path);
 
       // Everything is where it was, and it is the device account's: the person
       // who trained before there were accounts is the one "continue offline"
@@ -290,6 +299,53 @@ void main() {
       expect(await someoneElse.loadWorkouts(), isEmpty);
       expect(await someoneElse.loadSavedExercises(), isEmpty);
       expect(await someoneElse.loadProfile(), isNull);
+
+      // v5 added the column the sign-up fills; the old rows did not have one
+      // and are not asked to invent it.
+      final columns = await next.rawQuery(
+        'PRAGMA table_info(${AppDatabase.accountsTable})',
+      );
+      expect(columns.map((column) => column['name']), contains('dateOfBirth'));
+      await nextDb.close();
+    });
+
+    test('migrating from version 4 adds the date of birth column', () async {
+      final path = p.join(
+        Directory.systemTemp.path,
+        'form_dob_migration_test.db',
+      );
+      final file = File(path);
+      if (file.existsSync()) file.deleteSync();
+      addTearDown(() {
+        if (file.existsSync()) file.deleteSync();
+      });
+
+      // A v4 file has the current training tables but predates the sign-up
+      // question, so its account tables are the old shape.
+      final oldDb = AppDatabase();
+      final db = await oldDb.open(path: path);
+      await db.execute('DROP TABLE ${AppDatabase.accountsTable}');
+      await db.execute('DROP TABLE ${AppDatabase.sessionTable}');
+      for (final ddl in _v3IdentityTables) {
+        await db.execute(ddl);
+      }
+      await db.execute('PRAGMA user_version = 4');
+      await oldDb.close();
+
+      final nextDb = AppDatabase();
+      final next = await nextDb.open(path: path);
+
+      for (final table in [
+        AppDatabase.accountsTable,
+        AppDatabase.sessionTable,
+      ]) {
+        final columns = await next.rawQuery('PRAGMA table_info($table)');
+        expect(
+          columns.map((column) => column['name']),
+          contains('dateOfBirth'),
+          reason: table,
+        );
+      }
       await nextDb.close();
     });
   });
@@ -764,6 +820,27 @@ void main() {
 /// shape is the v4 migration's whole job. A fixture produced by the current code
 /// would be the new shape wearing an old version number, and the rebuild would
 /// pass whether or not it worked.
+const List<String> _v3IdentityTables = [
+  '''
+  CREATE TABLE accounts (
+    id           TEXT    PRIMARY KEY,
+    email        TEXT    NOT NULL UNIQUE,
+    displayName  TEXT    NOT NULL DEFAULT '',
+    passwordHash TEXT    NOT NULL,
+    createdAt    INTEGER NOT NULL
+  )
+  ''',
+  '''
+  CREATE TABLE session (
+    id          INTEGER PRIMARY KEY CHECK (id = 1),
+    userId      TEXT    NOT NULL,
+    email       TEXT,
+    displayName TEXT,
+    issuedAt    INTEGER NOT NULL
+  )
+  ''',
+];
+
 const List<String> _v3TrainingTables = [
   '''
   CREATE TABLE workouts (

@@ -80,6 +80,28 @@ void main() {
       expect((await auth.restoreSession())?.userId, session.userId);
     });
 
+    test('keeps the date of birth the sign-up asked for', () async {
+      final born = DateTime(2012, 1, 1);
+      final session = await signUp(
+        auth,
+        email: 'sam@example.com',
+        password: 'one-rep-more',
+        dateOfBirth: born,
+      );
+
+      expect(session.dateOfBirth, born);
+      // Both a restart and a later sign-in have to carry it, or the step was
+      // asking for something the app forgets.
+      expect((await auth.restoreSession())?.dateOfBirth, born);
+      expect(
+        (await auth.signIn(
+          email: 'sam@example.com',
+          password: 'one-rep-more',
+        )).dateOfBirth,
+        born,
+      );
+    });
+
     test('answers with a session, because nothing needs confirming', () async {
       final outcome = await auth.createAccount(
         email: 'sam@example.com',

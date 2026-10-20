@@ -104,8 +104,10 @@ are checked against Supabase Auth's API: a sign-up can answer "signed in" or
 refusals.
 
 - **Continue offline** → the device account: no password, everything works.
-- **Create account** → its own user id, its own empty store. The sign-up answers
-  in the shape a verifying backend uses: signed in, or "check your inbox".
+- **Create account** → three steps in the design's order: name, date of birth,
+  then the credentials. The date lands on the account for the athlete profile,
+  and the sign-up answers in the shape a verifying backend uses: signed in, or
+  "check your inbox".
 - **Change password** → from the account card in the profile, with the current
   password checked by the store.
 - **Sign out** → back to the welcome screen; your data stays.
@@ -168,10 +170,10 @@ fallbacks are MIT and Unlicense).
 lib/
 ├── main.dart                 # gate: splash → welcome/sign-in → app, routes
 ├── auth/                     # AuthRepository seam, local implementation, hasher
-├── data/                     # AppDatabase (schema v4), repositories, session stats
+├── data/                     # AppDatabase (schema v5), repositories, session stats
 ├── models/                   # Workout, ExerciseLog, ExerciseSet, Profile, Account, Session
 ├── providers/                # AuthProvider, WorkoutProvider
-├── screens/                  # welcome, sign in, create account, shell, home,
+├── screens/                  # welcome, sign in, sign-up steps, shell, home,
 │                             # progress, workout, library, profile
 ├── theme/                    # colours, typography, motion tokens, page transitions
 └── widgets/                  # nav bar, section header, cards, auth fields…
@@ -241,8 +243,8 @@ the keystore lives in a gitignored `android/key.properties`.
 - **Review**: every PR got inline review comments on the lines that carried a
   decision (identity, schema, lifecycle), not a rubber stamp, and was merged only
   with the suite green on the merged tree.
-- **Tests**: 301 widget, provider and database tests. The dangerous parts are
-  covered directly: the v3 → v4 migration builds an old database by hand, signing
+- **Tests**: 309 widget, provider and database tests. The dangerous parts are
+  covered directly: the v3 → v5 migration builds an old database by hand, signing
   in as somebody else asserts the old store is disposed, and the counting rules
   have their own tests.
 
@@ -267,7 +269,7 @@ screenshots side by side rather than by reading either screen's code.
 | Requirement | Where |
 | --- | --- |
 | REST API over `http`, JSON, loading/success/error | `lib/exercise_library.dart` + `Discover` |
-| 4+ screens | 11: welcome, sign in, create account, home, progress, workout, library, profile, workout detail, set logger, summary |
+| 4+ screens | 13: welcome, sign in, sign-up name, sign-up age, sign-up account, home, progress, workout, library, profile, workout detail, set logger, summary |
 | 3+ reusable widgets | `AuthField`, `AuthAction`, `AppNavBar`, `WorkoutCard`, `SectionHeader`, `EmptyState`… |
 | Provider state management | `AuthProvider`, `WorkoutProvider` |
 | CRUD | Sessions, exercises, sets, profile, saved exercises |

@@ -65,6 +65,7 @@ class LocalAuthRepository implements AuthRepository {
     required String email,
     required String password,
     String? displayName,
+    DateTime? dateOfBirth,
   }) async {
     _requireUsableEmail(email);
     _requireUsablePassword(password);
@@ -79,6 +80,7 @@ class LocalAuthRepository implements AuthRepository {
       id: _newAccountId(),
       email: normalised,
       displayName: displayName?.trim() ?? '',
+      dateOfBirth: dateOfBirth,
       passwordHash: await _hash(password),
       createdAt: DateTime.now(),
     );
@@ -231,6 +233,7 @@ class LocalAuthRepository implements AuthRepository {
       'userId': session.userId,
       'email': session.email,
       'displayName': session.displayName,
+      'dateOfBirth': session.dateOfBirth?.toIso8601String(),
       'issuedAt': session.issuedAt.millisecondsSinceEpoch,
     });
     return session;
@@ -241,6 +244,7 @@ class LocalAuthRepository implements AuthRepository {
     issuedAt: DateTime.now(),
     email: account.email,
     displayName: account.displayName,
+    dateOfBirth: account.dateOfBirth,
   );
 
   static Session _sessionFromRow(Map<String, Object?> row) => Session(
@@ -248,12 +252,14 @@ class LocalAuthRepository implements AuthRepository {
     issuedAt: DateTime.fromMillisecondsSinceEpoch(row['issuedAt']! as int),
     email: row['email'] as String?,
     displayName: row['displayName'] as String?,
+    dateOfBirth: _parseDate(row['dateOfBirth']),
   );
 
   static Map<String, Object?> _accountToRow(Account account) => {
     'id': account.id,
     'email': account.email,
     'displayName': account.displayName,
+    'dateOfBirth': account.dateOfBirth?.toIso8601String(),
     'passwordHash': account.passwordHash,
     'createdAt': account.createdAt.millisecondsSinceEpoch,
   };
@@ -262,9 +268,13 @@ class LocalAuthRepository implements AuthRepository {
     id: row['id']! as String,
     email: row['email']! as String,
     displayName: row['displayName']! as String,
+    dateOfBirth: _parseDate(row['dateOfBirth']),
     passwordHash: row['passwordHash']! as String,
     createdAt: DateTime.fromMillisecondsSinceEpoch(row['createdAt']! as int),
   );
+
+  static DateTime? _parseDate(Object? value) =>
+      value is String ? DateTime.tryParse(value) : null;
 
   // --- Rules -----------------------------------------------------------------
 
