@@ -227,10 +227,12 @@ void main() {
   });
 
   testWidgets('the body can be edited from the profile', (tester) async {
+    final now = DateTime.now();
+    final born = DateTime(now.year - 30, 1, 1);
     final provider = WorkoutProvider(
       today: today,
       profile: ProfileStats.empty().copyWith(
-        age: 30,
+        dateOfBirth: born,
         heightCm: 180,
         weightKg: 80,
       ),
@@ -244,12 +246,36 @@ void main() {
 
     expect(find.text('EDIT BODY.'), findsOneWidget);
 
-    await tester.enterText(fieldFor('AGE'), '31');
+    Future<void> choose(int list, String value) async {
+      final button = find.byType(DropdownButton<int>).at(list);
+      await tester.ensureVisible(button);
+      await tester.pumpAndSettle();
+      await tester.tap(button, warnIfMissed: false);
+      await tester.pumpAndSettle();
+      final items = find.widgetWithText(DropdownMenuItem<int>, value);
+      if (list == 2) {
+        await tester.scrollUntilVisible(
+          items,
+          200,
+          scrollable: find.byType(Scrollable).last,
+        );
+      }
+      final item = items.last;
+      await tester.ensureVisible(item);
+      await tester.pumpAndSettle();
+      await tester.tap(item, warnIfMissed: false);
+      await tester.pumpAndSettle();
+    }
+
+    await choose(0, '1');
+    await choose(1, 'January');
+    await choose(2, '${now.year - 31}');
     await tester.enterText(fieldFor('CENTIMETRES'), '182');
     await tester.enterText(fieldFor('KILOGRAMMES'), '82');
     await tester.tap(find.text('Save changes'));
     await tester.pumpAndSettle();
 
+    expect(provider.profile.dateOfBirth, DateTime(now.year - 31, 1, 1));
     expect(provider.profile.age, 31);
     expect(provider.profile.heightCm, 182);
     expect(provider.profile.weightKg, 82);

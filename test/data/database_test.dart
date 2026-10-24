@@ -300,19 +300,20 @@ void main() {
       expect(await someoneElse.loadSavedExercises(), isEmpty);
       expect(await someoneElse.loadProfile(), isNull);
 
-      // v6 added the age the sign-up fills; rows from before it are zero.
+      // v7 added the date of birth the sign-up fills; rows from before it
+      // have no answer and are not asked to invent one.
       final columns = await next.rawQuery(
         'PRAGMA table_info(${AppDatabase.profileTable})',
       );
-      expect(columns.map((column) => column['name']), contains('age'));
-      expect((await mine.loadProfile())?.age, 0);
+      expect(columns.map((column) => column['name']), contains('dateOfBirth'));
+      expect((await mine.loadProfile())?.dateOfBirth, isNull);
       await nextDb.close();
     });
 
-    test('migrating from version 5 adds the profile age column', () async {
+    test('migrating from version 5 adds the profile date of birth', () async {
       final path = p.join(
         Directory.systemTemp.path,
-        'form_age_migration_test.db',
+        'form_dob_migration_test.db',
       );
       final file = File(path);
       if (file.existsSync()) file.deleteSync();
@@ -321,11 +322,11 @@ void main() {
       });
 
       // Start from the current file, then put the profile back to its v5
-      // shape — every column except age.
+      // shape — every column except the date of birth.
       final oldDb = AppDatabase();
       final db = await oldDb.open(path: path);
       await db.execute(
-        'ALTER TABLE ${AppDatabase.profileTable} DROP COLUMN age',
+        'ALTER TABLE ${AppDatabase.profileTable} DROP COLUMN dateOfBirth',
       );
       await db.insert(AppDatabase.profileTable, {
         'userId': device,
@@ -340,10 +341,59 @@ void main() {
       final columns = await next.rawQuery(
         'PRAGMA table_info(${AppDatabase.profileTable})',
       );
-      expect(columns.map((column) => column['name']), contains('age'));
+      expect(columns.map((column) => column['name']), contains('dateOfBirth'));
       expect(
-        (await WorkoutRepository(nextDb, userId: device).loadProfile())?.age,
-        0,
+        (await WorkoutRepository(
+          nextDb,
+          userId: device,
+        ).loadProfile())?.dateOfBirth,
+        isNull,
+      );
+      await nextDb.close();
+    });
+
+    test('migrating from the v6 age column adds the date of birth', () async {
+      final path = p.join(
+        Directory.systemTemp.path,
+        'form_v6_age_migration_test.db',
+      );
+      final file = File(path);
+      if (file.existsSync()) file.deleteSync();
+      addTearDown(() {
+        if (file.existsSync()) file.deleteSync();
+      });
+
+      // v6 wrote an integer age. The v7 profile no longer uses it, but a file
+      // that ran that build must still open.
+      final oldDb = AppDatabase();
+      final db = await oldDb.open(path: path);
+      await db.execute(
+        'ALTER TABLE ${AppDatabase.profileTable} DROP COLUMN dateOfBirth',
+      );
+      await db.execute(
+        'ALTER TABLE ${AppDatabase.profileTable} '
+        'ADD COLUMN age INTEGER NOT NULL DEFAULT 0',
+      );
+      await db.insert(AppDatabase.profileTable, {
+        'userId': device,
+        'name': 'Sam',
+      });
+      await db.execute('PRAGMA user_version = 6');
+      await oldDb.close();
+
+      final nextDb = AppDatabase();
+      final next = await nextDb.open(path: path);
+
+      final columns = await next.rawQuery(
+        'PRAGMA table_info(${AppDatabase.profileTable})',
+      );
+      expect(columns.map((column) => column['name']), contains('dateOfBirth'));
+      expect(
+        (await WorkoutRepository(
+          nextDb,
+          userId: device,
+        ).loadProfile())?.dateOfBirth,
+        isNull,
       );
       await nextDb.close();
     });

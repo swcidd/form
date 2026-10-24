@@ -105,7 +105,7 @@ class _HeightFieldState extends State<HeightField> {
       children: [
         _MeasurementLabel(
           label: 'HEIGHT',
-          action: _imperial ? 'USE CM' : 'USE FT',
+          action: _imperial ? 'USE CM' : 'USE FEET',
           onPressed: widget.enabled ? _toggle : null,
         ),
         const SizedBox(height: 8),
@@ -239,7 +239,7 @@ class _WeightFieldState extends State<WeightField> {
       children: [
         _MeasurementLabel(
           label: 'WEIGHT',
-          action: _imperial ? 'USE KG' : 'USE LB',
+          action: _imperial ? 'USE KG' : 'USE POUNDS',
           onPressed: widget.enabled ? _toggle : null,
         ),
         const SizedBox(height: 8),

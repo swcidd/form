@@ -170,7 +170,9 @@ class WorkoutRepository {
       role: row['role']! as String,
       memberSince: row['memberSince']! as String,
       isPro: (row['isPro']! as int) == 1,
-      age: (row['age'] as num?)?.toInt() ?? 0,
+      dateOfBirth: row['dateOfBirth'] is String
+          ? DateTime.tryParse(row['dateOfBirth'] as String)
+          : null,
       weightKg: (row['weightKg']! as num).toDouble(),
       heightCm: (row['heightCm']! as num).toDouble(),
       bodyFatPct: (row['bodyFatPct']! as num).toDouble(),
@@ -292,7 +294,7 @@ class WorkoutRepository {
     'role': profile.role,
     'memberSince': profile.memberSince,
     'isPro': profile.isPro ? 1 : 0,
-    'age': profile.age,
+    'dateOfBirth': profile.dateOfBirth?.toIso8601String(),
     'weightKg': profile.weightKg,
     'heightCm': profile.heightCm,
     'bodyFatPct': profile.bodyFatPct,

@@ -20,7 +20,7 @@ class AppDatabase {
   final String fileName;
 
   /// Current schema version. Increment with every migration.
-  static const int version = 6;
+  static const int version = 7;
 
   static const String workoutsTable = 'workouts';
   static const String exerciseLogsTable = 'exercise_logs';
@@ -177,7 +177,7 @@ class AppDatabase {
       role          TEXT    NOT NULL DEFAULT '',
       memberSince   TEXT    NOT NULL DEFAULT '',
       isPro         INTEGER NOT NULL DEFAULT 0,
-      age           INTEGER NOT NULL DEFAULT 0,
+      dateOfBirth   TEXT,
       weightKg      REAL    NOT NULL DEFAULT 0,
       heightCm      REAL    NOT NULL DEFAULT 0,
       bodyFatPct    REAL    NOT NULL DEFAULT 0,
@@ -282,14 +282,14 @@ class AppDatabase {
       await _ownEverything(db);
     }
 
-    // v6 adds the age the sign-up asks for. Zero means it was never given,
-    // which is the honest reading for an account made before the question.
-    // Files below v4 rebuild the table above in its current shape, so only
-    // files that already have a profile need the column added.
-    if (from >= 4 && from < 6) {
-      await db.execute(
-        'ALTER TABLE $profileTable ADD COLUMN age INTEGER NOT NULL DEFAULT 0',
-      );
+    // v7 adds the date of birth the sign-up asks for. Nullable, not defaulted:
+    // an account made before the question has no answer, and a made-up one
+    // would be worse than the gap. Files below v4 rebuild the table above in
+    // its current shape, so only files that already have a profile need the
+    // column added. v6 wrote an integer age instead; it is left in place and
+    // ignored, because dropping a column is not worth the risk in a migration.
+    if (from >= 4 && from < 7) {
+      await db.execute('ALTER TABLE $profileTable ADD COLUMN dateOfBirth TEXT');
     }
   }
 

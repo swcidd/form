@@ -4,6 +4,7 @@ import 'package:plus_one/auth/local_auth_repository.dart';
 import 'package:plus_one/auth/password_hasher.dart';
 import 'package:plus_one/data/app_database.dart';
 import 'package:plus_one/data/workout_repository.dart';
+import 'package:plus_one/models/age.dart';
 import 'package:plus_one/models/session.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -82,12 +83,13 @@ void main() {
     });
 
     test('seeds the profile with the sign-up measurements', () async {
+      final born = DateTime(1996, 6, 15);
       final session = await signUp(
         auth,
         email: 'sam@example.com',
         password: 'one-rep-more',
         displayName: 'Sam Rivera',
-        age: 24,
+        dateOfBirth: born,
         heightCm: 178,
         weightKg: 75,
       );
@@ -97,7 +99,8 @@ void main() {
         userId: session.userId,
       ).loadProfile();
       expect(profile?.name, 'Sam Rivera');
-      expect(profile?.age, 24);
+      expect(profile?.dateOfBirth, born);
+      expect(profile?.age, ageInYears(born));
       expect(profile?.heightCm, 178);
       expect(profile?.weightKg, 75);
     });

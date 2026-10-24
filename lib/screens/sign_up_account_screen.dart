@@ -77,7 +77,7 @@ class _SignUpAccountScreenState extends State<SignUpAccountScreen> {
         email: email,
         password: password,
         displayName: widget.draft.fullName,
-        age: widget.draft.age,
+        dateOfBirth: widget.draft.dateOfBirth,
         heightCm: widget.draft.heightCm,
         weightKg: widget.draft.weightKg,
       );

@@ -116,7 +116,7 @@ abstract interface class AuthRepository {
     required String email,
     required String password,
     String? displayName,
-    int? age,
+    DateTime? dateOfBirth,
     double? heightCm,
     double? weightKg,
   });

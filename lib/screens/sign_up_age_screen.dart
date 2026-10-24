@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
+import '../models/age.dart';
 import '../models/sign_up_draft.dart';
 import '../widgets/auth_action.dart';
-import '../widgets/auth_field.dart';
 import '../widgets/auth_form_area.dart';
 import '../widgets/auth_hero.dart';
 import '../widgets/auth_intro.dart';
+import '../widgets/date_of_birth_field.dart';
 import '../widgets/sign_up_steps.dart';
 import 'sign_up_footer.dart';
 import 'sign_up_measurements_screen.dart';
 
-/// Sign-up, step two: how old the athlete is.
+/// Sign-up, step two: the date of birth the age is read from.
 class SignUpAgeScreen extends StatefulWidget {
   const SignUpAgeScreen({super.key, required this.draft});
 
@@ -22,25 +22,23 @@ class SignUpAgeScreen extends StatefulWidget {
 }
 
 class _SignUpAgeScreenState extends State<SignUpAgeScreen> {
-  final _age = TextEditingController();
-
+  DateTime? _dateOfBirth;
   String? _error;
 
   static const int minimumAge = 13;
   static const int maximumAge = 120;
 
-  @override
-  void dispose() {
-    _age.dispose();
-    super.dispose();
-  }
-
   void _continue() {
-    final age = int.tryParse(_age.text.trim());
+    final dateOfBirth = _dateOfBirth;
+    if (dateOfBirth == null) {
+      setState(() => _error = 'Choose your date of birth.');
+      return;
+    }
+
+    final age = ageInYears(dateOfBirth);
     final problem = switch (age) {
-      null => 'Enter your age.',
       < minimumAge => 'You must be at least $minimumAge.',
-      > maximumAge => 'Enter an age under $maximumAge.',
+      > maximumAge => 'Enter a date under $maximumAge years ago.',
       _ => null,
     };
     setState(() => _error = problem);
@@ -48,8 +46,9 @@ class _SignUpAgeScreenState extends State<SignUpAgeScreen> {
 
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) =>
-            SignUpMeasurementsScreen(draft: widget.draft.withAge(age!)),
+        builder: (_) => SignUpMeasurementsScreen(
+          draft: widget.draft.withDateOfBirth(dateOfBirth),
+        ),
       ),
     );
   }
@@ -73,18 +72,15 @@ class _SignUpAgeScreenState extends State<SignUpAgeScreen> {
                 const SizedBox(height: 24),
                 const AuthIntro(title: 'A LITTLE ABOUT YOU.'),
                 const SizedBox(height: 24),
-                AuthField(
-                  label: 'AGE',
-                  controller: _age,
-                  hint: 'Years',
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  textInputAction: TextInputAction.done,
+                DateOfBirthField(
+                  label: 'DATE OF BIRTH',
                   errorText: _error,
-                  onChanged: (_) {
-                    if (_error != null) setState(() => _error = null);
+                  onChanged: (value) {
+                    setState(() {
+                      _dateOfBirth = value;
+                      if (value != null) _error = null;
+                    });
                   },
-                  onSubmitted: (_) => _continue(),
                 ),
               ],
             ),

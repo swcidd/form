@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../models/age.dart';
 import '../providers/workout_provider.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_typography.dart';
 import 'auth_action.dart';
-import 'auth_field.dart';
+import 'date_of_birth_field.dart';
 import 'measurement_fields.dart';
 
-/// Age, height and weight, opened from the profile's Body section.
+/// Date of birth, height and weight, opened from the profile's Body section.
 Future<void> showEditBodySheet(BuildContext context) {
   final reduceMotion = MediaQuery.disableAnimationsOf(context);
   final animationStyle = reduceMotion
@@ -37,11 +37,10 @@ class EditBodySheet extends StatefulWidget {
 }
 
 class _EditBodySheetState extends State<EditBodySheet> {
-  final _age = TextEditingController();
-
+  DateTime? _dateOfBirth;
   double? _heightCm;
   double? _weightKg;
-  String? _ageError;
+  String? _dateError;
   String? _heightError;
   String? _weightError;
 
@@ -52,27 +51,23 @@ class _EditBodySheetState extends State<EditBodySheet> {
   void initState() {
     super.initState();
     final profile = context.read<WorkoutProvider>().profile;
-    if (profile.age > 0) _age.text = '${profile.age}';
+    _dateOfBirth = profile.dateOfBirth;
     _heightCm = profile.heightCm > 0 ? profile.heightCm : null;
     _weightKg = profile.weightKg > 0 ? profile.weightKg : null;
   }
 
-  @override
-  void dispose() {
-    _age.dispose();
-    super.dispose();
-  }
-
   void _save() {
-    final age = int.tryParse(_age.text.trim());
+    final dateOfBirth = _dateOfBirth;
     final height = _heightCm;
     final weight = _weightKg;
 
-    final ageProblem = switch (age) {
-      null => 'Enter your age.',
-      < minimumAge => 'You must be at least $minimumAge.',
-      > maximumAge => 'Enter an age under $maximumAge.',
-      _ => null,
+    final dateProblem = switch (dateOfBirth) {
+      null => 'Choose your date of birth.',
+      _ => switch (ageInYears(dateOfBirth)) {
+        < minimumAge => 'You must be at least $minimumAge.',
+        > maximumAge => 'Enter a date under $maximumAge years ago.',
+        _ => null,
+      },
     };
     final heightProblem = switch (height) {
       null => 'Enter your height.',
@@ -88,17 +83,21 @@ class _EditBodySheetState extends State<EditBodySheet> {
     };
 
     setState(() {
-      _ageError = ageProblem;
+      _dateError = dateProblem;
       _heightError = heightProblem;
       _weightError = weightProblem;
     });
-    if (ageProblem != null || heightProblem != null || weightProblem != null) {
+    if (dateProblem != null || heightProblem != null || weightProblem != null) {
       return;
     }
 
     final provider = context.read<WorkoutProvider>();
     provider.updateProfile(
-      provider.profile.copyWith(age: age, heightCm: height, weightKg: weight),
+      provider.profile.copyWith(
+        dateOfBirth: dateOfBirth,
+        heightCm: height,
+        weightKg: weight,
+      ),
     );
     Navigator.of(context).pop();
   }
@@ -128,17 +127,14 @@ class _EditBodySheetState extends State<EditBodySheet> {
               ),
             ),
             const SizedBox(height: 24),
-            AuthField(
-              label: 'AGE',
-              controller: _age,
-              hint: 'Years',
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              textInputAction: TextInputAction.next,
-              errorText: _ageError,
-              onChanged: (_) {
-                if (_ageError != null) setState(() => _ageError = null);
-              },
+            DateOfBirthField(
+              label: 'DATE OF BIRTH',
+              initialDate: _dateOfBirth,
+              errorText: _dateError,
+              onChanged: (value) => setState(() {
+                _dateOfBirth = value;
+                if (value != null) _dateError = null;
+              }),
             ),
             const SizedBox(height: 20),
             HeightField(

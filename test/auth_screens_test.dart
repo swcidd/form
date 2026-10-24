@@ -27,6 +27,39 @@ void main() {
     matching: find.byType(TextField),
   );
 
+  /// Picks a date from the day, month and year dropdowns.
+  Future<void> chooseDate(
+    WidgetTester tester, {
+    required String day,
+    required String month,
+    required String year,
+  }) async {
+    for (final (hint, value) in [
+      ('Select day', day),
+      ('Select month', month),
+      ('Select year', year),
+    ]) {
+      final button = find.text(hint).last;
+      await tester.ensureVisible(button);
+      await tester.pumpAndSettle();
+      await tester.tap(button, warnIfMissed: false);
+      await tester.pumpAndSettle();
+      final items = find.widgetWithText(DropdownMenuItem<int>, value);
+      if (hint == 'Select year') {
+        await tester.scrollUntilVisible(
+          items,
+          200,
+          scrollable: find.byType(Scrollable).last,
+        );
+      }
+      final item = items.last;
+      await tester.ensureVisible(item);
+      await tester.pumpAndSettle();
+      await tester.tap(item, warnIfMissed: false);
+      await tester.pumpAndSettle();
+    }
+  }
+
   /// A phone-shaped surface.
   ///
   /// The default test window is 800x600, and these screens are a full-height
@@ -256,7 +289,12 @@ void main() {
     }
 
     Future<void> continueToMeasurements(WidgetTester tester) async {
-      await tester.enterText(fieldFor('AGE'), '24');
+      await chooseDate(
+        tester,
+        day: '1',
+        month: 'January',
+        year: '${DateTime.now().year - 24}',
+      );
       await tapAction(tester, 'Continue');
     }
 
@@ -319,7 +357,7 @@ void main() {
 
       await tapAction(tester, 'Continue');
 
-      expect(find.text('Enter your age.'), findsOneWidget);
+      expect(find.text('Choose your date of birth.'), findsOneWidget);
       expect(find.byType(SignUpMeasurementsScreen), findsNothing);
     });
 
@@ -344,10 +382,10 @@ void main() {
       await continueToAge(tester);
       await continueToMeasurements(tester);
 
-      await tapAction(tester, 'USE FT');
+      await tapAction(tester, 'USE FEET');
       await tester.enterText(fieldFor('FEET'), '5');
       await tester.enterText(fieldFor('INCHES'), '10');
-      await tapAction(tester, 'USE LB');
+      await tapAction(tester, 'USE POUNDS');
       await tester.enterText(fieldFor('POUNDS'), '165');
       await tapAction(tester, 'Continue');
       await tester.enterText(fieldFor('EMAIL ADDRESS'), 'sam@example.com');
@@ -406,7 +444,7 @@ void main() {
       await tapAction(tester, 'Create account');
 
       expect(fake.lastDisplayName, 'Sam Rivera');
-      expect(fake.lastAge, 24);
+      expect(fake.lastDateOfBirth, DateTime(DateTime.now().year - 24, 1, 1));
       expect(fake.lastHeightCm, 178);
       expect(fake.lastWeightKg, 75);
       expect(find.byType(AppShell), findsOneWidget);
@@ -533,15 +571,20 @@ void main() {
       expect(find.byType(SignUpAgeScreen), findsOneWidget);
       expect(tester.takeException(), isNull, reason: 'Sign-up age');
 
-      await tester.enterText(fieldFor('AGE'), '24');
+      await chooseDate(
+        tester,
+        day: '1',
+        month: 'January',
+        year: '${DateTime.now().year - 24}',
+      );
       await tapAction(tester, 'Continue');
       expect(find.byType(SignUpMeasurementsScreen), findsOneWidget);
       expect(tester.takeException(), isNull, reason: 'Sign-up measurements');
 
-      await tapAction(tester, 'USE FT');
+      await tapAction(tester, 'USE FEET');
       await tester.enterText(fieldFor('FEET'), '5');
       await tester.enterText(fieldFor('INCHES'), '10');
-      await tapAction(tester, 'USE LB');
+      await tapAction(tester, 'USE POUNDS');
       await tester.enterText(fieldFor('POUNDS'), '165');
       expect(tester.takeException(), isNull, reason: 'Imperial measurements');
       await tapAction(tester, 'Continue');

@@ -65,7 +65,7 @@ uses:
 
 | Seam | Supabase | What the app already does with it |
 | --- | --- | --- |
-| `createAccount` | `signUp(email:, password:, data: {'display_name': …, 'age': …, 'height_cm': …, 'weight_kg': …})`; a null session means the confirmation mail is on its way | returns `ConfirmationSent`, the account step becomes "check your inbox" |
+| `createAccount` | `signUp(email:, password:, data: {'display_name': …, 'date_of_birth': …, 'height_cm': …, 'weight_kg': …})`; a null session means the confirmation mail is on its way | returns `ConfirmationSent`, the account step becomes "check your inbox" |
 | `signIn` | `signInWithPassword`; `email_not_confirmed` maps to `emailNotConfirmed` | the same banner vocabulary, no new screen |
 | `restoreSession` | `currentSession`, refreshed by the client | the gate opens on the right account before the first frame |
 | `changePassword` | `signInWithPassword` with the typed current password, then `updateUser(password:)` | the same sheet, including "that is not your current password" |
@@ -179,8 +179,10 @@ Migration v4 rebuilds rather than alters, because SQLite cannot change a primary
 key in place and the key on the id alone means the second account to create a
 workout silently fails to save it. Rows written before accounts existed belong to
 the device account, so an upgraded install opens on its own training instead of
-an empty app. v6 adds `age` to the profile, defaulting to zero for rows written
-before the question existed.
+an empty app. v7 adds a nullable `dateOfBirth` to the profile; rows written
+before the question existed keep no answer rather than inventing one. v6 wrote
+an integer age instead; a v6 file keeps that unused column and gains the date,
+so a build from that branch still opens.
 
 ## Deliberately not here
 
@@ -192,10 +194,11 @@ before the question existed.
 | Encryption of the training data | Out of scope for this submission, and worth saying plainly rather than implying the account protects it. |
 
 The sign-up is four steps, in the design's order: name, age, measurements, then
-the credentials. Height is stored in centimetres and weight in kilograms; the
-unit buttons convert what is typed, so a profile does not remember which unit it
-was given in. The same fields edit age, height and weight from the profile's
-Body section. The confirmation-password field is still not there: it is a second
+the credentials. Age is asked for as a date of birth in day, month and year
+lists; the profile stores the date and reads the age from it. Height is stored
+in centimetres and weight in kilograms; the unit buttons convert what is typed,
+so a profile does not remember which unit it was given in. The same date and
+measurement fields edit the body from the profile. The confirmation-password field is still not there: it is a second
 entry for a value the app is about to hash anyway. The change-password sheet
 follows the same rule — current password and new password, no second copy — so
 the app asks for a password the same way everywhere.
@@ -209,5 +212,5 @@ the app asks for a password the same way everywhere.
 | `test/auth_provider_test.dart` | Status transitions, `busy` held in a `finally`, failures passed on |
 | `test/auth_screens_test.dart` | The screens and the gate, driven through the UI, including a sign-up that needs confirming |
 | `test/session_store_test.dart` | The app builds the store for the account the session names |
-| `test/data/database_test.dart` | v1→v6, v3→v6 on a genuinely old-shaped file, v5→v6, and per-account partitioning |
+| `test/data/database_test.dart` | v1→v7, v3→v7 on a genuinely old-shaped file, v5→v7, v6→v7, and per-account partitioning |
 | `test/profile_screen_test.dart` | Editing the body, and the account section: who it is, change the password, sign out, delete asking first |

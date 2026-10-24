@@ -16,7 +16,7 @@ Future<Session> signUp(
   required String email,
   required String password,
   String? displayName,
-  int? age,
+  DateTime? dateOfBirth,
   double? heightCm,
   double? weightKg,
 }) async {
@@ -24,7 +24,7 @@ Future<Session> signUp(
     email: email,
     password: password,
     displayName: displayName,
-    age: age,
+    dateOfBirth: dateOfBirth,
     heightCm: heightCm,
     weightKg: weightKg,
   );

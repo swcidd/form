@@ -89,7 +89,7 @@ class AuthProvider extends ChangeNotifier {
     required String email,
     required String password,
     String? displayName,
-    int? age,
+    DateTime? dateOfBirth,
     double? heightCm,
     double? weightKg,
   }) async {
@@ -98,7 +98,7 @@ class AuthProvider extends ChangeNotifier {
         email: email,
         password: password,
         displayName: displayName,
-        age: age,
+        dateOfBirth: dateOfBirth,
         heightCm: heightCm,
         weightKg: weightKg,
       ),

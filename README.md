@@ -105,10 +105,10 @@ refusals.
 
 - **Continue offline** → the device account: no password, everything works.
 - **Create account** → four steps in the design's order: name, age,
-  measurements, then the credentials. Height and weight accept metric or
-  imperial input, land in the athlete profile, and stay editable there. The
-  sign-up answers in the shape a verifying backend uses: signed in, or "check
-  your inbox".
+  measurements, then the credentials. Age is entered as a date of birth in
+  day, month and year lists. Height and weight accept metric or imperial input,
+  land in the athlete profile, and stay editable there. The sign-up answers in
+  the shape a verifying backend uses: signed in, or "check your inbox".
 - **Change password** → from the account card in the profile, with the current
   password checked by the store.
 - **Sign out** → back to the welcome screen; your data stays.
@@ -171,7 +171,7 @@ fallbacks are MIT and Unlicense).
 lib/
 ├── main.dart                 # gate: splash → welcome/sign-in → app, routes
 ├── auth/                     # AuthRepository seam, local implementation, hasher
-├── data/                     # AppDatabase (schema v6), repositories, session stats
+├── data/                     # AppDatabase (schema v7), repositories, session stats
 ├── models/                   # Workout, ExerciseLog, ExerciseSet, Profile, Account, Session
 ├── providers/                # AuthProvider, WorkoutProvider
 ├── screens/                  # welcome, sign in, sign-up steps, shell, home,
@@ -244,10 +244,11 @@ the keystore lives in a gitignored `android/key.properties`.
 - **Review**: every PR got inline review comments on the lines that carried a
   decision (identity, schema, lifecycle), not a rubber stamp, and was merged only
   with the suite green on the merged tree.
-- **Tests**: 318 widget, provider and database tests. The dangerous parts are
-  covered directly: the v3 → v6 migration builds an old database by hand, the
-  v5 → v6 migration restores the age default, signing in as somebody else
-  asserts the old store is disposed, and the counting rules have their own tests.
+- **Tests**: 322 widget, provider and database tests. The dangerous parts are
+  covered directly: the v3 → v7 migration builds an old database by hand, the
+  v5 → v7 and v6 → v7 migrations leave the date of birth unset, signing in as
+  somebody else asserts the old store is disposed, and the counting rules have
+  their own tests.
 
 ---
 

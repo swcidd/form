@@ -16,7 +16,7 @@ class SignUpSteps extends StatelessWidget {
   static const List<String> _labels = [
     '01  NAME',
     '02  AGE',
-    '03  MEASUREMENTS',
+    '03  MEASURE',
     '04  ACCOUNT',
   ];
 

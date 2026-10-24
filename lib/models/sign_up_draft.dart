@@ -9,7 +9,7 @@ class SignUpDraft {
   const SignUpDraft({
     required this.firstName,
     this.lastName = '',
-    this.age,
+    this.dateOfBirth,
     this.heightCm,
     this.weightKg,
   });
@@ -17,8 +17,8 @@ class SignUpDraft {
   final String firstName;
   final String lastName;
 
-  /// Null until the age step has a valid number.
-  final int? age;
+  /// Null until the age step has a real date.
+  final DateTime? dateOfBirth;
 
   /// Null until the measurements step has a valid height.
   final double? heightCm;
@@ -36,8 +36,8 @@ class SignUpDraft {
     lastName.trim(),
   ].where((part) => part.isNotEmpty).join(' ');
 
-  SignUpDraft withAge(int value) =>
-      SignUpDraft(firstName: firstName, lastName: lastName, age: value);
+  SignUpDraft withDateOfBirth(DateTime value) =>
+      SignUpDraft(firstName: firstName, lastName: lastName, dateOfBirth: value);
 
   SignUpDraft withMeasurements({
     required double heightCm,
@@ -45,7 +45,7 @@ class SignUpDraft {
   }) => SignUpDraft(
     firstName: firstName,
     lastName: lastName,
-    age: age,
+    dateOfBirth: dateOfBirth,
     heightCm: heightCm,
     weightKg: weightKg,
   );

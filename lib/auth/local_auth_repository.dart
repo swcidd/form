@@ -67,7 +67,7 @@ class LocalAuthRepository implements AuthRepository {
     required String email,
     required String password,
     String? displayName,
-    int? age,
+    DateTime? dateOfBirth,
     double? heightCm,
     double? weightKg,
   }) async {
@@ -97,7 +97,7 @@ class LocalAuthRepository implements AuthRepository {
             account.id,
             ProfileStats.empty().copyWith(
               name: account.displayName,
-              age: age ?? 0,
+              dateOfBirth: dateOfBirth,
               heightCm: heightCm ?? 0,
               weightKg: weightKg ?? 0,
             ),
