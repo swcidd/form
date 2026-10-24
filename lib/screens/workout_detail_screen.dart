@@ -6,6 +6,7 @@ import '../models/workout.dart';
 import '../providers/workout_provider.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
+import '../widgets/exercise_picker_sheet.dart';
 import 'set_logging_screen.dart';
 
 /// Pre-workout screen: what the session is, and the button that starts it.
@@ -55,9 +56,12 @@ class WorkoutDetailScreen extends StatelessWidget {
                     const SizedBox(height: 24),
                   ],
                   if (workout.logs.isEmpty)
-                    const _NoExercises()
+                    _NoExercises(onAdd: () => _addExercise(context, workout))
                   else
-                    _ExerciseList(workout: workout),
+                    _ExerciseList(
+                      workout: workout,
+                      onAdd: () => _addExercise(context, workout),
+                    ),
                   const SizedBox(height: 24),
                   _StartWorkoutButton(workout: workout),
                   const SizedBox(height: 32),
@@ -75,6 +79,31 @@ class WorkoutDetailScreen extends StatelessWidget {
     final segments = routeName.split('/').where((s) => s.isNotEmpty).toList();
     if (segments.length < 2) return null;
     return Uri.decodeComponent(segments[1]);
+  }
+
+  /// Adds a catalogue exercise with a small starting scheme the athlete can
+  /// edit on the logging screen. Three sets is enough to make the session
+  /// startable without pretending to know their working weight.
+  Future<void> _addExercise(BuildContext context, Workout workout) async {
+    final picked = await ExercisePickerSheet.show(context);
+    if (picked == null || !context.mounted) return;
+
+    context.read<WorkoutProvider>().addExercise(
+      workout.id,
+      ExerciseLog(
+        exercise: Exercise(
+          name: picked.name,
+          equipment: picked.equipment.isEmpty
+              ? 'Bodyweight'
+              : picked.equipment.first,
+          muscleGroups: picked.primaryMuscles,
+        ),
+        sets: [
+          for (var index = 0; index < 3; index++)
+            const WorkoutSet(reps: 8, weightKg: 0),
+        ],
+      ),
+    );
   }
 }
 
@@ -284,7 +313,9 @@ class _Chips extends StatelessWidget {
 
 /// A session with no exercises on it yet - what the create dialog produces.
 class _NoExercises extends StatelessWidget {
-  const _NoExercises();
+  const _NoExercises({required this.onAdd});
+
+  final VoidCallback onAdd;
 
   @override
   Widget build(BuildContext context) {
@@ -298,10 +329,26 @@ class _NoExercises extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: scheme.outlineVariant),
       ),
-      child: Text(
-        'This session has no exercises yet. Add one on the logging screen '
-        'when you start training.',
-        style: context.text.annotation.copyWith(height: 1.5),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'This session has no exercises yet. Add one here, then start '
+            'training when the line-up is ready.',
+            style: context.text.annotation.copyWith(height: 1.5),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: onAdd,
+            icon: const Icon(Icons.add_rounded, size: 18),
+            label: const Text('Add exercise'),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size.fromHeight(44),
+              foregroundColor: scheme.onSurface,
+              side: BorderSide(color: scheme.outlineVariant),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -309,9 +356,10 @@ class _NoExercises extends StatelessWidget {
 
 /// Exercise list with numbering, names, set schemes, and rest times.
 class _ExerciseList extends StatelessWidget {
-  const _ExerciseList({required this.workout});
+  const _ExerciseList({required this.workout, required this.onAdd});
 
   final Workout workout;
+  final VoidCallback onAdd;
 
   @override
   Widget build(BuildContext context) {
@@ -320,7 +368,17 @@ class _ExerciseList extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(children: [Text('THE LINEUP', style: text.labelCaps)]),
+        Row(
+          children: [
+            Text('THE LINEUP', style: text.labelCaps),
+            const Spacer(),
+            TextButton.icon(
+              onPressed: onAdd,
+              icon: const Icon(Icons.add_rounded, size: 18),
+              label: const Text('Add exercise'),
+            ),
+          ],
+        ),
         const SizedBox(height: 12),
         ListView.separated(
           shrinkWrap: true,
@@ -414,10 +472,12 @@ class _StartWorkoutButton extends StatelessWidget {
       width: double.infinity,
       height: 56,
       child: ElevatedButton.icon(
-        onPressed: () {
-          Navigator.of(context)
-              .pushNamed(SetLoggingScreen.routeFor(workout.id));
-        },
+        onPressed: workout.logs.isEmpty
+            ? null
+            : () {
+                Navigator.of(context)
+                    .pushNamed(SetLoggingScreen.routeFor(workout.id));
+              },
         icon: const Icon(Icons.play_arrow_rounded, size: 20),
         label: Text(
           'Start ${workout.title}',

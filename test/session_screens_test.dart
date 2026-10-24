@@ -306,7 +306,72 @@ void main() {
     expect(find.text('Leg Day'), findsOneWidget);
     expect(find.text('THE LINEUP'), findsNothing);
     expect(find.textContaining('no exercises yet'), findsOneWidget);
+    expect(find.text('Add exercise'), findsOneWidget);
     // Nothing to focus on yet, so the section is left out rather than empty.
     expect(find.text("TODAY'S FOCUS"), findsNothing);
+
+    // Starting an empty session would land on a logging screen with no
+    // exercise to show, so the button waits until there is a line-up.
+    final start = tester.widget<ElevatedButton>(
+      find.widgetWithText(ElevatedButton, 'Start Leg Day'),
+    );
+    expect(start.onPressed, isNull);
+  });
+
+  testWidgets('an exercise can be added before the session starts', (
+    tester,
+  ) async {
+    final provider = WorkoutProvider(
+      today: _today,
+      workouts: [
+        Workout(
+          id: 'fresh',
+          title: 'Leg Day',
+          date: _today,
+          status: WorkoutStatus.planned,
+          durationMin: 0,
+          estimatedKcal: 0,
+          targetMuscleGroups: const [],
+          equipment: const [],
+          logs: const [],
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      _withProvider(
+        provider,
+        WorkoutDetailScreen(
+          route: RouteSettings(name: WorkoutDetailScreen.routeFor('fresh')),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    await tester.tap(find.text('Add exercise'));
+    // The bundled catalogue is real asset I/O, so the fake clock cannot settle
+    // the spinner on its own.
+    for (var attempt = 0; attempt < 20; attempt++) {
+      await tester.pump(const Duration(milliseconds: 100));
+      if (tester.any(find.byType(ListTile))) break;
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 25)),
+      );
+    }
+
+    await tester.enterText(find.byType(TextField), 'bench');
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byType(ListTile).first);
+    await tester.pumpAndSettle();
+
+    expect(provider.workouts.single.logs, hasLength(1));
+    expect(provider.workouts.single.logs.single.sets, hasLength(3));
+    expect(find.text('THE LINEUP'), findsOneWidget);
+
+    final start = tester.widget<ElevatedButton>(
+      find.widgetWithText(ElevatedButton, 'Start Leg Day'),
+    );
+    expect(start.onPressed, isNotNull);
   });
 }
