@@ -1068,6 +1068,7 @@ class _RotationRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final text = context.text;
 
     return GestureDetector(
@@ -1075,9 +1076,9 @@ class _RotationRow extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: AppColors.white,
+          color: scheme.surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.hairline),
+          border: Border.all(color: scheme.outlineVariant),
         ),
         child: Row(
           children: [
@@ -1085,13 +1086,13 @@ class _RotationRow extends StatelessWidget {
               width: 50,
               height: 50,
               decoration: BoxDecoration(
-                color: AppColors.sage50,
+                color: scheme.secondaryContainer,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(
                 _iconFor(entry.workout.targetMuscleGroups),
                 size: 26,
-                color: AppColors.ink,
+                color: scheme.onSecondaryContainer,
               ),
             ),
             const SizedBox(width: 14),
@@ -1101,7 +1102,9 @@ class _RotationRow extends StatelessWidget {
                 children: [
                   Text(
                     entry.label,
-                    style: text.labelCaps.copyWith(color: AppColors.sage600),
+                    style: text.labelCaps.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
                   ),
                   Text(
                     entry.title.toUpperCase(),
@@ -1116,7 +1119,7 @@ class _RotationRow extends StatelessWidget {
                     Text(
                       entry.meta,
                       style: text.previousPerf.copyWith(
-                        color: AppColors.sage600,
+                        color: scheme.onSurfaceVariant,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -1124,10 +1127,10 @@ class _RotationRow extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(
+            Icon(
               Icons.arrow_outward_rounded,
               size: 18,
-              color: AppColors.sage600,
+              color: scheme.onSurfaceVariant,
             ),
           ],
         ),

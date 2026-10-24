@@ -38,15 +38,18 @@ String _wgerBody() => jsonEncode({
 
 /// The screen under the app's own routes, so a tap that navigates does not
 /// pass here and fail in the application.
-Widget _screen({ExerciseCatalog? catalog, WorkoutProvider? provider}) =>
-    ChangeNotifierProvider<WorkoutProvider>.value(
-      value: provider ?? WorkoutProvider(),
-      child: MaterialApp(
-        theme: AppTheme.light(),
-        onGenerateRoute: PlusOneApp.routeFor,
-        home: LibraryScreen(catalog: catalog),
-      ),
-    );
+Widget _screen({
+  ExerciseCatalog? catalog,
+  WorkoutProvider? provider,
+  ThemeData? theme,
+}) => ChangeNotifierProvider<WorkoutProvider>.value(
+  value: provider ?? WorkoutProvider(),
+  child: MaterialApp(
+    theme: theme ?? AppTheme.light(),
+    onGenerateRoute: PlusOneApp.routeFor,
+    home: LibraryScreen(catalog: catalog),
+  ),
+);
 
 /// A fixed Sunday, so the week boundary in the assertions is arithmetic rather
 /// than whatever day the suite happens to run on.
@@ -127,6 +130,36 @@ void main() {
       expect(find.text('7 workouts'), findsOneWidget);
       expect(find.text('NEXT SESSION'), findsOneWidget);
       expect(find.text('LAST TRAINED OCT 17'), findsOneWidget);
+    });
+
+    testWidgets('the rotation row keeps its title readable in dark mode', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _screen(
+          theme: AppTheme.dark(),
+          provider: seededProvider(today: _today),
+        ),
+      );
+
+      final scheme = AppTheme.dark().colorScheme;
+      final cardFinder = find
+          .ancestor(
+            of: find.text('NEXT SESSION'),
+            matching: find.byType(Container),
+          )
+          .first;
+      final card = tester.widget<Container>(cardFinder);
+      final title = tester.widget<Text>(
+        find.descendant(
+          of: cardFinder,
+          matching: find.text('UPPER BODY HYPERTROPHY & CORE'),
+        ),
+      );
+
+      expect((card.decoration! as BoxDecoration).color, scheme.surface);
+      expect(title.style?.color, scheme.onSurface);
+      expect(title.style?.color, isNot(scheme.surface));
     });
 
     testWidgets('narrows the rotation with the search field', (tester) async {
