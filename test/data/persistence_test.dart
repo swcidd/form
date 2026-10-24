@@ -64,8 +64,8 @@ void main() {
   /// A catalogue entry, the shape Discover hands the bookmark.
   const barbellCurl = LibraryExercise(
     name: 'Barbell Curl',
-    primaryMuscle: 'biceps',
-    instructions: 'Curl the bar.',
+    primaryMuscles: ['biceps'],
+    instructions: ['Curl the bar.'],
     equipment: ['Barbell'],
     category: 'strength',
     level: 'intermediate',
@@ -73,8 +73,8 @@ void main() {
 
   const inclineCurl = LibraryExercise(
     name: 'Incline Dumbbell Curl',
-    primaryMuscle: 'biceps',
-    instructions: 'Curl on an incline.',
+    primaryMuscles: ['biceps'],
+    instructions: ['Curl on an incline.'],
     equipment: ['Dumbbells'],
     category: 'strength',
   );

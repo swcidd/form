@@ -292,16 +292,24 @@ Built for **SE2142 — Software Engineering Tools and Practices**.
 
 ## Data sources and licences
 
-FORM does not invent its exercise catalogue — it reads it from three places.
-The licences that ask for attribution get one on screen and in
+FORM does not invent its exercise catalogue — it reads the live data from
+wger.de and ships one canonical offline catalogue generated from two open data
+sets. The licences that ask for attribution get one on screen and in
 **[docs/ATTRIBUTION.md](docs/ATTRIBUTION.md)**, which also carries the notice
 texts and the two font licences.
 
 | Source | Licence |
 | --- | --- |
 | [wger.de](https://wger.de) REST API — the live catalogue | CC BY-SA 3.0/4.0, per entry |
-| [exercemus/exercises](https://github.com/exercemus/exercises) — bundled offline fallback | MIT, © 2022 exercemus |
-| [free-exercise-db](https://github.com/yuhonas/free-exercise-db) — bundled offline fallback | The Unlicense (public domain) |
+| [exercemus/exercises](https://github.com/exercemus/exercises) — source for the bundled catalogue | MIT, © 2022 exercemus |
+| [free-exercise-db](https://github.com/yuhonas/free-exercise-db) — source for the bundled catalogue | The Unlicense (public domain) |
+
+The app ships one file, `assets/data/exercises.json`, built by
+`tool/build_exercises.dart`. The raw upstream downloads live in
+`tool/exercise_sources/` so the catalogue can be rebuilt and audited without
+shipping either source in the APK. Catalogue cards hotlink a small Unsplash set
+for their thumbnails for now, with no API key; see
+**[docs/ATTRIBUTION.md](docs/ATTRIBUTION.md)**.
 
 The interface icons are [Lucide](https://lucide.dev) (ISC). Inter and Barlow
 Condensed are bundled with the app under the SIL Open Font License 1.1, so no

@@ -4,17 +4,17 @@ import 'package:plus_one/models/saved_exercise.dart';
 
 LibraryExercise _exercise({String name = 'Barbell Curl'}) => LibraryExercise(
   name: name,
-  primaryMuscle: 'biceps',
-  secondaryMuscle: 'forearms',
-  instructions: 'Curl the bar slowly.',
+  primaryMuscles: ['biceps'],
+  secondaryMuscles: ['forearms'],
+  instructions: ['Curl the bar slowly.'],
   equipment: const ['Barbell', 'Curl bar'],
   category: 'strength',
   level: 'intermediate',
   force: 'isolation',
   images: const ['assets/images/free-db/barbell-curl_1.png'],
-  tips: 'Keep the elbows fixed.',
+  tips: ['Keep the elbows fixed.'],
   video: 'https://example.com/curl.mp4',
-  variations: const ['Incline dumbbell curl', 'Hammer curl'],
+  aliases: const ['Incline dumbbell curl', 'Hammer curl'],
 );
 
 void main() {
@@ -63,12 +63,12 @@ void main() {
       });
 
       expect(exercise.name, 'Barbell Curl');
-      expect(exercise.level, 'beginner');
-      expect(exercise.force, 'pull');
+      expect(exercise.level, isNull);
+      expect(exercise.force, isNull);
       expect(exercise.images, isEmpty);
       expect(exercise.secondaryMuscle, isNull);
-      expect(exercise.tips, isNull);
-      expect(exercise.variations, isNull);
+      expect(exercise.tips, isEmpty);
+      expect(exercise.aliases, isEmpty);
     });
 
     test('an empty payload becomes a readable, empty entry', () {

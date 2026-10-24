@@ -96,23 +96,30 @@ class ExerciseApiClient {
 
     final category =
         (json['category'] as Map<String, dynamic>?)?['name'] as String? ?? '';
-    final secondary = _muscles(json['muscles_secondary']);
 
     return LibraryExercise(
+      catalogueId: _id(json['id']),
       name: name,
-      primaryMuscle: _muscles(json['muscles']),
-      secondaryMuscle: secondary.isEmpty ? null : secondary,
-      instructions: _plainText((translation['description'] as String?) ?? ''),
+      primaryMuscles: _muscles(json['muscles']),
+      secondaryMuscles: _muscles(json['muscles_secondary']),
+      instructions: _instructions(
+        (translation['description'] as String?) ?? '',
+      ),
       equipment: _equipment(json['equipment']),
       category: category.isEmpty ? 'strength' : category,
-      // wger's card fields need no level; the grid shows the defaults.
-      level: 'beginner',
-      images: const [],
     );
   }
 
-  /// Comma-joined muscle labels, English names preferred; '' when none.
-  String _muscles(Object? raw) {
+  /// wger's id namespaced so it cannot collide with a bundled free-exercise-db
+  /// id once both have been saved.
+  String? _id(Object? raw) {
+    if (raw == null) return null;
+    final value = raw.toString().trim();
+    return value.isEmpty ? null : 'wger-$value';
+  }
+
+  /// Muscle labels, English names preferred; empty when none.
+  List<String> _muscles(Object? raw) {
     final labels = <String>[];
     for (final node in raw as List? ?? const []) {
       if (node is! Map<String, dynamic>) continue;
@@ -121,7 +128,7 @@ class ExerciseApiClient {
       final label = english.isNotEmpty ? english : latin;
       if (label.isNotEmpty) labels.add(label);
     }
-    return labels.join(', ');
+    return labels;
   }
 
   /// Equipment names; wger nests them as objects, unlike the bundled sets.
@@ -135,13 +142,18 @@ class ExerciseApiClient {
   }
 
   /// wger descriptions arrive as HTML; the cards show plain text.
-  static String _plainText(String html) {
-    return html
+  ///
+  /// One string becomes one instruction line. Keeping the list lets the model
+  /// hold the bundled catalogue's line-by-line instructions without a second
+  /// shape for network entries.
+  static List<String> _instructions(String html) {
+    final text = html
         .replaceAll(RegExp('<[^>]+>'), ' ')
         .replaceAll('&nbsp;', ' ')
         .replaceAll('&amp;', '&')
         .replaceAll('&quot;', '"')
         .replaceAll(RegExp(r'\s+'), ' ')
         .trim();
+    return text.isEmpty ? const [] : [text];
   }
 }

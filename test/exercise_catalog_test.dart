@@ -10,8 +10,8 @@ import 'package:plus_one/exercise_library.dart';
 
 const _bundledSeed = LibraryExercise(
   name: 'Bundled Curl',
-  primaryMuscle: 'biceps',
-  instructions: 'Curl the bar.',
+  primaryMuscles: ['biceps'],
+  instructions: ['Curl the bar.'],
   equipment: ['Barbell'],
   category: 'strength',
 );

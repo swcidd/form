@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../data/exercise_catalog.dart';
+import '../data/exercise_images.dart';
 import '../exercise_library.dart';
 import '../models/saved_exercise.dart';
 import '../models/workout.dart';
@@ -654,10 +655,14 @@ class _LibraryScreenState extends State<LibraryScreen> {
     return [
       for (final exercise in exercises)
         if (_inMuscle(exercise) &&
-            (_matches(exercise.name) || _matches(exercise.primaryMuscle)))
+            (_matches(exercise.name) || _matches(_muscleText(exercise))))
           exercise,
     ];
   }
+
+  /// Every muscle name on an entry, so a search finds the second one too.
+  String _muscleText(LibraryExercise exercise) =>
+      [...exercise.primaryMuscles, ...exercise.secondaryMuscles].join(' ');
 
   bool _inMuscle(LibraryExercise exercise) {
     if (_muscle == _allMuscles) return true;
@@ -665,7 +670,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
     // keep a muscle fallback for names that read like muscle groups.
     final needle = _muscle.toLowerCase();
     return exercise.category.toLowerCase() == needle ||
-        exercise.primaryMuscle.toLowerCase().contains(needle);
+        _muscleText(exercise).toLowerCase().contains(needle);
   }
 
   Widget _muscleChips() {
@@ -759,7 +764,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
               // The row shows the muscle it trains, so the search field has to
               // find it by that too - the same terms the catalogue matches on,
               // since a saved entry came from there.
-              _matches(entry.exercise.primaryMuscle),
+              _matches(_muscleText(entry.exercise)),
         )
         .toList();
 
@@ -847,13 +852,15 @@ class _LibraryScreenState extends State<LibraryScreen> {
   /// wger asks for attribution (its entries are CC BY-SA, per entry) and
   /// exercemus is MIT, so both are named where the catalogue is shown rather
   /// than only in an about screen. free-exercise-db is public domain but named
-  /// anyway, so a reader can tell where the offline catalogue came from.
+  /// anyway, so a reader can tell where the offline catalogue came from. The
+  /// card photography is Unsplash, whose licence does not require a credit but
+  /// makes the source worth naming.
   ///
   /// The full notices, including the bundled fonts, are in docs/ATTRIBUTION.md.
   Widget _attribution() {
     return Text(
       'Exercise data: wger.de (CC BY-SA 3.0/4.0) · exercemus (MIT) · '
-      'free-exercise-db (public domain).',
+      'free-exercise-db (public domain). Exercise photos: Unsplash.',
       style: context.text.annotation.copyWith(color: AppColors.sage600),
     );
   }
@@ -1302,6 +1309,12 @@ class _ExerciseCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = context.text;
+    final bundled = ExerciseImages.bundledAsset(exercise);
+    const placeholder = Icon(
+      Icons.fitness_center_rounded,
+      size: 30,
+      color: AppColors.ink,
+    );
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -1322,24 +1335,25 @@ class _ExerciseCard extends StatelessWidget {
                   color: AppColors.sage50,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: exercise.images.isNotEmpty
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: Image.asset(
-                          exercise.images.first,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: bundled != null
+                      ? Image.asset(
+                          bundled,
                           fit: BoxFit.cover,
-                          errorBuilder: (_, _, _) => const Icon(
-                            Icons.fitness_center_rounded,
-                            size: 30,
-                            color: AppColors.ink,
-                          ),
+                          errorBuilder: (_, _, _) => placeholder,
+                        )
+                      : Image.network(
+                          ExerciseImages.forExercise(exercise),
+                          fit: BoxFit.cover,
+                          cacheWidth: 480,
+                          filterQuality: FilterQuality.medium,
+                          excludeFromSemantics: true,
+                          loadingBuilder: (_, child, progress) =>
+                              progress == null ? child : placeholder,
+                          errorBuilder: (_, _, _) => placeholder,
                         ),
-                      )
-                    : const Icon(
-                        Icons.fitness_center_rounded,
-                        size: 30,
-                        color: AppColors.ink,
-                      ),
+                ),
               ),
               // Kept against the corner of the image rather than under the
               // text, so the card's lower half reads the same whatever the
@@ -1383,11 +1397,11 @@ class _ExerciseCard extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      if (exercise.tips != null) ...[
+                      if (exercise.tipsText != null) ...[
                         const SizedBox(height: 4),
                         Flexible(
                           child: Text(
-                            exercise.tips!,
+                            exercise.tipsText!,
                             style: text.annotation.copyWith(
                               color: AppColors.sage600,
                             ),
@@ -1400,7 +1414,7 @@ class _ExerciseCard extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  exercise.level.toUpperCase(),
+                  (exercise.level ?? 'beginner').toUpperCase(),
                   style: text.annotation.copyWith(
                     color: AppColors.sage600,
                     fontWeight: FontWeight.w600,

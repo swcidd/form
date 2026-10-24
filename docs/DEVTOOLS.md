@@ -35,7 +35,7 @@ Inside the 1.24 MB of assets:
 | --- | ---: | --- |
 | `fonts/` | 673 KB | Four Inter weights (607 KB) + two Barlow Condensed (60 KB) |
 | `images/` | 400 KB | Three photographs: workout hero 145 KB, profile avatar 129 KB, program hero 125 KB |
-| `data/` | 20 KB | The two bundled exercise catalogues |
+| `data/` | 67 KB | The one canonical exercise catalogue, generated from two sources |
 | `MaterialIcons-Regular.otf` | **4.8 KB** | Tree-shaken by the build, from ~1.6 MB |
 
 Inside `libapp.so`, attributed by package:
