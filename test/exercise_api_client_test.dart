@@ -60,14 +60,17 @@ void main() {
 
     expect(exercises, hasLength(1));
     final exercise = exercises.single;
+    expect(exercise.id, 'wger-9');
     expect(exercise.name, '2 Handed Kettlebell Swing');
     expect(exercise.category, 'Abs');
     // English muscle names win over the Latin ones.
-    expect(exercise.primaryMuscle, 'Hamstrings, Glutes');
-    expect(exercise.secondaryMuscle, 'Abs');
+    expect(exercise.primaryMuscles, ['Hamstrings', 'Glutes']);
+    expect(exercise.secondaryMuscles, ['Abs']);
     expect(exercise.equipment, ['Kettlebell']);
     // The card shows plain text, so the HTML tags cannot survive parsing.
-    expect(exercise.instructions, 'Two Handed Russian Style Kettlebell swing');
+    expect(exercise.instructions, [
+      'Two Handed Russian Style Kettlebell swing',
+    ]);
   });
 
   test('falls back to the first translation when English is missing', () async {

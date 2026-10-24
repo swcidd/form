@@ -336,8 +336,8 @@ void main() {
       final saved = SavedExercise(
         exercise: const LibraryExercise(
           name: 'Barbell Curl',
-          primaryMuscle: 'biceps',
-          instructions: 'Curl the bar.',
+          primaryMuscles: ['biceps'],
+          instructions: ['Curl the bar.'],
           equipment: ['Barbell'],
           category: 'strength',
         ),
@@ -619,15 +619,15 @@ void main() {
 
     LibraryExercise exercise({String name = 'Barbell Curl'}) => LibraryExercise(
       name: name,
-      primaryMuscle: 'biceps',
-      secondaryMuscle: 'forearms',
-      instructions: 'Curl the bar slowly.',
+      primaryMuscles: ['biceps'],
+      secondaryMuscles: ['forearms'],
+      instructions: ['Curl the bar slowly.'],
       equipment: const ['Barbell'],
       category: 'strength',
       level: 'intermediate',
       images: const ['assets/images/free-db/barbell-curl_1.png'],
-      tips: 'Keep the elbows fixed.',
-      variations: const ['Hammer curl'],
+      tips: ['Keep the elbows fixed.'],
+      aliases: const ['Hammer curl'],
     );
 
     SavedExercise kept({String name = 'Barbell Curl'}) => SavedExercise(
@@ -654,8 +654,8 @@ void main() {
       expect(loaded.single.exercise.images, [
         'assets/images/free-db/barbell-curl_1.png',
       ]);
-      expect(loaded.single.exercise.tips, 'Keep the elbows fixed.');
-      expect(loaded.single.exercise.variations, ['Hammer curl']);
+      expect(loaded.single.exercise.tips, ['Keep the elbows fixed.']);
+      expect(loaded.single.exercise.aliases, ['Hammer curl']);
     });
 
     test('keeping one exercise twice leaves a single row', () async {
@@ -718,8 +718,8 @@ void main() {
         SavedExercise(
           exercise: LibraryExercise(
             name: 'Barbell Curl',
-            primaryMuscle: 'biceps',
-            instructions: 'Curl the bar.',
+            primaryMuscles: ['biceps'],
+            instructions: ['Curl the bar.'],
             equipment: const ['Barbell'],
             category: 'strength',
           ),

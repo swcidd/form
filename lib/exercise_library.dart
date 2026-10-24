@@ -2,72 +2,101 @@ import 'dart:convert';
 
 import 'package:flutter/services.dart' show rootBundle;
 
-/// Library exercise catalog — merged from two open-source data sets.
+/// One entry in the bundled exercise catalogue.
 ///
-/// Completely independent of the core [Exercise] model.  Display-only;
-/// if the user saves a workout that references it, a real [Exercise] is
-/// created from the workout's logged sets.
+/// The two upstream data sets are merged by `tool/build_exercises.dart` into
+/// `assets/data/exercises.json`, so this is the only shape the app parses. The
+/// fields are the union that survived: stable id, list-valued muscles and
+/// equipment, and the text/media that only one source carried. Optional fields
+/// stay nullable rather than being filled with invented defaults; the UI
+/// decides what a missing level means.
 class LibraryExercise {
   const LibraryExercise({
     required this.name,
-    required this.primaryMuscle,
-    this.secondaryMuscle,
-    required this.instructions,
+    this.catalogueId,
+    this.aliases = const [],
+    this.primaryMuscles = const [],
+    this.secondaryMuscles = const [],
+    this.instructions = const [],
     required this.equipment,
     required this.category,
-    this.level = 'beginner',
-    this.force = 'pull',
-    this.images = const [],
-    this.tips,
+    this.level,
+    this.force,
+    this.mechanic,
+    this.description,
+    this.tips = const [],
     this.video,
-    this.variations,
+    this.images = const [],
   });
 
-  /// Human-friendly name (e.g. "Barbell Curl")
+  /// Human-friendly name (e.g. "Barbell Curl").
   final String name;
 
-  /// Primary muscle group (e.g. "biceps")
-  final String primaryMuscle;
+  /// Stable catalogue identity, written by the build script. Older saved rows
+  /// have no id, so [id] falls back to the normalised name.
+  final String? catalogueId;
 
-  /// Optional secondary muscle group
-  final String? secondaryMuscle;
+  /// Other names this exercise is known by.
+  final List<String> aliases;
 
-  /// Instructions text (single string, instructions joined with spaces)
-  final String instructions;
+  /// Every primary muscle, in source order.
+  final List<String> primaryMuscles;
 
-  /// Equipment needed (list of strings)
+  /// Every secondary muscle, in source order.
+  final List<String> secondaryMuscles;
+
+  /// Instruction lines, kept separate so a card can show a paragraph and a
+  /// detail view can keep the list.
+  final List<String> instructions;
+
+  /// Equipment needed. Empty is allowed for malformed saved rows, never for a
+  /// catalogue entry.
   final List<String> equipment;
 
-  /// Category: strength, stretching, plyometrics, strongman, etc.
+  /// strength | stretching | plyometrics | strongman | powerlifting.
   final String category;
 
-  /// Difficulty level: beginner | intermediate | expert
-  final String level;
+  /// beginner | intermediate | expert, or null when the source had no level.
+  final String? level;
 
-  /// Movement type: pull | push | static | compound | isolation
-  final String force;
+  /// push | pull | static, or null when the source had no force.
+  final String? force;
 
-  /// Bundled image paths (free-exercise-db).  May be empty if only
-  /// available via exercemus URLs.
-  final List<String> images;
+  /// compound | isolation, or null when the source had no mechanic.
+  final String? mechanic;
 
-  /// Optional tips text
-  final String? tips;
+  /// Short description from exercemus, when present.
+  final String? description;
 
-  /// Optional video URL
+  /// Form cues from exercemus, when present.
+  final List<String> tips;
+
+  /// Demonstration video URL, when present.
   final String? video;
 
-  /// Optional variation names
-  final List<String>? variations;
+  /// Source-relative image paths, when present.
+  final List<String> images;
 
-  /// Stable identity for an entry.
-  ///
-  /// The catalogue is keyed by name because that is the only field both
-  /// sources agree on, normalised so "3/4 Sit-Up" and "3-4 sit up" are one
-  /// exercise. Keeping an entry needs the same key to find it again after a
-  /// restart, so the normalisation lives on the entry rather than in whichever
-  /// loader happened to build it.
-  String get id => keyFor(name);
+  /// Stable identity. The build script's id wins; a payload written before the
+  /// canonical catalogue keeps working through the name-derived fallback.
+  String get id => catalogueId ?? keyFor(name);
+
+  /// Convenience for cards and older callers: the first primary muscle.
+  String get primaryMuscle =>
+      primaryMuscles.isEmpty ? '' : primaryMuscles.first;
+
+  /// Convenience for older callers: the first secondary muscle.
+  String? get secondaryMuscle =>
+      secondaryMuscles.isEmpty ? null : secondaryMuscles.first;
+
+  /// Instructions as one block of text, for the places that show a paragraph.
+  String get instructionsText => instructions.join(' ');
+
+  /// Tips as one block of text, or null when there are none.
+  String? get tipsText => tips.isEmpty ? null : tips.join(' ');
+
+  /// Older name for [aliases], kept so saved payloads can be read.
+  List<String>? get variations => aliases.isEmpty ? null : aliases;
 
   /// The key two spellings of the same exercise share.
   static String keyFor(String name) =>
@@ -80,227 +109,139 @@ class LibraryExercise {
   /// came from is one request away and the app may well be offline - so what
   /// is stored has to stand on its own.
   Map<String, Object?> toJson() => {
+    'id': id,
     'name': name,
-    'primaryMuscle': primaryMuscle,
-    'secondaryMuscle': secondaryMuscle,
+    'aliases': aliases,
+    'primaryMuscles': primaryMuscles,
+    'secondaryMuscles': secondaryMuscles,
     'instructions': instructions,
     'equipment': equipment,
     'category': category,
     'level': level,
     'force': force,
-    'images': images,
+    'mechanic': mechanic,
+    'description': description,
     'tips': tips,
     'video': video,
-    'variations': variations,
+    'images': images,
   };
 
   /// Rebuilds an entry from [toJson]'s output.
   ///
   /// Tolerant field by field: a saved row outlives the code that wrote it, and
-  /// an entry missing one field beats a screen that cannot open.
-  static LibraryExercise fromJson(Map<String, dynamic> json) {
+  /// an entry missing one field beats a screen that cannot open. Rows written
+  /// before the canonical model used singular `primaryMuscle`/`secondaryMuscle`
+  /// and string `instructions`/`tips`; those shapes are read here so an update
+  /// does not cost the user their saved list.
+  factory LibraryExercise.fromJson(Map<String, dynamic> json) {
+    final primary = _list(json['primaryMuscles']);
+    if (primary.isEmpty) {
+      final legacy = _optionalText(json['primaryMuscle']);
+      if (legacy != null) primary.add(legacy);
+    }
+
+    final secondary = _list(json['secondaryMuscles']);
+    if (secondary.isEmpty) {
+      final legacy = _optionalText(json['secondaryMuscle']);
+      if (legacy != null) secondary.add(legacy);
+    }
+
     return LibraryExercise(
+      catalogueId: _optionalText(json['id']),
       name: _text(json['name']),
-      primaryMuscle: _text(json['primaryMuscle']),
-      secondaryMuscle: _optionalText(json['secondaryMuscle']),
-      instructions: _text(json['instructions']),
-      equipment: _textList(json['equipment']),
+      aliases: _union(_list(json['aliases']), _list(json['variations'])),
+      primaryMuscles: primary,
+      secondaryMuscles: secondary,
+      instructions: _lines(json['instructions']),
+      equipment: _list(json['equipment']),
       category: _text(json['category']),
-      level: _optionalText(json['level']) ?? 'beginner',
-      force: _optionalText(json['force']) ?? 'pull',
-      images: _textList(json['images']),
-      tips: _optionalText(json['tips']),
+      level: _optionalText(json['level']),
+      force: _optionalText(json['force']),
+      mechanic: _optionalText(json['mechanic']),
+      description: _optionalText(json['description']),
+      tips: _lines(json['tips']),
       video: _optionalText(json['video']),
-      variations: json['variations'] == null
-          ? null
-          : _textList(json['variations']),
+      images: _list(json['images']),
     );
   }
 
   static String _text(Object? raw) => raw is String ? raw : '';
 
   static String? _optionalText(Object? raw) =>
-      raw is String && raw.isNotEmpty ? raw : null;
+      raw is String && raw.trim().isNotEmpty ? raw.trim() : null;
 
-  static List<String> _textList(Object? raw) =>
-      raw is List ? [for (final item in raw) '$item'] : const [];
-
-  /// Parse from exercemus JSON object.
-  static LibraryExercise fromExercemus(Map<String, dynamic> map) {
-    // Muscles are lists in exercemus; the catalog uses the first entry.
-    final primary = _firstNonEmpty(map['primary_muscles'] as List<dynamic>?);
-    final secondary = _firstNonEmpty(
-      map['secondary_muscles'] as List<dynamic>?,
-    );
-    final tips = _joinInstructions(
-      map['tips'] as List<dynamic>?,
-      separator: '\n',
-    );
-
-    return LibraryExercise(
-      name: map['name'] as String? ?? '',
-      primaryMuscle: primary ?? 'unknown',
-      secondaryMuscle: secondary,
-      instructions: _joinInstructions(map['instructions'] as List<dynamic>?),
-      equipment: _equipment(map['equipment']),
-      category: (map['category'] as String?) ?? 'strength',
-      level: 'beginner', // exercemus has no level field
-      force: 'pull', // no force field either
-      images: const [], // no bundled images in exercemus
-      tips: tips.isEmpty ? null : tips,
-      video: map['video'] as String?,
-      variations: _variations(map),
-    );
-  }
-
-  /// Parse from free-exercise-db JSON object.
-  static LibraryExercise fromFreeDb(Map<String, dynamic> map) {
-    final primary = _firstNonEmpty(map['primaryMuscles'] as List<dynamic>?);
-    final secondary = _firstNonEmpty(map['secondaryMuscles'] as List<dynamic>?);
-
-    return LibraryExercise(
-      name: map['name'] as String? ?? '',
-      primaryMuscle: primary ?? 'unknown',
-      secondaryMuscle: secondary,
-      instructions: _joinInstructions(map['instructions'] as List<dynamic>?),
-      // free-exercise-db stores equipment as a single string.
-      equipment: _equipment(map['equipment']),
-      category: (map['category'] as String?) ?? 'strength',
-      level: (map['level'] as String?) ?? 'beginner',
-      force: (map['force'] as String?) ?? 'pull',
-      images: _strings(map['images']),
-    );
-  }
-
-  /// First non-empty string of a JSON string list, or null when there is none.
-  static String? _firstNonEmpty(List<dynamic>? nodes) {
-    if (nodes == null) return null;
-    for (final node in nodes) {
-      final text = node.toString();
-      if (text.isNotEmpty) return text;
+  /// A list of non-empty strings. A single string is accepted because older
+  /// payloads stored instructions and tips that way; newlines become lines.
+  static List<String> _lines(Object? raw) {
+    if (raw is String) {
+      return [
+        for (final line in raw.split('\n'))
+          if (line.trim().isNotEmpty) line.trim(),
+      ];
     }
-    return null;
+    return _list(raw);
   }
 
-  /// All non-empty strings of a JSON list, in order.
-  static List<String> _strings(Object? raw) {
-    if (raw is! List) return const [];
+  /// A list of non-empty strings, with non-list values treated as empty.
+  static List<String> _list(Object? raw) {
+    if (raw is! List) return [];
     return [
-      for (final node in raw)
-        if (node.toString().isNotEmpty) node.toString(),
+      for (final item in raw)
+        if (item != null && item.toString().trim().isNotEmpty)
+          item.toString().trim(),
     ];
   }
 
-  /// Equipment is a list in exercemus but a bare string in free-exercise-db.
-  static List<String> _equipment(Object? raw) {
-    if (raw is String) return raw.isEmpty ? const [] : [raw];
-    return _strings(raw);
+  static List<String> _union(List<String> a, List<String> b) {
+    final seen = <String>{};
+    final result = <String>[];
+    for (final value in [...a, ...b]) {
+      if (seen.add(value.toLowerCase())) result.add(value);
+    }
+    return result;
   }
 
-  /// Join instruction or tip lines into one block of text.
-  static String _joinInstructions(
-    List<dynamic>? list, {
-    String separator = ' ',
-  }) {
-    if (list == null || list.isEmpty) return '';
-    return [
-      for (final line in list)
-        if (line.toString().isNotEmpty) line.toString(),
-    ].join(separator);
-  }
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is LibraryExercise &&
+          name == other.name &&
+          id == other.id &&
+          category == other.category;
 
-  /// Variation names; exercemus uses both spellings across its entries.
-  static List<String>? _variations(Map<String, dynamic> map) {
-    final nodes =
-        (map['variation_on'] ?? map['variations_on']) as List<dynamic>?;
-    if (nodes == null || nodes.isEmpty) return null;
-    return _strings(nodes);
-  }
+  @override
+  int get hashCode => Object.hash(name, id, category);
+
+  @override
+  String toString() => 'LibraryExercise($name)';
 }
 
-/// Loads and merges the bundled data sets into one catalog.
+/// Loads the bundled catalogue.
 ///
-/// The UI talks to [loadAll] only, and so will the API client's offline
-/// fallback: keeping the merge here rather than in a build script means the
-/// assets stay the untouched open-source downloads and the screen has a
-/// single code path.
+/// One asset, one parse. The merge and the source adapters live in
+/// `tool/build_exercises.dart`, so there is no second shape to reconcile at
+/// runtime and nothing here can silently drop a field the build script kept.
 class ExerciseLibrary {
   const ExerciseLibrary._();
 
-  /// exercemus (CC BY-SA) — text metadata and variations.
-  static const String exercemusAsset = 'assets/data/exercemus.json';
+  /// The canonical catalogue, generated from the two upstream data sets.
+  static const String catalogAsset = 'assets/data/exercises.json';
 
-  /// free-exercise-db (public domain) — images, level and force.
-  static const String freeDbAsset = 'assets/data/free-exercise-db.json';
-
-  /// The full bundled catalog, merged and de-duplicated by name.
+  /// The full bundled catalogue, in the build script's deterministic order.
   static Future<List<LibraryExercise>> loadAll() async {
-    final raw = await Future.wait([
-      rootBundle.loadString(exercemusAsset),
-      rootBundle.loadString(freeDbAsset),
-    ]);
-    final exercemus =
-        ((jsonDecode(raw[0]) as Map<String, dynamic>)['exercises']
-                as List<dynamic>)
-            .cast<Map<String, dynamic>>();
-    final freeDb = (jsonDecode(raw[1]) as List<dynamic>)
-        .cast<Map<String, dynamic>>();
-    return merge(exercemus: exercemus, freeDb: freeDb);
-  }
+    final raw = await rootBundle.loadString(catalogAsset);
+    final decoded = jsonDecode(raw);
+    final entries = decoded is Map<String, dynamic>
+        ? decoded['exercises']
+        : decoded;
 
-  /// Merges both sets by normalized name.
-  ///
-  /// exercemus wins on text metadata; free-exercise-db fills in what it
-  /// lacks (images, level, force).  Names that only one source carries pass
-  /// through untouched, so the catalog is the union of both.
-  static List<LibraryExercise> merge({
-    required List<Map<String, dynamic>> exercemus,
-    required List<Map<String, dynamic>> freeDb,
-  }) {
-    final merged = <String, LibraryExercise>{};
-    for (final map in exercemus) {
-      final exercise = LibraryExercise.fromExercemus(map);
-      // No name, no identity: the catalogue merges by name and the cards show
-      // it, so an entry that keys to nothing is nothing to show. The wger
-      // client drops its nameless entries for the same reason.
-      if (exercise.id.isEmpty) continue;
-      merged[_key(exercise.name)] = exercise;
+    if (entries is! List) {
+      throw const FormatException('exercise catalogue has no exercises list');
     }
-    for (final map in freeDb) {
-      final fromDb = LibraryExercise.fromFreeDb(map);
-      if (fromDb.id.isEmpty) continue;
-      final key = _key(fromDb.name);
-      final existing = merged[key];
-      merged[key] = existing == null
-          ? fromDb
-          : _combine(text: existing, media: fromDb);
-    }
-    return List.unmodifiable(merged.values);
-  }
 
-  /// One entry from both sources: text from [text], media from [media].
-  static LibraryExercise _combine({
-    required LibraryExercise text,
-    required LibraryExercise media,
-  }) {
-    return LibraryExercise(
-      name: text.name,
-      primaryMuscle: text.primaryMuscle,
-      secondaryMuscle: text.secondaryMuscle ?? media.secondaryMuscle,
-      instructions: text.instructions.isNotEmpty
-          ? text.instructions
-          : media.instructions,
-      equipment: text.equipment.isNotEmpty ? text.equipment : media.equipment,
-      category: text.category,
-      level: media.level,
-      force: media.force,
-      images: media.images,
-      tips: text.tips,
-      video: text.video,
-      variations: text.variations,
-    );
+    return [
+      for (final entry in entries)
+        if (entry is Map<String, dynamic>) LibraryExercise.fromJson(entry),
+    ].where((exercise) => exercise.name.isNotEmpty).toList(growable: false);
   }
-
-  /// "3/4 Sit-Up" and "3-4 sit up" are the same exercise.
-  static String _key(String name) => LibraryExercise.keyFor(name);
 }

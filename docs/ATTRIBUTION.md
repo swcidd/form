@@ -26,21 +26,25 @@ from the URL recorded in the `google_fonts` package's own font metadata.
 
 ## Exercise data
 
-The library screen shows exercises from three sources. The live source is a
-network call; the other two are bundled assets used when the API is
-unreachable.
+The library screen shows exercises from two places: the live wger API, and one
+canonical catalogue bundled in the app for when the API is unreachable. The
+canonical file is generated from the two open data sets below.
 
 | Source | How the app gets it | Licence | Notes |
 | --- | --- | --- | --- |
 | **[wger.de](https://wger.de)** | `GET https://wger.de/api/v2/exerciseinfo/` — public, no API key | CC BY-SA 3.0 or 4.0 **per entry**, author per entry | Every exercise the API returns carries its own `license` and `license_author` fields. |
-| **[exercemus/exercises](https://github.com/exercemus/exercises)** | `assets/data/exercemus.json`, bundled | MIT, © 2022 exercemus | See [`docs/licenses/exercemus-MIT.txt`](licenses/exercemus-MIT.txt). The data set is itself curated from wger.de and wrkout/exercises.json. |
-| **[free-exercise-db](https://github.com/yuhonas/free-exercise-db)** | `assets/data/free-exercise-db.json`, bundled | The Unlicense (public domain) | No conditions; recorded here for completeness. |
+| **[exercemus/exercises](https://github.com/exercemus/exercises)** | `tool/exercise_sources/exercemus.json`, source for the bundled catalogue | MIT, © 2022 exercemus | See [`docs/licenses/exercemus-MIT.txt`](licenses/exercemus-MIT.txt). The data set is itself curated from wger.de and wrkout/exercises.json. |
+| **[free-exercise-db](https://github.com/yuhonas/free-exercise-db)** | `tool/exercise_sources/free-exercise-db.json`, source for the bundled catalogue | The Unlicense (public domain) | No conditions; recorded here for completeness. |
+
+`tool/build_exercises.dart` merges the two offline sources into
+`assets/data/exercises.json` and normalises their muscle and equipment
+vocabularies. Instruction text is carried through, not rewritten.
 
 How this shows up in the app: the library screen carries a permanent
 attribution line under the grid naming all three sources and their licences, and
-the offline banner names the API that could not be reached. The exercises
-themselves are unaltered apart from parsing — the app does not rewrite
-instructions or relicense entries.
+the offline banner names the API that could not be reached. The build script
+merges the two offline sets and normalises muscle and equipment vocabulary;
+instruction text is carried through, not rewritten.
 
 Known gap: wger returns an author per entry and the app does not display it.
 The source and the licence are named, the individual contributor is not yet.
