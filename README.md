@@ -305,7 +305,9 @@ texts and the two font licences.
 The app ships one file, `assets/data/exercises.json`, built by
 `tool/build_exercises.dart`. The raw upstream downloads live in
 `tool/exercise_sources/` so the catalogue can be rebuilt and audited without
-shipping either source in the APK.
+shipping either source in the APK. Catalogue cards hotlink a small Unsplash set
+for their thumbnails for now, with no API key; see
+**[docs/ATTRIBUTION.md](docs/ATTRIBUTION.md)**.
 
 The interface icons are [Lucide](https://lucide.dev) (ISC). Inter and Barlow
 Condensed are bundled with the app under the SIL Open Font License 1.1, so no

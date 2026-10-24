@@ -165,6 +165,8 @@ void main() {
     expect(find.text('Barbell Curl'), findsOneWidget);
     // Live data, so no offline notice.
     expect(find.textContaining('Offline'), findsNothing);
+    // The card photography is sourced, and the screen says so.
+    expect(find.textContaining('Unsplash'), findsOneWidget);
     // And no mock iOS status bar — that chrome belongs to the OS.
     expect(find.text('9:41'), findsNothing);
   });
