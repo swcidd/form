@@ -196,7 +196,8 @@ so a build from that branch still opens.
 The sign-up is four steps, in the design's order: name, age, measurements, then
 the credentials. Age is asked for as a date of birth in day, month and year
 lists; the profile stores the date and reads the age from it. Height is stored
-in centimetres and weight in kilograms; the unit buttons convert what is typed,
+in centimetres and weight in kilograms; the FEET | CENTIMETERS and POUNDS |
+KILOGRAMS toggles convert what is typed,
 so a profile does not remember which unit it was given in. The same date and
 measurement fields edit the body from the profile. The confirmation-password field is still not there: it is a second
 entry for a value the app is about to hash anyway. The change-password sheet

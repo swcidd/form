@@ -382,10 +382,10 @@ void main() {
       await continueToAge(tester);
       await continueToMeasurements(tester);
 
-      await tapAction(tester, 'USE FEET');
+      await tapAction(tester, 'FEET');
       await tester.enterText(fieldFor('FEET'), '5');
       await tester.enterText(fieldFor('INCHES'), '10');
-      await tapAction(tester, 'USE POUNDS');
+      await tapAction(tester, 'POUNDS');
       await tester.enterText(fieldFor('POUNDS'), '165');
       await tapAction(tester, 'Continue');
       await tester.enterText(fieldFor('EMAIL ADDRESS'), 'sam@example.com');
@@ -581,10 +581,10 @@ void main() {
       expect(find.byType(SignUpMeasurementsScreen), findsOneWidget);
       expect(tester.takeException(), isNull, reason: 'Sign-up measurements');
 
-      await tapAction(tester, 'USE FEET');
+      await tapAction(tester, 'FEET');
       await tester.enterText(fieldFor('FEET'), '5');
       await tester.enterText(fieldFor('INCHES'), '10');
-      await tapAction(tester, 'USE POUNDS');
+      await tapAction(tester, 'POUNDS');
       await tester.enterText(fieldFor('POUNDS'), '165');
       expect(tester.takeException(), isNull, reason: 'Imperial measurements');
       await tapAction(tester, 'Continue');

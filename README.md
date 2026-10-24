@@ -106,8 +106,9 @@ refusals.
 - **Continue offline** → the device account: no password, everything works.
 - **Create account** → four steps in the design's order: name, age,
   measurements, then the credentials. Age is entered as a date of birth in
-  day, month and year lists. Height and weight accept metric or imperial input,
-  land in the athlete profile, and stay editable there. The sign-up answers in
+  day, month and year lists. Height and weight use FEET | CENTIMETERS and
+  POUNDS | KILOGRAMS toggles, land in the athlete profile, and stay editable
+  there. The sign-up answers in
   the shape a verifying backend uses: signed in, or "check your inbox".
 - **Change password** → from the account card in the profile, with the current
   password checked by the store.
@@ -244,7 +245,7 @@ the keystore lives in a gitignored `android/key.properties`.
 - **Review**: every PR got inline review comments on the lines that carried a
   decision (identity, schema, lifecycle), not a rubber stamp, and was merged only
   with the suite green on the merged tree.
-- **Tests**: 322 widget, provider and database tests. The dangerous parts are
+- **Tests**: 324 widget, provider and database tests. The dangerous parts are
   covered directly: the v3 → v7 migration builds an old database by hand, the
   v5 → v7 and v6 → v7 migrations leave the date of birth unset, signing in as
   somebody else asserts the old store is disposed, and the counting rules have

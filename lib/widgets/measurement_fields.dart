@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import 'auth_field.dart';
 
-/// Height in centimetres, or feet and inches behind a unit button.
+/// Height in centimetres, or feet and inches behind a unit toggle.
 ///
 /// The canonical value is always centimetres. Switching units only changes how
 /// the same height is written down, so the profile does not have to remember
@@ -50,9 +51,10 @@ class _HeightFieldState extends State<HeightField> {
     super.dispose();
   }
 
-  void _toggle() {
+  void _selectUnit(bool imperial) {
+    if (imperial == _imperial) return;
     setState(() {
-      _imperial = !_imperial;
+      _imperial = imperial;
       _writeCurrent();
     });
   }
@@ -103,12 +105,16 @@ class _HeightFieldState extends State<HeightField> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _MeasurementLabel(
-          label: 'HEIGHT',
-          action: _imperial ? 'USE CM' : 'USE FEET',
-          onPressed: widget.enabled ? _toggle : null,
-        ),
+        Text('HEIGHT', style: context.text.labelCaps),
         const SizedBox(height: 8),
+        _UnitToggle(
+          imperialLabel: 'FEET',
+          metricLabel: 'CENTIMETERS',
+          imperial: _imperial,
+          enabled: widget.enabled,
+          onChanged: _selectUnit,
+        ),
+        const SizedBox(height: 12),
         if (!_imperial)
           AuthField(
             label: 'CENTIMETRES',
@@ -160,7 +166,7 @@ class _HeightFieldState extends State<HeightField> {
   }
 }
 
-/// Weight in kilograms, or pounds behind a unit button.
+/// Weight in kilograms, or pounds behind a unit toggle.
 class WeightField extends StatefulWidget {
   const WeightField({
     super.key,
@@ -200,9 +206,10 @@ class _WeightFieldState extends State<WeightField> {
     super.dispose();
   }
 
-  void _toggle() {
+  void _selectUnit(bool imperial) {
+    if (imperial == _imperial) return;
     setState(() {
-      _imperial = !_imperial;
+      _imperial = imperial;
       _writeCurrent();
     });
   }
@@ -237,12 +244,16 @@ class _WeightFieldState extends State<WeightField> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _MeasurementLabel(
-          label: 'WEIGHT',
-          action: _imperial ? 'USE KG' : 'USE POUNDS',
-          onPressed: widget.enabled ? _toggle : null,
-        ),
+        Text('WEIGHT', style: context.text.labelCaps),
         const SizedBox(height: 8),
+        _UnitToggle(
+          imperialLabel: 'POUNDS',
+          metricLabel: 'KILOGRAMS',
+          imperial: _imperial,
+          enabled: widget.enabled,
+          onChanged: _selectUnit,
+        ),
+        const SizedBox(height: 12),
         AuthField(
           label: _imperial ? 'POUNDS' : 'KILOGRAMMES',
           controller: _imperial ? _lb : _kg,
@@ -259,32 +270,88 @@ class _WeightFieldState extends State<WeightField> {
   }
 }
 
-class _MeasurementLabel extends StatelessWidget {
-  const _MeasurementLabel({
-    required this.label,
-    required this.action,
-    required this.onPressed,
+/// The two units for one measurement, with the one in use filled in the
+/// design system's signature green.
+class _UnitToggle extends StatelessWidget {
+  const _UnitToggle({
+    required this.imperialLabel,
+    required this.metricLabel,
+    required this.imperial,
+    required this.onChanged,
+    this.enabled = true,
   });
 
-  final String label;
-  final String action;
-  final VoidCallback? onPressed;
+  final String imperialLabel;
+  final String metricLabel;
+  final bool imperial;
+  final ValueChanged<bool> onChanged;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(child: Text(label, style: context.text.labelCaps)),
-        TextButton(
-          onPressed: onPressed,
-          style: TextButton.styleFrom(
-            minimumSize: Size.zero,
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    final scheme = Theme.of(context).colorScheme;
+
+    return Container(
+      height: 44,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: AppRadius.control,
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _segment(
+              context,
+              label: imperialLabel,
+              selected: imperial,
+              value: true,
+            ),
           ),
-          child: Text(action),
+          Container(width: 1, color: scheme.outlineVariant),
+          Expanded(
+            child: _segment(
+              context,
+              label: metricLabel,
+              selected: !imperial,
+              value: false,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _segment(
+    BuildContext context, {
+    required String label,
+    required bool selected,
+    required bool value,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+    final style = context.text.labelCaps.copyWith(
+      color: selected ? AppColors.ink : scheme.onSurfaceVariant,
+      fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+    );
+
+    return Semantics(
+      button: true,
+      selected: selected,
+      child: Material(
+        color: selected ? AppColors.lime : scheme.surface,
+        child: InkWell(
+          onTap: enabled ? () => onChanged(value) : null,
+          child: Center(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: style,
+            ),
+          ),
         ),
-      ],
+      ),
     );
   }
 }
