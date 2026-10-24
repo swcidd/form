@@ -4,204 +4,208 @@ import 'package:plus_one/exercise_library.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  group('LibraryExercise.fromExercemus', () {
-    test('reads muscles, equipment, instructions and variations', () {
-      final exercise = LibraryExercise.fromExercemus({
+  group('LibraryExercise', () {
+    test('reads the canonical shape', () {
+      final exercise = LibraryExercise.fromJson(const {
+        'id': 'barbell-bench-press',
         'name': 'Barbell Bench Press',
-        'category': 'strength',
-        'primary_muscles': ['chest'],
-        'secondary_muscles': ['shoulders', 'triceps'],
-        'equipment': ['barbell', 'bench'],
+        'aliases': ['flat bench press'],
+        'primaryMuscles': ['chest'],
+        'secondaryMuscles': ['shoulders', 'triceps'],
         'instructions': ['Lie on the bench.', 'Press the bar.'],
-        'variation_on': ['flat bench press'],
+        'equipment': ['barbell', 'bench'],
+        'category': 'strength',
+        'level': 'intermediate',
+        'force': 'push',
+        'mechanic': 'compound',
+        'description': 'The classic press.',
+        'tips': ['Keep the shoulder blades pinned.'],
+        'video': 'https://example.com/bench.mp4',
+        'images': ['Bench_Press/0.jpg'],
       });
 
+      expect(exercise.id, 'barbell-bench-press');
       expect(exercise.name, 'Barbell Bench Press');
+      expect(exercise.aliases, ['flat bench press']);
+      expect(exercise.primaryMuscles, ['chest']);
+      expect(exercise.secondaryMuscles, ['shoulders', 'triceps']);
       expect(exercise.primaryMuscle, 'chest');
       expect(exercise.secondaryMuscle, 'shoulders');
+      expect(exercise.instructions, ['Lie on the bench.', 'Press the bar.']);
+      expect(exercise.instructionsText, 'Lie on the bench. Press the bar.');
       expect(exercise.equipment, ['barbell', 'bench']);
-      expect(exercise.instructions, 'Lie on the bench. Press the bar.');
-      expect(exercise.variations, ['flat bench press']);
-      expect(exercise.tips, isNull);
-      expect(exercise.video, isNull);
-    });
-
-    test('falls back for missing data instead of throwing', () {
-      final exercise = LibraryExercise.fromExercemus({'name': 'Bare'});
-
-      expect(exercise.primaryMuscle, 'unknown');
-      expect(exercise.secondaryMuscle, isNull);
-      expect(exercise.instructions, '');
-      expect(exercise.equipment, isEmpty);
-      expect(exercise.images, isEmpty);
-      expect(exercise.level, 'beginner');
-    });
-
-    test('keeps tips and video when present', () {
-      final exercise = LibraryExercise.fromExercemus({
-        'name': 'Curl',
-        'tips': ['Keep the elbows still.', 'Squeeze at the top.'],
-        'video': 'https://example.com/curl.mp4',
-      });
-
-      expect(exercise.tips, 'Keep the elbows still.\nSqueeze at the top.');
-      expect(exercise.video, 'https://example.com/curl.mp4');
-    });
-
-    test('accepts the variations_on spelling some entries use', () {
-      final exercise = LibraryExercise.fromExercemus({
-        'name': 'Incline Bench Press',
-        'variations_on': ['flat bench press'],
-      });
-
-      expect(exercise.variations, ['flat bench press']);
-    });
-  });
-
-  group('LibraryExercise.fromFreeDb', () {
-    test('reads the bare-string equipment the data set really uses', () {
-      final exercise = LibraryExercise.fromFreeDb({
-        'name': '3/4 Sit-Up',
-        'force': 'pull',
-        'level': 'beginner',
-        'equipment': 'body only',
-        'primaryMuscles': ['abdominals'],
-        'secondaryMuscles': <String>[],
-        'instructions': ['Sit up.'],
-        'category': 'strength',
-        'images': ['3_4_Sit-Up/0.jpg'],
-      });
-
-      expect(exercise.equipment, ['body only']);
-      expect(exercise.primaryMuscle, 'abdominals');
-      expect(exercise.secondaryMuscle, isNull);
-      expect(exercise.level, 'beginner');
-      expect(exercise.force, 'pull');
-      expect(exercise.images, ['3_4_Sit-Up/0.jpg']);
-    });
-
-    test('also accepts a list of equipment values', () {
-      final exercise = LibraryExercise.fromFreeDb({
-        'name': 'Bench Press',
-        'equipment': ['barbell', 'bench'],
-      });
-
-      expect(exercise.equipment, ['barbell', 'bench']);
-    });
-  });
-
-  group('ExerciseLibrary.merge', () {
-    test('keeps exercemus text and takes media from free-exercise-db', () {
-      final merged = ExerciseLibrary.merge(
-        exercemus: [
-          {
-            'name': 'Barbell Bench Press',
-            'category': 'strength',
-            'primary_muscles': ['chest'],
-            'equipment': ['barbell'],
-            'instructions': ['From exercemus.'],
-            'variation_on': ['flat bench press'],
-          },
-        ],
-        freeDb: [
-          {
-            'name': 'Barbell Bench Press',
-            'level': 'intermediate',
-            'force': 'push',
-            'equipment': 'barbell',
-            'images': ['Barbell_Bench_Press/0.jpg'],
-            'instructions': ['From free-exercise-db.'],
-          },
-        ],
-      );
-
-      expect(merged, hasLength(1));
-      final exercise = merged.single;
-      expect(exercise.instructions, 'From exercemus.');
-      expect(exercise.variations, ['flat bench press']);
+      expect(exercise.category, 'strength');
       expect(exercise.level, 'intermediate');
       expect(exercise.force, 'push');
-      expect(exercise.images, ['Barbell_Bench_Press/0.jpg']);
+      expect(exercise.mechanic, 'compound');
+      expect(exercise.description, 'The classic press.');
+      expect(exercise.tips, ['Keep the shoulder blades pinned.']);
+      expect(exercise.tipsText, 'Keep the shoulder blades pinned.');
+      expect(exercise.video, 'https://example.com/bench.mp4');
+      expect(exercise.images, ['Bench_Press/0.jpg']);
     });
 
-    test('matches names across punctuation and case', () {
-      final merged = ExerciseLibrary.merge(
-        exercemus: [
-          {
-            'name': '3/4 Sit-Up',
-            'primary_muscles': ['abdominals'],
-          },
-        ],
-        freeDb: [
-          {'name': '3-4 sit up', 'level': 'expert'},
-        ],
+    test('round trips every field', () {
+      const exercise = LibraryExercise(
+        catalogueId: 'barbell-curl',
+        name: 'Barbell Curl',
+        aliases: ['standing curl'],
+        primaryMuscles: ['biceps'],
+        secondaryMuscles: ['forearms'],
+        instructions: ['Curl the bar slowly.'],
+        equipment: ['barbell'],
+        category: 'strength',
+        level: 'intermediate',
+        force: 'pull',
+        mechanic: 'isolation',
+        description: 'A curl with a bar.',
+        tips: ['Keep the elbows fixed.'],
+        video: 'https://example.com/curl.mp4',
+        images: ['Barbell_Curl/0.jpg'],
       );
 
-      expect(merged, hasLength(1));
-      expect(merged.single.name, '3/4 Sit-Up');
-      expect(merged.single.level, 'expert');
+      final decoded = LibraryExercise.fromJson(exercise.toJson());
+
+      expect(decoded.id, exercise.id);
+      expect(decoded.name, exercise.name);
+      expect(decoded.aliases, exercise.aliases);
+      expect(decoded.primaryMuscles, exercise.primaryMuscles);
+      expect(decoded.secondaryMuscles, exercise.secondaryMuscles);
+      expect(decoded.instructions, exercise.instructions);
+      expect(decoded.equipment, exercise.equipment);
+      expect(decoded.category, exercise.category);
+      expect(decoded.level, exercise.level);
+      expect(decoded.force, exercise.force);
+      expect(decoded.mechanic, exercise.mechanic);
+      expect(decoded.description, exercise.description);
+      expect(decoded.tips, exercise.tips);
+      expect(decoded.video, exercise.video);
+      expect(decoded.images, exercise.images);
     });
 
-    test('keeps entries only one source has', () {
-      final merged = ExerciseLibrary.merge(
-        exercemus: [
-          {'name': 'Only Exercemus'},
-        ],
-        freeDb: [
-          {'name': 'Only Free Db'},
-        ],
-      );
+    test('reads a saved row written before the canonical model', () {
+      // The schema has no column per field, so a payload is what an earlier
+      // version wrote. Missing or wrongly typed fields must not cost the user
+      // their library.
+      final exercise = LibraryExercise.fromJson(const {
+        'name': 'Barbell Curl',
+        'primaryMuscle': 'biceps',
+        'secondaryMuscle': 'forearms',
+        'instructions': 'Curl the bar.',
+        'equipment': <String>['Barbell'],
+        'category': 'strength',
+        'level': 42,
+        'images': 'not a list',
+        'tips': 'Keep the elbows fixed.\nSqueeze at the top.',
+        'variations': ['Hammer curl'],
+      });
 
-      expect(merged, hasLength(2));
-      expect(
-        merged.map((e) => e.name),
-        containsAll(['Only Exercemus', 'Only Free Db']),
-      );
+      expect(exercise.name, 'Barbell Curl');
+      expect(exercise.primaryMuscles, ['biceps']);
+      expect(exercise.secondaryMuscles, ['forearms']);
+      expect(exercise.instructions, ['Curl the bar.']);
+      expect(exercise.equipment, ['Barbell']);
+      expect(exercise.level, isNull);
+      expect(exercise.force, isNull);
+      expect(exercise.mechanic, isNull);
+      expect(exercise.images, isEmpty);
+      expect(exercise.tips, ['Keep the elbows fixed.', 'Squeeze at the top.']);
+      expect(exercise.aliases, ['Hammer curl']);
     });
 
-    test('drops an entry with no name from either source', () {
-      final merged = ExerciseLibrary.merge(
-        exercemus: [
-          {
-            'name': '',
-            'primary_muscles': ['chest'],
-          },
-          {'name': 'Named'},
-        ],
-        freeDb: [
-          {'name': '   ', 'level': 'expert'},
-        ],
+    test('falls back to the normalised name when a row has no id', () {
+      const exercise = LibraryExercise(
+        name: '3/4 Sit-Up',
+        equipment: ['body only'],
+        category: 'strength',
       );
 
-      // A nameless entry has no key to merge on and nothing to show in a card,
-      // so two of them would collide on the empty name rather than be two
-      // exercises. The wger client drops its own for the same reason.
-      expect(merged, hasLength(1));
-      expect(merged.single.name, 'Named');
+      expect(exercise.id, '34situp');
+      expect(exercise.primaryMuscle, '');
+      expect(exercise.secondaryMuscle, isNull);
+      expect(exercise.tipsText, isNull);
+      expect(exercise.variations, isNull);
+    });
+
+    test('an empty payload becomes a readable, empty entry', () {
+      final exercise = LibraryExercise.fromJson(const {});
+
+      expect(exercise.name, '');
+      expect(exercise.id, '');
+      expect(exercise.primaryMuscle, '');
+      expect(exercise.equipment, isEmpty);
+      expect(exercise.images, isEmpty);
     });
   });
 
   group('ExerciseLibrary.loadAll', () {
-    test('parses the bundled assets and merges them', () async {
+    test('loads the single canonical asset', () async {
       final exercises = await ExerciseLibrary.loadAll();
 
-      expect(exercises, isNotEmpty);
-      expect(exercises.length, greaterThan(50));
+      expect(exercises, hasLength(56));
       expect(exercises.every((e) => e.name.isNotEmpty), isTrue);
+      expect(exercises.every((e) => e.id.isNotEmpty), isTrue);
+      expect(exercises.every((e) => e.primaryMuscles.isNotEmpty), isTrue);
+      expect(exercises.every((e) => e.equipment.isNotEmpty), isTrue);
+      expect(exercises.every((e) => e.instructions.isNotEmpty), isTrue);
+    });
+
+    test('serves one entry per stable id and per normalised name', () async {
+      final exercises = await ExerciseLibrary.loadAll();
+
+      expect(exercises.map((e) => e.id).toSet(), hasLength(exercises.length));
       expect(
-        exercises.map((e) => e.name.toLowerCase()),
-        contains('3/4 sit-up'),
+        exercises.map((e) => LibraryExercise.keyFor(e.name)).toSet(),
+        hasLength(exercises.length),
       );
     });
 
-    test('serves one entry per normalized name', () async {
+    test('normalises the two source vocabularies', () async {
       final exercises = await ExerciseLibrary.loadAll();
-      final keys = [
-        for (final e in exercises)
-          e.name.toLowerCase().replaceAll(RegExp('[^a-z0-9]+'), ''),
-      ];
+      final muscles = <String>{
+        for (final e in exercises) ...[
+          ...e.primaryMuscles,
+          ...e.secondaryMuscles,
+        ],
+      };
+      final equipment = {for (final e in exercises) ...e.equipment};
 
-      expect(keys.length, keys.toSet().length);
+      expect(muscles, isNot(contains('abs')));
+      expect(muscles, isNot(contains('quadriceps')));
+      expect(muscles, contains('abdominals'));
+      expect(muscles, contains('quads'));
+      expect(equipment, isNot(contains('none')));
+      expect(equipment, isNot(contains('kettlebell')));
+      expect(equipment, contains('body only'));
+      expect(equipment, contains('kettlebells'));
     });
+
+    test('keeps both sources text and media on a matched entry', () async {
+      final exercises = await ExerciseLibrary.loadAll();
+      final sitUp = exercises.singleWhere((e) => e.name == '3/4 Sit-Up');
+
+      expect(sitUp.id, '3_4_Sit-Up');
+      expect(sitUp.primaryMuscles, ['abdominals']);
+      expect(sitUp.equipment, ['body only']);
+      expect(sitUp.images, ['3_4_Sit-Up/0.jpg', '3_4_Sit-Up/1.jpg']);
+      expect(sitUp.description, isNotNull);
+      expect(sitUp.video, isNotNull);
+      expect(sitUp.level, 'beginner');
+      expect(sitUp.force, 'pull');
+      expect(sitUp.mechanic, 'compound');
+    });
+
+    test(
+      'does not invent a level or force for an exercemus-only entry',
+      () async {
+        final exercises = await ExerciseLibrary.loadAll();
+        final crunch = exercises.singleWhere((e) => e.name == 'Machine Crunch');
+
+        expect(crunch.level, isNull);
+        expect(crunch.force, isNull);
+        expect(crunch.mechanic, isNull);
+        expect(crunch.images, isEmpty);
+      },
+    );
   });
 }

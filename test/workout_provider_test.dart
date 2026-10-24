@@ -446,15 +446,15 @@ void main() {
   group('saved exercises', () {
     const barbellCurl = LibraryExercise(
       name: 'Barbell Curl',
-      primaryMuscle: 'biceps',
-      instructions: 'Curl the bar.',
+      primaryMuscles: ['biceps'],
+      instructions: ['Curl the bar.'],
       equipment: ['Barbell'],
       category: 'strength',
     );
     const inclineCurl = LibraryExercise(
       name: 'Incline Dumbbell Curl',
-      primaryMuscle: 'biceps',
-      instructions: 'Curl on an incline.',
+      primaryMuscles: ['biceps'],
+      instructions: ['Curl on an incline.'],
       equipment: ['Dumbbells'],
       category: 'strength',
     );
@@ -530,8 +530,8 @@ void main() {
       provider.toggleSavedExercise(
         const LibraryExercise(
           name: 'barbell  curl',
-          primaryMuscle: 'biceps',
-          instructions: 'Curl the bar.',
+          primaryMuscles: ['biceps'],
+          instructions: ['Curl the bar.'],
           equipment: ['Barbell'],
           category: 'strength',
         ),
