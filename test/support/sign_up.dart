@@ -16,13 +16,17 @@ Future<Session> signUp(
   required String email,
   required String password,
   String? displayName,
-  DateTime? dateOfBirth,
+  int? age,
+  double? heightCm,
+  double? weightKg,
 }) async {
   final outcome = await auth.createAccount(
     email: email,
     password: password,
     displayName: displayName,
-    dateOfBirth: dateOfBirth,
+    age: age,
+    heightCm: heightCm,
+    weightKg: weightKg,
   );
   return switch (outcome) {
     SignedUp(:final session) => session,

@@ -1,22 +1,30 @@
-/// What the three sign-up steps have collected so far.
+/// What the four sign-up steps have collected so far.
 ///
-/// The name is asked for first, the date of birth second and the credentials
-/// last, so the first two steps have to survive two route pushes. One small
-/// immutable object passed as the route argument does that without a provider:
-/// nothing outside the flow reads it, and popping a step throws it away with
-/// the route.
+/// The name is asked for first, the age second, the measurements third and
+/// the credentials last, so the first three steps have to survive three route
+/// pushes. One small immutable object passed as the route argument does that
+/// without a provider: nothing outside the flow reads it, and popping a step
+/// throws it away with the route.
 class SignUpDraft {
   const SignUpDraft({
     required this.firstName,
     this.lastName = '',
-    this.dateOfBirth,
+    this.age,
+    this.heightCm,
+    this.weightKg,
   });
 
   final String firstName;
   final String lastName;
 
-  /// Null until the age step has a complete, valid date.
-  final DateTime? dateOfBirth;
+  /// Null until the age step has a valid number.
+  final int? age;
+
+  /// Null until the measurements step has a valid height.
+  final double? heightCm;
+
+  /// Null until the measurements step has a valid weight.
+  final double? weightKg;
 
   /// The single line an account is stored under.
   ///
@@ -28,6 +36,17 @@ class SignUpDraft {
     lastName.trim(),
   ].where((part) => part.isNotEmpty).join(' ');
 
-  SignUpDraft withDateOfBirth(DateTime value) =>
-      SignUpDraft(firstName: firstName, lastName: lastName, dateOfBirth: value);
+  SignUpDraft withAge(int value) =>
+      SignUpDraft(firstName: firstName, lastName: lastName, age: value);
+
+  SignUpDraft withMeasurements({
+    required double heightCm,
+    required double weightKg,
+  }) => SignUpDraft(
+    firstName: firstName,
+    lastName: lastName,
+    age: age,
+    heightCm: heightCm,
+    weightKg: weightKg,
+  );
 }

@@ -1,21 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../models/sign_up_draft.dart';
-import '../theme/app_typography.dart';
 import '../widgets/auth_action.dart';
+import '../widgets/auth_field.dart';
 import '../widgets/auth_form_area.dart';
 import '../widgets/auth_hero.dart';
 import '../widgets/auth_intro.dart';
-import '../widgets/date_of_birth_field.dart';
 import '../widgets/sign_up_steps.dart';
-import 'sign_up_account_screen.dart';
 import 'sign_up_footer.dart';
+import 'sign_up_measurements_screen.dart';
 
-/// Sign-up, step two: the date of birth behind the athlete profile.
-///
-/// The design calls this step "Age" and asks for a date of birth. The date is
-/// the input because an age is a number that stops being true tomorrow; a
-/// birthday stays a fact.
+/// Sign-up, step two: how old the athlete is.
 class SignUpAgeScreen extends StatefulWidget {
   const SignUpAgeScreen({super.key, required this.draft});
 
@@ -26,45 +22,40 @@ class SignUpAgeScreen extends StatefulWidget {
 }
 
 class _SignUpAgeScreenState extends State<SignUpAgeScreen> {
-  DateTime? _dateOfBirth;
+  final _age = TextEditingController();
+
   String? _error;
 
-  /// The same floor the year list offers, checked again because the list can
-  /// produce somebody whose birthday later this year makes them twelve.
   static const int minimumAge = 13;
+  static const int maximumAge = 120;
+
+  @override
+  void dispose() {
+    _age.dispose();
+    super.dispose();
+  }
 
   void _continue() {
-    final problem = _problemFor(_dateOfBirth);
+    final age = int.tryParse(_age.text.trim());
+    final problem = switch (age) {
+      null => 'Enter your age.',
+      < minimumAge => 'You must be at least $minimumAge.',
+      > maximumAge => 'Enter an age under $maximumAge.',
+      _ => null,
+    };
     setState(() => _error = problem);
     if (problem != null) return;
 
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => SignUpAccountScreen(
-          draft: widget.draft.withDateOfBirth(_dateOfBirth!),
-        ),
+        builder: (_) =>
+            SignUpMeasurementsScreen(draft: widget.draft.withAge(age!)),
       ),
     );
   }
 
-  static String? _problemFor(DateTime? dateOfBirth) {
-    if (dateOfBirth == null) return 'Choose your date of birth.';
-
-    final now = DateTime.now();
-    var age = now.year - dateOfBirth.year;
-    if (now.month < dateOfBirth.month ||
-        (now.month == dateOfBirth.month && now.day < dateOfBirth.day)) {
-      age--;
-    }
-    if (age < minimumAge) return 'You must be at least $minimumAge.';
-    return null;
-  }
-
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final text = context.text;
-
     return Scaffold(
       body: Column(
         children: [
@@ -80,41 +71,26 @@ class _SignUpAgeScreenState extends State<SignUpAgeScreen> {
               children: [
                 const SignUpSteps(current: 1),
                 const SizedBox(height: 24),
-                const AuthIntro(
-                  title: 'A LITTLE ABOUT YOU.',
-                  subtitle: 'Add your age to your athlete profile.',
-                ),
+                const AuthIntro(title: 'A LITTLE ABOUT YOU.'),
                 const SizedBox(height: 24),
-                DateOfBirthField(
-                  label: 'DATE OF BIRTH',
-                  initialDate: _dateOfBirth,
+                AuthField(
+                  label: 'AGE',
+                  controller: _age,
+                  hint: 'Years',
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  textInputAction: TextInputAction.done,
                   errorText: _error,
-                  onChanged: (date) {
-                    setState(() {
-                      _dateOfBirth = date;
-                      if (date != null) _error = null;
-                    });
+                  onChanged: (_) {
+                    if (_error != null) setState(() => _error = null);
                   },
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Select your date of birth from the dropdowns.',
-                  style: text.exerciseMeta.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
+                  onSubmitted: (_) => _continue(),
                 ),
               ],
             ),
             bottom: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  'One more step: create your account.',
-                  style: text.annotation.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: 16),
                 AuthAction(label: 'Continue', onPressed: _continue),
                 const SizedBox(height: 12),
                 const SignUpFooter(),

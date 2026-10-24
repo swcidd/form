@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:plus_one/exercise_library.dart';
 import 'package:plus_one/auth/auth_repository.dart';
 import 'package:plus_one/models/exercise.dart';
+import 'package:plus_one/models/profile_stats.dart';
 import 'package:plus_one/models/saved_exercise.dart';
 import 'package:plus_one/models/session.dart';
 import 'package:plus_one/models/workout.dart';
@@ -92,6 +93,11 @@ void main() {
   /// matches what is rendered rather than what the caller passes.
   String tileValue(WidgetTester tester, String label) =>
       tester.widget<StatTile>(find.widgetWithText(StatTile, label)).value;
+
+  Finder fieldFor(String label) => find.descendant(
+    of: find.ancestor(of: find.text(label), matching: find.byType(AuthField)),
+    matching: find.byType(TextField),
+  );
 
   testWidgets('an account with nothing says so rather than showing a history', (
     tester,
@@ -218,6 +224,37 @@ void main() {
     expect(find.text('140 kg'), findsOneWidget);
     expect(find.textContaining('No personal records yet'), findsNothing);
     expect(find.textContaining('No badges yet'), findsNothing);
+  });
+
+  testWidgets('the body can be edited from the profile', (tester) async {
+    final provider = WorkoutProvider(
+      today: today,
+      profile: ProfileStats.empty().copyWith(
+        age: 30,
+        heightCm: 180,
+        weightKg: 80,
+      ),
+    );
+    await pumpProfile(tester, provider);
+
+    expect(tileValue(tester, 'AGE'), '30');
+
+    await tester.tap(find.text('Edit'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('EDIT BODY.'), findsOneWidget);
+
+    await tester.enterText(fieldFor('AGE'), '31');
+    await tester.enterText(fieldFor('CENTIMETRES'), '182');
+    await tester.enterText(fieldFor('KILOGRAMMES'), '82');
+    await tester.tap(find.text('Save changes'));
+    await tester.pumpAndSettle();
+
+    expect(provider.profile.age, 31);
+    expect(provider.profile.heightCm, 182);
+    expect(provider.profile.weightKg, 82);
+    expect(tileValue(tester, 'AGE'), '31');
+    expect(tileValue(tester, 'HEIGHT (CM)'), '182');
   });
 
   group('the account behind the profile', () {

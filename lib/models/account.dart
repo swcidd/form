@@ -11,7 +11,6 @@ class Account {
     required this.passwordHash,
     required this.createdAt,
     this.displayName = '',
-    this.dateOfBirth,
   });
 
   /// The stable identifier every other row attributes itself to.
@@ -24,11 +23,6 @@ class Account {
   final String email;
 
   final String displayName;
-
-  /// The date the sign-up asked for, or null for an account made before it did.
-  ///
-  /// A date rather than an age: an age is only true for a year.
-  final DateTime? dateOfBirth;
 
   /// The stored verifier for this account's password.
   final String passwordHash;
@@ -45,15 +39,10 @@ class Account {
     return at > 0 ? email.substring(0, at) : email;
   }
 
-  Account copyWith({
-    String? displayName,
-    String? passwordHash,
-    DateTime? dateOfBirth,
-  }) => Account(
+  Account copyWith({String? displayName, String? passwordHash}) => Account(
     id: id,
     email: email,
     displayName: displayName ?? this.displayName,
-    dateOfBirth: dateOfBirth ?? this.dateOfBirth,
     passwordHash: passwordHash ?? this.passwordHash,
     createdAt: createdAt,
   );

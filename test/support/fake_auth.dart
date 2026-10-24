@@ -36,7 +36,9 @@ class FakeAuth implements AuthRepository {
   String? lastEmail;
   String? lastPassword;
   String? lastDisplayName;
-  DateTime? lastDateOfBirth;
+  int? lastAge;
+  double? lastHeightCm;
+  double? lastWeightKg;
   String? lastUserId;
   String? lastCurrentPassword;
   String? lastNewPassword;
@@ -63,7 +65,9 @@ class FakeAuth implements AuthRepository {
     required String email,
     required String password,
     String? displayName,
-    DateTime? dateOfBirth,
+    int? age,
+    double? heightCm,
+    double? weightKg,
   }) async {
     await _hold();
     final error = createError;
@@ -71,7 +75,9 @@ class FakeAuth implements AuthRepository {
     lastEmail = email;
     lastPassword = password;
     lastDisplayName = displayName;
-    lastDateOfBirth = dateOfBirth;
+    lastAge = age;
+    lastHeightCm = heightCm;
+    lastWeightKg = weightKg;
     if (confirmationRequired) return ConfirmationSent(email);
     return SignedUp(
       session = Session(
@@ -79,7 +85,6 @@ class FakeAuth implements AuthRepository {
         issuedAt: DateTime(2026, 10, 19),
         email: email,
         displayName: displayName,
-        dateOfBirth: dateOfBirth,
       ),
     );
   }

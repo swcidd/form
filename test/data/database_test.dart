@@ -300,19 +300,19 @@ void main() {
       expect(await someoneElse.loadSavedExercises(), isEmpty);
       expect(await someoneElse.loadProfile(), isNull);
 
-      // v5 added the column the sign-up fills; the old rows did not have one
-      // and are not asked to invent it.
+      // v6 added the age the sign-up fills; rows from before it are zero.
       final columns = await next.rawQuery(
-        'PRAGMA table_info(${AppDatabase.accountsTable})',
+        'PRAGMA table_info(${AppDatabase.profileTable})',
       );
-      expect(columns.map((column) => column['name']), contains('dateOfBirth'));
+      expect(columns.map((column) => column['name']), contains('age'));
+      expect((await mine.loadProfile())?.age, 0);
       await nextDb.close();
     });
 
-    test('migrating from version 4 adds the date of birth column', () async {
+    test('migrating from version 5 adds the profile age column', () async {
       final path = p.join(
         Directory.systemTemp.path,
-        'form_dob_migration_test.db',
+        'form_age_migration_test.db',
       );
       final file = File(path);
       if (file.existsSync()) file.deleteSync();
@@ -320,32 +320,31 @@ void main() {
         if (file.existsSync()) file.deleteSync();
       });
 
-      // A v4 file has the current training tables but predates the sign-up
-      // question, so its account tables are the old shape.
+      // Start from the current file, then put the profile back to its v5
+      // shape — every column except age.
       final oldDb = AppDatabase();
       final db = await oldDb.open(path: path);
-      await db.execute('DROP TABLE ${AppDatabase.accountsTable}');
-      await db.execute('DROP TABLE ${AppDatabase.sessionTable}');
-      for (final ddl in _v3IdentityTables) {
-        await db.execute(ddl);
-      }
-      await db.execute('PRAGMA user_version = 4');
+      await db.execute(
+        'ALTER TABLE ${AppDatabase.profileTable} DROP COLUMN age',
+      );
+      await db.insert(AppDatabase.profileTable, {
+        'userId': device,
+        'name': 'Sam',
+      });
+      await db.execute('PRAGMA user_version = 5');
       await oldDb.close();
 
       final nextDb = AppDatabase();
       final next = await nextDb.open(path: path);
 
-      for (final table in [
-        AppDatabase.accountsTable,
-        AppDatabase.sessionTable,
-      ]) {
-        final columns = await next.rawQuery('PRAGMA table_info($table)');
-        expect(
-          columns.map((column) => column['name']),
-          contains('dateOfBirth'),
-          reason: table,
-        );
-      }
+      final columns = await next.rawQuery(
+        'PRAGMA table_info(${AppDatabase.profileTable})',
+      );
+      expect(columns.map((column) => column['name']), contains('age'));
+      expect(
+        (await WorkoutRepository(nextDb, userId: device).loadProfile())?.age,
+        0,
+      );
       await nextDb.close();
     });
   });

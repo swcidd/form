@@ -4,7 +4,9 @@ import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 
 import '../data/app_database.dart';
+import '../data/workout_repository.dart';
 import '../models/account.dart';
+import '../models/profile_stats.dart';
 import '../models/session.dart';
 import 'auth_repository.dart';
 import 'credentials.dart';
@@ -65,7 +67,9 @@ class LocalAuthRepository implements AuthRepository {
     required String email,
     required String password,
     String? displayName,
-    DateTime? dateOfBirth,
+    int? age,
+    double? heightCm,
+    double? weightKg,
   }) async {
     _requireUsableEmail(email);
     _requireUsablePassword(password);
@@ -80,13 +84,26 @@ class LocalAuthRepository implements AuthRepository {
       id: _newAccountId(),
       email: normalised,
       displayName: displayName?.trim() ?? '',
-      dateOfBirth: dateOfBirth,
       passwordHash: await _hash(password),
       createdAt: DateTime.now(),
     );
 
     try {
-      await db.insert(AppDatabase.accountsTable, _accountToRow(account));
+      await db.transaction((txn) async {
+        await txn.insert(AppDatabase.accountsTable, _accountToRow(account));
+        await txn.insert(
+          AppDatabase.profileTable,
+          WorkoutRepository.profileToRow(
+            account.id,
+            ProfileStats.empty().copyWith(
+              name: account.displayName,
+              age: age ?? 0,
+              heightCm: heightCm ?? 0,
+              weightKg: weightKg ?? 0,
+            ),
+          ),
+        );
+      });
     } on DatabaseException catch (error) {
       // The check above is there to give a good error in the ordinary case;
       // the UNIQUE index is what actually guarantees it. Two taps on "create
@@ -233,7 +250,6 @@ class LocalAuthRepository implements AuthRepository {
       'userId': session.userId,
       'email': session.email,
       'displayName': session.displayName,
-      'dateOfBirth': session.dateOfBirth?.toIso8601String(),
       'issuedAt': session.issuedAt.millisecondsSinceEpoch,
     });
     return session;
@@ -244,7 +260,6 @@ class LocalAuthRepository implements AuthRepository {
     issuedAt: DateTime.now(),
     email: account.email,
     displayName: account.displayName,
-    dateOfBirth: account.dateOfBirth,
   );
 
   static Session _sessionFromRow(Map<String, Object?> row) => Session(
@@ -252,14 +267,12 @@ class LocalAuthRepository implements AuthRepository {
     issuedAt: DateTime.fromMillisecondsSinceEpoch(row['issuedAt']! as int),
     email: row['email'] as String?,
     displayName: row['displayName'] as String?,
-    dateOfBirth: _parseDate(row['dateOfBirth']),
   );
 
   static Map<String, Object?> _accountToRow(Account account) => {
     'id': account.id,
     'email': account.email,
     'displayName': account.displayName,
-    'dateOfBirth': account.dateOfBirth?.toIso8601String(),
     'passwordHash': account.passwordHash,
     'createdAt': account.createdAt.millisecondsSinceEpoch,
   };
@@ -268,13 +281,9 @@ class LocalAuthRepository implements AuthRepository {
     id: row['id']! as String,
     email: row['email']! as String,
     displayName: row['displayName']! as String,
-    dateOfBirth: _parseDate(row['dateOfBirth']),
     passwordHash: row['passwordHash']! as String,
     createdAt: DateTime.fromMillisecondsSinceEpoch(row['createdAt']! as int),
   );
-
-  static DateTime? _parseDate(Object? value) =>
-      value is String ? DateTime.tryParse(value) : null;
 
   // --- Rules -----------------------------------------------------------------
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
@@ -22,8 +23,10 @@ class AuthField extends StatefulWidget {
     this.obscure = false,
     this.keyboardType,
     this.textInputAction,
+    this.inputFormatters,
     this.autofillHints,
     this.errorText,
+    this.onChanged,
     this.onSubmitted,
     this.enabled = true,
   });
@@ -37,11 +40,14 @@ class AuthField extends StatefulWidget {
 
   final TextInputType? keyboardType;
   final TextInputAction? textInputAction;
+  final List<TextInputFormatter>? inputFormatters;
   final Iterable<String>? autofillHints;
 
   /// What is wrong with what is in the field, or null. Shown under the box and
   /// echoed by a red hairline, so the message is not the only signal.
   final String? errorText;
+
+  final ValueChanged<String>? onChanged;
 
   final ValueChanged<String>? onSubmitted;
 
@@ -95,7 +101,9 @@ class _AuthFieldState extends State<AuthField> {
                   enabled: widget.enabled,
                   keyboardType: widget.keyboardType,
                   textInputAction: widget.textInputAction,
+                  inputFormatters: widget.inputFormatters,
                   autofillHints: widget.autofillHints,
+                  onChanged: widget.onChanged,
                   onSubmitted: widget.onSubmitted,
                   style: textTheme.bodyMedium,
                   decoration: InputDecoration(

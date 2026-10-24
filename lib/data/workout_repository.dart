@@ -170,6 +170,7 @@ class WorkoutRepository {
       role: row['role']! as String,
       memberSince: row['memberSince']! as String,
       isPro: (row['isPro']! as int) == 1,
+      age: (row['age'] as num?)?.toInt() ?? 0,
       weightKg: (row['weightKg']! as num).toDouble(),
       heightCm: (row['heightCm']! as num).toDouble(),
       bodyFatPct: (row['bodyFatPct']! as num).toDouble(),
@@ -276,30 +277,38 @@ class WorkoutRepository {
       where: 'userId = ?',
       whereArgs: [userId],
     );
-    await db.insert(AppDatabase.profileTable, {
-      'userId': userId,
-      'name': profile.name,
-      'handle': profile.handle,
-      'role': profile.role,
-      'memberSince': profile.memberSince,
-      'isPro': profile.isPro ? 1 : 0,
-      'weightKg': profile.weightKg,
-      'heightCm': profile.heightCm,
-      'bodyFatPct': profile.bodyFatPct,
-      'restingHrBpm': profile.restingHrBpm,
-      'totalWorkouts': profile.totalWorkouts,
-      'totalKcal': profile.totalKcal,
-      'totalHours': profile.totalHours,
-      'streakDays': profile.streakDays,
-      'badgeCount': profile.badgeCount,
-      'records': jsonEncode([
-        for (final record in profile.records) record.toJson(),
-      ]),
-      'achievements': jsonEncode([
-        for (final badge in profile.achievements) badge.toJson(),
-      ]),
-    });
+    await db.insert(AppDatabase.profileTable, profileToRow(userId, profile));
   }
+
+  /// The row [saveProfile] writes, shared with sign-up so a new account's
+  /// measurements land in one place.
+  static Map<String, Object?> profileToRow(
+    String userId,
+    ProfileStats profile,
+  ) => {
+    'userId': userId,
+    'name': profile.name,
+    'handle': profile.handle,
+    'role': profile.role,
+    'memberSince': profile.memberSince,
+    'isPro': profile.isPro ? 1 : 0,
+    'age': profile.age,
+    'weightKg': profile.weightKg,
+    'heightCm': profile.heightCm,
+    'bodyFatPct': profile.bodyFatPct,
+    'restingHrBpm': profile.restingHrBpm,
+    'totalWorkouts': profile.totalWorkouts,
+    'totalKcal': profile.totalKcal,
+    'totalHours': profile.totalHours,
+    'streakDays': profile.streakDays,
+    'badgeCount': profile.badgeCount,
+    'records': jsonEncode([
+      for (final record in profile.records) record.toJson(),
+    ]),
+    'achievements': jsonEncode([
+      for (final badge in profile.achievements) badge.toJson(),
+    ]),
+  };
 
   /// Discards this account's workouts, profile and saved exercises. Used by
   /// tests and by the "start over" action.

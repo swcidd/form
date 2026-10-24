@@ -94,6 +94,7 @@ class ProfileStats extends Equatable {
     role: '',
     memberSince: '',
     isPro: false,
+    age: 0,
     weightKg: 0,
     heightCm: 0,
     bodyFatPct: 0,
@@ -112,6 +113,7 @@ class ProfileStats extends Equatable {
     required this.role,
     required this.memberSince,
     required this.isPro,
+    this.age = 0,
     required this.weightKg,
     required this.heightCm,
     required this.bodyFatPct,
@@ -130,6 +132,9 @@ class ProfileStats extends Equatable {
   final String role;
   final String memberSince;
   final bool isPro;
+
+  /// Years old, or zero when the account has not said.
+  final int age;
 
   final double weightKg;
   final double heightCm;
@@ -151,6 +156,7 @@ class ProfileStats extends Equatable {
     String? role,
     String? memberSince,
     bool? isPro,
+    int? age,
     double? weightKg,
     double? heightCm,
     double? bodyFatPct,
@@ -169,6 +175,7 @@ class ProfileStats extends Equatable {
       role: role ?? this.role,
       memberSince: memberSince ?? this.memberSince,
       isPro: isPro ?? this.isPro,
+      age: age ?? this.age,
       weightKg: weightKg ?? this.weightKg,
       heightCm: heightCm ?? this.heightCm,
       bodyFatPct: bodyFatPct ?? this.bodyFatPct,
@@ -190,6 +197,7 @@ class ProfileStats extends Equatable {
       role: json['role'] as String,
       memberSince: json['memberSince'] as String,
       isPro: json['isPro'] as bool? ?? false,
+      age: (json['age'] as num?)?.toInt() ?? 0,
       weightKg: (json['weightKg'] as num).toDouble(),
       heightCm: (json['heightCm'] as num).toDouble(),
       bodyFatPct: (json['bodyFatPct'] as num).toDouble(),
@@ -214,6 +222,7 @@ class ProfileStats extends Equatable {
     'role': role,
     'memberSince': memberSince,
     'isPro': isPro,
+    'age': age,
     'weightKg': weightKg,
     'heightCm': heightCm,
     'bodyFatPct': bodyFatPct,
@@ -234,6 +243,7 @@ class ProfileStats extends Equatable {
     role,
     memberSince,
     isPro,
+    age,
     weightKg,
     heightCm,
     bodyFatPct,

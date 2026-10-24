@@ -8,6 +8,7 @@ import 'package:plus_one/providers/auth_provider.dart';
 import 'package:plus_one/screens/app_shell.dart';
 import 'package:plus_one/screens/sign_up_account_screen.dart';
 import 'package:plus_one/screens/sign_up_age_screen.dart';
+import 'package:plus_one/screens/sign_up_measurements_screen.dart';
 import 'package:plus_one/screens/sign_up_name_screen.dart';
 import 'package:plus_one/screens/sign_in_screen.dart';
 import 'package:plus_one/screens/welcome_screen.dart';
@@ -254,38 +255,21 @@ void main() {
       await tapAction(tester, 'Continue');
     }
 
-    /// Opens a date dropdown and picks one of its entries.
-    Future<void> choose(WidgetTester tester, String hint, String value) async {
-      // Both the hint and the menu row sit inside a gesture detector, so the
-      // text itself is not the hit target; the tap still lands on the button
-      // or row, and the caller checks the result. `warnIfMissed` is off for
-      // the same reason.
-      final button = find.text(hint).last;
-      await tester.ensureVisible(button);
-      await tester.pumpAndSettle();
-      await tester.tap(button, warnIfMissed: false);
-      await tester.pumpAndSettle();
-
-      // The menu item, not the copy the button keeps hidden for its next
-      // selection — both carry the same text once a value is chosen.
-      final item = find.widgetWithText(DropdownMenuItem<int>, value).last;
-      await tester.ensureVisible(item);
-      await tester.pumpAndSettle();
-      await tester.tap(item, warnIfMissed: false);
-      await tester.pumpAndSettle();
+    Future<void> continueToMeasurements(WidgetTester tester) async {
+      await tester.enterText(fieldFor('AGE'), '24');
+      await tapAction(tester, 'Continue');
     }
 
-    /// January 2012 makes the age fourteen today, which is over the floor.
     Future<void> continueToAccount(WidgetTester tester) async {
-      await choose(tester, 'Select month', 'January');
-      await choose(tester, 'Select day', '1');
-      await choose(tester, 'Select year', '2012');
+      await tester.enterText(fieldFor('CENTIMETRES'), '178');
+      await tester.enterText(fieldFor('KILOGRAMMES'), '75');
       await tapAction(tester, 'Continue');
     }
 
     Future<void> reachAccountStep(WidgetTester tester) async {
       await openCreateAccount(tester);
       await continueToAge(tester);
+      await continueToMeasurements(tester);
       await continueToAccount(tester);
     }
 
@@ -327,7 +311,7 @@ void main() {
       );
     });
 
-    testWidgets('the age step will not continue without a date', (
+    testWidgets('the age step will not continue without an age', (
       tester,
     ) async {
       await openCreateAccount(tester);
@@ -335,8 +319,43 @@ void main() {
 
       await tapAction(tester, 'Continue');
 
-      expect(find.text('Choose your date of birth.'), findsOneWidget);
+      expect(find.text('Enter your age.'), findsOneWidget);
+      expect(find.byType(SignUpMeasurementsScreen), findsNothing);
+    });
+
+    testWidgets('the measurements step will not continue empty', (
+      tester,
+    ) async {
+      await openCreateAccount(tester);
+      await continueToAge(tester);
+      await continueToMeasurements(tester);
+
+      await tapAction(tester, 'Continue');
+
+      expect(find.text('Enter your height.'), findsOneWidget);
+      expect(find.text('Enter your weight.'), findsOneWidget);
       expect(find.byType(SignUpAccountScreen), findsNothing);
+    });
+
+    testWidgets('height and weight can be entered in imperial units', (
+      tester,
+    ) async {
+      await openCreateAccount(tester);
+      await continueToAge(tester);
+      await continueToMeasurements(tester);
+
+      await tapAction(tester, 'USE FT');
+      await tester.enterText(fieldFor('FEET'), '5');
+      await tester.enterText(fieldFor('INCHES'), '10');
+      await tapAction(tester, 'USE LB');
+      await tester.enterText(fieldFor('POUNDS'), '165');
+      await tapAction(tester, 'Continue');
+      await tester.enterText(fieldFor('EMAIL ADDRESS'), 'sam@example.com');
+      await tester.enterText(fieldFor('PASSWORD'), 'one-rep-more');
+      await tapAction(tester, 'Create account');
+
+      expect(fake.lastHeightCm, closeTo(177.8, 0.01));
+      expect(fake.lastWeightKg, closeTo(74.84, 0.01));
     });
 
     testWidgets('an empty account form says what is missing', (tester) async {
@@ -377,7 +396,9 @@ void main() {
       expect(find.byType(SignUpAccountScreen), findsOneWidget);
     });
 
-    testWidgets('both names become the account name', (tester) async {
+    testWidgets('the draft reaches the account the sign-up makes', (
+      tester,
+    ) async {
       await reachAccountStep(tester);
 
       await tester.enterText(fieldFor('EMAIL ADDRESS'), 'sam@example.com');
@@ -385,7 +406,9 @@ void main() {
       await tapAction(tester, 'Create account');
 
       expect(fake.lastDisplayName, 'Sam Rivera');
-      expect(fake.lastDateOfBirth, DateTime(2012, 1, 1));
+      expect(fake.lastAge, 24);
+      expect(fake.lastHeightCm, 178);
+      expect(fake.lastWeightKg, 75);
       expect(find.byType(AppShell), findsOneWidget);
     });
 
@@ -510,22 +533,17 @@ void main() {
       expect(find.byType(SignUpAgeScreen), findsOneWidget);
       expect(tester.takeException(), isNull, reason: 'Sign-up age');
 
-      Future<void> choose(int list, String value) async {
-        final button = find.byType(DropdownButton<int>).at(list);
-        await tester.ensureVisible(button);
-        await tester.pumpAndSettle();
-        await tester.tap(button, warnIfMissed: false);
-        await tester.pumpAndSettle();
-        final item = find.widgetWithText(DropdownMenuItem<int>, value).last;
-        await tester.ensureVisible(item);
-        await tester.pumpAndSettle();
-        await tester.tap(item, warnIfMissed: false);
-        await tester.pumpAndSettle();
-      }
+      await tester.enterText(fieldFor('AGE'), '24');
+      await tapAction(tester, 'Continue');
+      expect(find.byType(SignUpMeasurementsScreen), findsOneWidget);
+      expect(tester.takeException(), isNull, reason: 'Sign-up measurements');
 
-      await choose(0, 'January');
-      await choose(1, '1');
-      await choose(2, '2012');
+      await tapAction(tester, 'USE FT');
+      await tester.enterText(fieldFor('FEET'), '5');
+      await tester.enterText(fieldFor('INCHES'), '10');
+      await tapAction(tester, 'USE LB');
+      await tester.enterText(fieldFor('POUNDS'), '165');
+      expect(tester.takeException(), isNull, reason: 'Imperial measurements');
       await tapAction(tester, 'Continue');
       expect(find.byType(SignUpAccountScreen), findsOneWidget);
       // Two labels, two fields and a note on a 568-tall screen: the form

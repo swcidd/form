@@ -89,14 +89,18 @@ class AuthProvider extends ChangeNotifier {
     required String email,
     required String password,
     String? displayName,
-    DateTime? dateOfBirth,
+    int? age,
+    double? heightCm,
+    double? weightKg,
   }) async {
     final outcome = await _run(
       () => _auth.createAccount(
         email: email,
         password: password,
         displayName: displayName,
-        dateOfBirth: dateOfBirth,
+        age: age,
+        heightCm: heightCm,
+        weightKg: weightKg,
       ),
     );
     if (outcome case SignedUp(:final session)) _apply(session);

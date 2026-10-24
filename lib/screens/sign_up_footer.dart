@@ -5,10 +5,10 @@ import 'sign_in_screen.dart';
 
 /// The quiet line at the foot of every sign-up step.
 ///
-/// One widget because the answer is the same on all three: leave the flow and
+/// One widget because the answer is the same on every step: leave the flow and
 /// log in. It clears the steps rather than replacing the top one — replacing
-/// would leave "age" or "name" underneath a sign-in screen, and the back button
-/// would walk back into a form for an account that already exists.
+/// would leave "measurements" or "name" underneath a sign-in screen, and the
+/// back button would walk back into a form for an account that already exists.
 class SignUpFooter extends StatelessWidget {
   const SignUpFooter({super.key, this.enabled = true});
 

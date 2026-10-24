@@ -3,6 +3,7 @@ import 'package:plus_one/auth/auth_repository.dart';
 import 'package:plus_one/auth/local_auth_repository.dart';
 import 'package:plus_one/auth/password_hasher.dart';
 import 'package:plus_one/data/app_database.dart';
+import 'package:plus_one/data/workout_repository.dart';
 import 'package:plus_one/models/session.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -80,26 +81,25 @@ void main() {
       expect((await auth.restoreSession())?.userId, session.userId);
     });
 
-    test('keeps the date of birth the sign-up asked for', () async {
-      final born = DateTime(2012, 1, 1);
+    test('seeds the profile with the sign-up measurements', () async {
       final session = await signUp(
         auth,
         email: 'sam@example.com',
         password: 'one-rep-more',
-        dateOfBirth: born,
+        displayName: 'Sam Rivera',
+        age: 24,
+        heightCm: 178,
+        weightKg: 75,
       );
 
-      expect(session.dateOfBirth, born);
-      // Both a restart and a later sign-in have to carry it, or the step was
-      // asking for something the app forgets.
-      expect((await auth.restoreSession())?.dateOfBirth, born);
-      expect(
-        (await auth.signIn(
-          email: 'sam@example.com',
-          password: 'one-rep-more',
-        )).dateOfBirth,
-        born,
-      );
+      final profile = await WorkoutRepository(
+        app,
+        userId: session.userId,
+      ).loadProfile();
+      expect(profile?.name, 'Sam Rivera');
+      expect(profile?.age, 24);
+      expect(profile?.heightCm, 178);
+      expect(profile?.weightKg, 75);
     });
 
     test('answers with a session, because nothing needs confirming', () async {

@@ -20,7 +20,7 @@ class AppDatabase {
   final String fileName;
 
   /// Current schema version. Increment with every migration.
-  static const int version = 5;
+  static const int version = 6;
 
   static const String workoutsTable = 'workouts';
   static const String exerciseLogsTable = 'exercise_logs';
@@ -177,6 +177,7 @@ class AppDatabase {
       role          TEXT    NOT NULL DEFAULT '',
       memberSince   TEXT    NOT NULL DEFAULT '',
       isPro         INTEGER NOT NULL DEFAULT 0,
+      age           INTEGER NOT NULL DEFAULT 0,
       weightKg      REAL    NOT NULL DEFAULT 0,
       heightCm      REAL    NOT NULL DEFAULT 0,
       bodyFatPct    REAL    NOT NULL DEFAULT 0,
@@ -228,7 +229,6 @@ class AppDatabase {
       id           TEXT    PRIMARY KEY,
       email        TEXT    NOT NULL UNIQUE,
       displayName  TEXT    NOT NULL DEFAULT '',
-      dateOfBirth  TEXT,
       passwordHash TEXT    NOT NULL,
       createdAt    INTEGER NOT NULL
     )
@@ -247,7 +247,6 @@ class AppDatabase {
       userId      TEXT    NOT NULL,
       email       TEXT,
       displayName TEXT,
-      dateOfBirth TEXT,
       issuedAt    INTEGER NOT NULL
     )
   ''';
@@ -283,16 +282,14 @@ class AppDatabase {
       await _ownEverything(db);
     }
 
-    // v5 adds the date of birth the sign-up asks for. Nullable, not defaulted:
-    // an account made before the question existed has no answer, and a made-up
-    // one would be worse than the gap. The v3 step above creates the accounts
-    // table in its current shape, so only files that already had one need the
-    // column added.
-    if (from >= 3 && from < 5) {
+    // v6 adds the age the sign-up asks for. Zero means it was never given,
+    // which is the honest reading for an account made before the question.
+    // Files below v4 rebuild the table above in its current shape, so only
+    // files that already have a profile need the column added.
+    if (from >= 4 && from < 6) {
       await db.execute(
-        'ALTER TABLE $accountsTable ADD COLUMN dateOfBirth TEXT',
+        'ALTER TABLE $profileTable ADD COLUMN age INTEGER NOT NULL DEFAULT 0',
       );
-      await db.execute('ALTER TABLE $sessionTable ADD COLUMN dateOfBirth TEXT');
     }
   }
 

@@ -17,12 +17,12 @@ import '../widgets/sign_up_steps.dart';
 import 'sign_in_screen.dart';
 import 'sign_up_footer.dart';
 
-/// Sign-up, step three: the address and the password.
+/// Sign-up, step four: the address and the password.
 ///
-/// The name and date of birth have already been collected, so this step is only
-/// what the identity store needs. When the store signs the new account in, the
-/// gate swaps the whole window and there is nothing here left to navigate to;
-/// when it wants the address confirmed first, this screen turns into the
+/// The name, age and measurements have already been collected, so this step is
+/// only what the identity store needs. When the store signs the new account in,
+/// the gate swaps the whole window and there is nothing here left to navigate
+/// to; when it wants the address confirmed first, this screen turns into the
 /// answer.
 class SignUpAccountScreen extends StatefulWidget {
   const SignUpAccountScreen({super.key, required this.draft});
@@ -77,7 +77,9 @@ class _SignUpAccountScreenState extends State<SignUpAccountScreen> {
         email: email,
         password: password,
         displayName: widget.draft.fullName,
-        dateOfBirth: widget.draft.dateOfBirth,
+        age: widget.draft.age,
+        heightCm: widget.draft.heightCm,
+        weightKg: widget.draft.weightKg,
       );
       if (!mounted) return;
       switch (outcome) {
@@ -179,12 +181,9 @@ class _SignUpAccountScreenState extends State<SignUpAccountScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const SignUpSteps(current: 2),
+                  const SignUpSteps(current: 3),
                   const SizedBox(height: 24),
-                  const AuthIntro(
-                    title: 'CREATE YOUR ACCOUNT.',
-                    subtitle: 'Your training. Your progress. All in one place.',
-                  ),
+                  const AuthIntro(title: 'CREATE YOUR ACCOUNT.'),
                   const SizedBox(height: 24),
                   AuthField(
                     label: 'EMAIL ADDRESS',

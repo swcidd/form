@@ -11,6 +11,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/brand_app_bar.dart';
 import '../widgets/change_password_sheet.dart';
+import '../widgets/edit_body_sheet.dart';
 import '../widgets/progress_bar.dart';
 import '../widgets/pressable.dart';
 import '../widgets/section_header.dart';
@@ -61,7 +62,11 @@ class ProfileScreen extends StatelessWidget {
           const SizedBox(height: 12),
           _weeklyTarget(context, provider),
           const SizedBox(height: 28),
-          const SectionHeader(label: 'Body'),
+          SectionHeader(
+            label: 'Body',
+            actionLabel: 'Edit',
+            onAction: () => showEditBodySheet(context),
+          ),
           const SizedBox(height: 12),
           _body(profile),
           const SizedBox(height: 28),
@@ -314,11 +319,22 @@ class ProfileScreen extends StatelessWidget {
           children: [
             Expanded(
               child: StatTile(
+                value: profile.age == 0 ? '—' : '${profile.age}',
+                label: 'Age',
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: StatTile(
                 value: _decimal(profile.bodyFatPct, 1),
                 label: 'Body fat (%)',
               ),
             ),
-            const SizedBox(width: 12),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
             Expanded(
               child: StatTile(
                 value: _decimal(profile.restingHrBpm, 0),
