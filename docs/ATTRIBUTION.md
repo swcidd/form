@@ -62,11 +62,18 @@ printing it on the card.
 
 | Asset | Source | Licence |
 | --- | --- | --- |
+| Exercise card thumbnails | [Unsplash](https://unsplash.com) — hotlinked CDN images | [Unsplash License](https://unsplash.com/license) |
 | `assets/images/program_hero.png` | **to be recorded** | **to be recorded** |
 | `assets/images/workout_hero.png` | **to be recorded** | **to be recorded** |
 | `assets/images/profile_avatar.png` | **to be recorded** | **to be recorded** |
 
-These three were already in `assets/images/` and carry no metadata saying where
+The catalogue cards hotlink a small Unsplash set, chosen by the exercise's
+category and first primary muscle, because the upstream catalogue's image
+paths are not bundled with the app. This is a temporary stand-in until the
+repo ships its own exercise photography. No Unsplash API key is used and no
+credential ships.
+
+These three local assets were already in `assets/images/` and carry no metadata saying where
 they came from. They need a source and a licence recorded before submission —
 either an entry here, or replaced with artwork whose provenance is known.
 
