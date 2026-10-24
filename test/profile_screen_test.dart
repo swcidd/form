@@ -298,8 +298,8 @@ void main() {
           SavedExercise(
             exercise: const LibraryExercise(
               name: 'Barbell Curl',
-              primaryMuscle: 'biceps',
-              instructions: 'Curl the bar.',
+              primaryMuscles: ['biceps'],
+              instructions: ['Curl the bar.'],
               equipment: ['Barbell'],
               category: 'strength',
             ),
