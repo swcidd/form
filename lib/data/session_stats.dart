@@ -32,6 +32,56 @@ class SetRecord {
       value == value.roundToDouble() ? '${value.round()}' : '$value';
 }
 
+/// One week in an exercise's estimated-1RM series.
+///
+/// [estimatedOneRepMax] is null when the exercise was not trained that week.
+/// A missing week is not zero: no session means nothing is known, and drawing
+/// it at the baseline would invent a drop that never happened.
+class OneRepMaxWeek {
+  const OneRepMaxWeek({required this.weekStart, this.estimatedOneRepMax});
+
+  /// Monday that starts the week, at local midnight.
+  final DateTime weekStart;
+
+  /// Best estimate logged in the week, or null when it was not trained.
+  final double? estimatedOneRepMax;
+}
+
+/// Four weeks of one exercise's estimated 1RM, newest week last.
+class ExerciseOneRepMaxTrend {
+  const ExerciseOneRepMaxTrend({required this.exercise, required this.weeks});
+
+  final String exercise;
+  final List<OneRepMaxWeek> weeks;
+
+  /// The weeks that actually contain a completed weighted set.
+  Iterable<OneRepMaxWeek> get observed =>
+      weeks.where((week) => week.estimatedOneRepMax != null);
+
+  /// The newest observed estimate. Null when the exercise has no recent work.
+  double? get latest {
+    for (final week in weeks.reversed) {
+      final value = week.estimatedOneRepMax;
+      if (value != null) return value;
+    }
+    return null;
+  }
+
+  /// Change from the first observed week to the newest one.
+  ///
+  /// Null until there are two points to compare, so the card can leave the
+  /// percentage off instead of claiming progress from one session.
+  double? get changePercent {
+    final points = observed.toList(growable: false);
+    if (points.length < 2) return null;
+
+    final first = points.first.estimatedOneRepMax!;
+    final last = points.last.estimatedOneRepMax!;
+    if (first <= 0) return null;
+    return (last - first) / first * 100;
+  }
+}
+
 /// Statistics derived from the sessions on the device.
 ///
 /// Screens report progress from here rather than from stored totals, because a
@@ -102,6 +152,78 @@ class SessionStats {
 
     return best.values.toList()
       ..sort((a, b) => b.estimatedOneRepMax.compareTo(a.estimatedOneRepMax));
+  }
+
+  /// Estimated 1RM for every exercise trained in the last four weeks.
+  ///
+  /// Each week is a calendar week starting Monday. The series uses the best
+  /// completed set of each week, because a 1RM estimate is about the ceiling
+  /// reached, not the average set. Exercises are ordered by their latest
+  /// estimate so the strongest current lift is the obvious default.
+  List<ExerciseOneRepMaxTrend> get oneRepMaxTrends {
+    final starts = _weekStarts(4);
+    final series = <String, List<double?>>{};
+
+    for (final entry in _entries) {
+      final name = entry.log.exercise.name;
+      final weekIndex = _weekIndexFor(entry.workout.date, starts);
+      if (weekIndex == null) continue;
+
+      for (final set in entry.log.sets) {
+        if (!set.completed || set.weightKg <= 0) continue;
+
+        final estimate = set.weightKg * (1 + set.reps / 30);
+        final values = series.putIfAbsent(
+          name,
+          () => List<double?>.filled(starts.length, null),
+        );
+        final current = values[weekIndex];
+        if (current == null || estimate > current) {
+          values[weekIndex] = estimate;
+        }
+      }
+    }
+
+    final trends = [
+      for (final entry in series.entries)
+        ExerciseOneRepMaxTrend(
+          exercise: entry.key,
+          weeks: [
+            for (var index = 0; index < starts.length; index++)
+              OneRepMaxWeek(
+                weekStart: starts[index],
+                estimatedOneRepMax: entry.value[index],
+              ),
+          ],
+        ),
+    ];
+
+    trends.sort((a, b) {
+      final latest = a.latest ?? 0;
+      final other = b.latest ?? 0;
+      final byLatest = other.compareTo(latest);
+      return byLatest != 0 ? byLatest : a.exercise.compareTo(b.exercise);
+    });
+    return trends;
+  }
+
+  /// Monday starts for the [count] weeks ending with the current week.
+  List<DateTime> _weekStarts(int count) {
+    final monday = _today.subtract(Duration(days: _today.weekday - 1));
+    return [
+      for (var index = count - 1; index >= 0; index--)
+        monday.subtract(Duration(days: index * 7)),
+    ];
+  }
+
+  /// The week bucket containing [date], or null when it falls outside.
+  static int? _weekIndexFor(DateTime date, List<DateTime> starts) {
+    for (var index = 0; index < starts.length; index++) {
+      final start = starts[index];
+      final next = start.add(const Duration(days: 7));
+      if (!date.isBefore(start) && date.isBefore(next)) return index;
+    }
+    return null;
   }
 
   /// The best set in one session, for the summary's "top set" line.

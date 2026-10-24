@@ -8,6 +8,7 @@ import 'package:plus_one/models/workout.dart';
 import 'package:plus_one/providers/workout_provider.dart';
 import 'package:plus_one/screens/progress_screen.dart';
 import 'package:plus_one/theme/app_theme.dart';
+import 'package:plus_one/widgets/sparkline_chart.dart';
 
 import 'support/harness.dart';
 
@@ -109,9 +110,12 @@ void main() {
     await tester.pumpWidget(_app(_oneSession()));
     await tester.pumpAndSettle();
 
-    // 100 kg for 5 reps is an estimated 117 kg single.
-    expect(find.text('Estimated 1RM'), findsOneWidget);
-    expect(find.text('117 kg'), findsOneWidget);
+    // 100 kg for 5 reps is an estimated 117 kg single. One point is not a
+    // trend, so the card stops at the value.
+    expect(find.text('ESTIMATED 1-REP MAX'), findsOneWidget);
+    expect(find.text('117'), findsOneWidget);
+    expect(find.text('kg'), findsOneWidget);
+    expect(find.text('Not enough history yet'), findsOneWidget);
     // Once as the exercise the estimate belongs to, once in the record list.
     expect(find.text('Bench Press'), findsNWidgets(2));
 
@@ -125,6 +129,67 @@ void main() {
     // The set that earned the record, on the day it was logged.
     expect(find.text('100 kg × 5'), findsOneWidget);
     expect(find.text(DateFormat('MMM d').format(_daysAgo(10))), findsOneWidget);
+  });
+
+  testWidgets('the 1RM card plots four weeks and switches exercises', (
+    tester,
+  ) async {
+    _useTallSurface(tester);
+    final provider = _provider([
+      _session(
+        id: 'bench-1',
+        date: _daysAgo(25),
+        logs: [
+          _log('Bench Press', [_set(5, 100)]),
+        ],
+      ),
+      _session(
+        id: 'bench-2',
+        date: _daysAgo(18),
+        logs: [
+          _log('Bench Press', [_set(5, 110)]),
+        ],
+      ),
+      _session(
+        id: 'bench-3',
+        date: _daysAgo(4),
+        logs: [
+          _log('Bench Press', [_set(5, 120)]),
+        ],
+      ),
+      _session(
+        id: 'squat',
+        date: _daysAgo(3),
+        logs: [
+          _log('Squat', [_set(5, 100)]),
+        ],
+      ),
+    ]);
+
+    await tester.pumpWidget(_app(provider));
+    await tester.pumpAndSettle();
+
+    // The strongest current lift is the default. 100 kg × 5 rose to
+    // 120 kg × 5 across the window: +20%.
+    expect(find.text('Bench Press'), findsNWidgets(2));
+    expect(find.text('140'), findsOneWidget);
+    expect(find.text('+20.0%'), findsOneWidget);
+    expect(find.text('last 4 weeks'), findsOneWidget);
+    expect(find.byType(SparklineChart), findsOneWidget);
+    expect(find.text('SEP 21'), findsOneWidget);
+    expect(find.text('SEP 28'), findsOneWidget);
+    expect(find.text('OCT 05'), findsOneWidget);
+    expect(find.text('OCT 12'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Choose exercise'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Squat').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Squat'), findsNWidgets(2));
+    expect(find.text('117'), findsOneWidget);
+    expect(find.text('Not enough history yet'), findsOneWidget);
+    expect(find.text('+20.0%'), findsNothing);
   });
 
   testWidgets('no comparison is printed without an earlier window', (

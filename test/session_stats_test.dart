@@ -248,6 +248,90 @@ void main() {
     });
   });
 
+  group('estimated 1RM trends', () {
+    test('buckets the last four weeks and leaves gaps as gaps', () {
+      final stats = SessionStats([
+        _session(
+          id: 'week-1',
+          date: DateTime(2026, 9, 22),
+          logs: [
+            _log('Bench Press', [_set(5, 100)]),
+          ],
+        ),
+        _session(
+          id: 'week-2',
+          date: DateTime(2026, 9, 29),
+          logs: [
+            _log('Bench Press', [_set(5, 110)]),
+          ],
+        ),
+        // Nothing in the week of 5 October: the series must not turn that into
+        // a zero or carry the previous estimate forward.
+        _session(
+          id: 'week-4',
+          date: DateTime(2026, 10, 13),
+          logs: [
+            _log('Bench Press', [_set(5, 120)]),
+          ],
+        ),
+        // Outside the window entirely.
+        _session(
+          id: 'old',
+          date: DateTime(2026, 9, 1),
+          logs: [
+            _log('Bench Press', [_set(5, 200)]),
+          ],
+        ),
+      ], today: _today);
+
+      final trend = stats.oneRepMaxTrends.single;
+      expect(trend.exercise, 'Bench Press');
+      expect(trend.weeks.map((week) => week.weekStart), [
+        DateTime(2026, 9, 21),
+        DateTime(2026, 9, 28),
+        DateTime(2026, 10, 5),
+        DateTime(2026, 10, 12),
+      ]);
+      expect(trend.weeks[0].estimatedOneRepMax, closeTo(116.67, 0.01));
+      expect(trend.weeks[1].estimatedOneRepMax, closeTo(128.33, 0.01));
+      expect(trend.weeks[2].estimatedOneRepMax, isNull);
+      expect(trend.weeks[3].estimatedOneRepMax, closeTo(140, 0.01));
+      expect(trend.latest, closeTo(140, 0.01));
+      expect(trend.changePercent, closeTo(20, 0.01));
+    });
+
+    test('uses the best set in a week and orders by latest estimate', () {
+      final stats = SessionStats([
+        _session(
+          id: 'bench-light',
+          date: DateTime(2026, 10, 13),
+          logs: [
+            _log('Bench Press', [_set(5, 100)]),
+          ],
+        ),
+        _session(
+          id: 'bench-heavy',
+          date: DateTime(2026, 10, 15),
+          logs: [
+            _log('Bench Press', [_set(3, 110)]),
+          ],
+        ),
+        _session(
+          id: 'squat',
+          date: DateTime(2026, 10, 14),
+          logs: [
+            _log('Squat', [_set(5, 140)]),
+          ],
+        ),
+      ], today: _today);
+
+      final trends = stats.oneRepMaxTrends;
+      expect(trends.map((trend) => trend.exercise), ['Squat', 'Bench Press']);
+      expect(trends[1].latest, closeTo(121, 0.01));
+      expect(trends[1].changePercent, isNull);
+    });
+  });
+
   group('session frequency', () {
     test('averages finished sessions over the last four weeks', () {
       final stats = SessionStats([

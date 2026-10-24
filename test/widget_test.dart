@@ -216,7 +216,7 @@ void main() {
       expect(find.text('UP NEXT'), findsOneWidget);
 
       await _tapDestination(tester, 'Progress');
-      expect(find.text('Estimated 1RM'), findsOneWidget);
+      expect(find.text('ESTIMATED 1-REP MAX'), findsOneWidget);
 
       await _tapDestination(tester, 'Profile');
       expect(find.text('Alex Mercer'), findsOneWidget);
@@ -283,7 +283,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // The progress tab should now be visible - check for progress content
-      expect(find.text('Estimated 1RM'), findsOneWidget);
+      expect(find.text('ESTIMATED 1-REP MAX'), findsOneWidget);
     });
   });
 

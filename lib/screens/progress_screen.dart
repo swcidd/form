@@ -7,6 +7,7 @@ import '../providers/workout_provider.dart';
 import '../theme/app_typography.dart';
 import '../widgets/brand_app_bar.dart';
 import '../widgets/empty_state.dart';
+import '../widgets/one_rep_max_card.dart';
 import '../widgets/section_header.dart';
 
 /// What the logged sessions add up to.
@@ -31,6 +32,7 @@ class ProgressScreen extends StatelessWidget {
     final provider = context.watch<WorkoutProvider>();
     final stats = SessionStats(provider.workouts, today: provider.today);
     final records = stats.records;
+    final trends = stats.oneRepMaxTrends;
 
     return Scaffold(
       appBar: const BrandAppBar(),
@@ -48,15 +50,14 @@ class ProgressScreen extends StatelessWidget {
                   'here.',
             )
           else ...[
-            _ProgressCard(
-              title: 'Estimated 1RM',
-              subtitle: records.isEmpty
-                  ? 'No weighted sets yet'
-                  : records.first.exercise,
-              value: records.isEmpty
-                  ? '—'
-                  : '${records.first.estimatedOneRepMax.round()} kg',
-            ),
+            if (trends.isNotEmpty)
+              OneRepMaxCard(trends: trends)
+            else
+              _ProgressCard(
+                title: 'Estimated 1RM',
+                subtitle: 'No weighted sets yet',
+                value: '—',
+              ),
             const SizedBox(height: 16),
             _volumeCard(stats),
             const SizedBox(height: 16),
