@@ -39,6 +39,8 @@ class FakeAuth implements AuthRepository {
   DateTime? lastDateOfBirth;
   double? lastHeightCm;
   double? lastWeightKg;
+  bool? lastHeightImperial;
+  bool? lastWeightImperial;
   String? lastUserId;
   String? lastCurrentPassword;
   String? lastNewPassword;
@@ -68,6 +70,8 @@ class FakeAuth implements AuthRepository {
     DateTime? dateOfBirth,
     double? heightCm,
     double? weightKg,
+    bool heightImperial = false,
+    bool weightImperial = false,
   }) async {
     await _hold();
     final error = createError;
@@ -78,6 +82,8 @@ class FakeAuth implements AuthRepository {
     lastDateOfBirth = dateOfBirth;
     lastHeightCm = heightCm;
     lastWeightKg = weightKg;
+    lastHeightImperial = heightImperial;
+    lastWeightImperial = weightImperial;
     if (confirmationRequired) return ConfirmationSent(email);
     return SignedUp(
       session = Session(

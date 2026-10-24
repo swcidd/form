@@ -103,6 +103,27 @@ void main() {
       expect(profile?.age, ageInYears(born));
       expect(profile?.heightCm, 178);
       expect(profile?.weightKg, 75);
+      expect(profile?.heightImperial, isFalse);
+      expect(profile?.weightImperial, isFalse);
+    });
+
+    test('seeds the profile with the units chosen at sign-up', () async {
+      final session = await signUp(
+        auth,
+        email: 'sam@example.com',
+        password: 'one-rep-more',
+        heightCm: 177.8,
+        weightKg: 74.84,
+        heightImperial: true,
+        weightImperial: true,
+      );
+
+      final profile = await WorkoutRepository(
+        app,
+        userId: session.userId,
+      ).loadProfile();
+      expect(profile?.heightImperial, isTrue);
+      expect(profile?.weightImperial, isTrue);
     });
 
     test('answers with a session, because nothing needs confirming', () async {

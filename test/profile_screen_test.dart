@@ -226,6 +226,24 @@ void main() {
     expect(find.textContaining('No badges yet'), findsNothing);
   });
 
+  testWidgets('an imperial profile reads height and weight in its units', (
+    tester,
+  ) async {
+    final provider = WorkoutProvider(
+      today: today,
+      profile: ProfileStats.empty().copyWith(
+        heightCm: 182,
+        weightKg: 74.5,
+        heightImperial: true,
+        weightImperial: true,
+      ),
+    );
+    await pumpProfile(tester, provider);
+
+    expect(tileValue(tester, 'WEIGHT (LB)'), '164.2');
+    expect(tileValue(tester, 'HEIGHT (FT)'), '6\'0"');
+  });
+
   testWidgets('the body can be edited from the profile', (tester) async {
     final now = DateTime.now();
     final born = DateTime(now.year - 30, 1, 1);
@@ -281,6 +299,42 @@ void main() {
     expect(provider.profile.weightKg, 82);
     expect(tileValue(tester, 'AGE'), '31');
     expect(tileValue(tester, 'HEIGHT (CM)'), '182');
+  });
+
+  testWidgets('editing in imperial saves the units the profile shows', (
+    tester,
+  ) async {
+    final now = DateTime.now();
+    final provider = WorkoutProvider(
+      today: today,
+      profile: ProfileStats.empty().copyWith(
+        dateOfBirth: DateTime(now.year - 30, 1, 1),
+        heightCm: 180,
+        weightKg: 80,
+      ),
+    );
+    await pumpProfile(tester, provider);
+
+    await tester.tap(find.text('Edit'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('FEET').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('POUNDS').last);
+    await tester.pumpAndSettle();
+
+    await tester.enterText(fieldFor('FEET'), '5');
+    await tester.enterText(fieldFor('INCHES'), '10');
+    await tester.enterText(fieldFor('POUNDS'), '165');
+    await tester.tap(find.text('Save changes'));
+    await tester.pumpAndSettle();
+
+    expect(provider.profile.heightImperial, isTrue);
+    expect(provider.profile.weightImperial, isTrue);
+    expect(provider.profile.heightCm, closeTo(177.8, 0.01));
+    expect(provider.profile.weightKg, closeTo(74.84, 0.01));
+    expect(tileValue(tester, 'HEIGHT (FT)'), '5\'10"');
+    expect(tileValue(tester, 'WEIGHT (LB)'), '165.0');
   });
 
   group('the account behind the profile', () {

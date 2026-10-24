@@ -200,6 +200,8 @@ void main() {
       final restored = ProfileStats.fromJson(stats.toJson());
 
       expect(restored, stats);
+      expect(restored.heightImperial, isTrue);
+      expect(restored.weightImperial, isTrue);
       expect(restored.records, hasLength(3));
       expect(restored.achievements, hasLength(3));
     });
@@ -214,6 +216,8 @@ Map<String, dynamic> _statsJson() => {
   'isPro': true,
   'weightKg': 74.5,
   'heightCm': 182,
+  'heightImperial': true,
+  'weightImperial': true,
   'bodyFatPct': 14.2,
   'restingHrBpm': 56,
   'totalWorkouts': 248,

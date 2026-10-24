@@ -92,6 +92,8 @@ class AuthProvider extends ChangeNotifier {
     DateTime? dateOfBirth,
     double? heightCm,
     double? weightKg,
+    bool heightImperial = false,
+    bool weightImperial = false,
   }) async {
     final outcome = await _run(
       () => _auth.createAccount(
@@ -101,6 +103,8 @@ class AuthProvider extends ChangeNotifier {
         dateOfBirth: dateOfBirth,
         heightCm: heightCm,
         weightKg: weightKg,
+        heightImperial: heightImperial,
+        weightImperial: weightImperial,
       ),
     );
     if (outcome case SignedUp(:final session)) _apply(session);

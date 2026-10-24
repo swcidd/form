@@ -14,13 +14,20 @@ class HeightField extends StatefulWidget {
   const HeightField({
     super.key,
     this.initialHeightCm,
+    this.initialImperial = false,
     required this.onChanged,
+    this.onUnitChanged,
     this.errorText,
     this.enabled = true,
   });
 
   final double? initialHeightCm;
+  final bool initialImperial;
   final ValueChanged<double?> onChanged;
+
+  /// Reports the unit the athlete chose, so the profile can remember it.
+  final ValueChanged<bool>? onUnitChanged;
+
   final String? errorText;
   final bool enabled;
 
@@ -40,6 +47,7 @@ class _HeightFieldState extends State<HeightField> {
   void initState() {
     super.initState();
     _heightCm = widget.initialHeightCm;
+    _imperial = widget.initialImperial;
     _writeCurrent();
   }
 
@@ -57,6 +65,7 @@ class _HeightFieldState extends State<HeightField> {
       _imperial = imperial;
       _writeCurrent();
     });
+    widget.onUnitChanged?.call(imperial);
   }
 
   void _writeCurrent() {
@@ -171,13 +180,20 @@ class WeightField extends StatefulWidget {
   const WeightField({
     super.key,
     this.initialWeightKg,
+    this.initialImperial = false,
     required this.onChanged,
+    this.onUnitChanged,
     this.errorText,
     this.enabled = true,
   });
 
   final double? initialWeightKg;
+  final bool initialImperial;
   final ValueChanged<double?> onChanged;
+
+  /// Reports the unit the athlete chose, so the profile can remember it.
+  final ValueChanged<bool>? onUnitChanged;
+
   final String? errorText;
   final bool enabled;
 
@@ -196,6 +212,7 @@ class _WeightFieldState extends State<WeightField> {
   void initState() {
     super.initState();
     _weightKg = widget.initialWeightKg;
+    _imperial = widget.initialImperial;
     _writeCurrent();
   }
 
@@ -212,6 +229,7 @@ class _WeightFieldState extends State<WeightField> {
       _imperial = imperial;
       _writeCurrent();
     });
+    widget.onUnitChanged?.call(imperial);
   }
 
   void _writeCurrent() {

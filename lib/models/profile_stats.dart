@@ -118,6 +118,8 @@ class ProfileStats extends Equatable {
     this.dateOfBirth,
     required this.weightKg,
     required this.heightCm,
+    this.heightImperial = false,
+    this.weightImperial = false,
     required this.bodyFatPct,
     required this.restingHrBpm,
     required this.totalWorkouts,
@@ -143,6 +145,15 @@ class ProfileStats extends Equatable {
 
   final double weightKg;
   final double heightCm;
+
+  /// Whether the profile writes height in feet and inches rather than
+  /// centimetres. The stored value stays canonical centimetres.
+  final bool heightImperial;
+
+  /// Whether the profile writes weight in pounds rather than kilograms. The
+  /// stored value stays canonical kilograms.
+  final bool weightImperial;
+
   final double bodyFatPct;
   final int restingHrBpm;
 
@@ -164,6 +175,8 @@ class ProfileStats extends Equatable {
     DateTime? dateOfBirth,
     double? weightKg,
     double? heightCm,
+    bool? heightImperial,
+    bool? weightImperial,
     double? bodyFatPct,
     int? restingHrBpm,
     int? totalWorkouts,
@@ -183,6 +196,8 @@ class ProfileStats extends Equatable {
       dateOfBirth: dateOfBirth ?? this.dateOfBirth,
       weightKg: weightKg ?? this.weightKg,
       heightCm: heightCm ?? this.heightCm,
+      heightImperial: heightImperial ?? this.heightImperial,
+      weightImperial: weightImperial ?? this.weightImperial,
       bodyFatPct: bodyFatPct ?? this.bodyFatPct,
       restingHrBpm: restingHrBpm ?? this.restingHrBpm,
       totalWorkouts: totalWorkouts ?? this.totalWorkouts,
@@ -207,6 +222,8 @@ class ProfileStats extends Equatable {
           : null,
       weightKg: (json['weightKg'] as num).toDouble(),
       heightCm: (json['heightCm'] as num).toDouble(),
+      heightImperial: json['heightImperial'] as bool? ?? false,
+      weightImperial: json['weightImperial'] as bool? ?? false,
       bodyFatPct: (json['bodyFatPct'] as num).toDouble(),
       restingHrBpm: (json['restingHrBpm'] as num).toInt(),
       totalWorkouts: (json['totalWorkouts'] as num).toInt(),
@@ -232,6 +249,8 @@ class ProfileStats extends Equatable {
     'dateOfBirth': dateOfBirth?.toIso8601String(),
     'weightKg': weightKg,
     'heightCm': heightCm,
+    'heightImperial': heightImperial,
+    'weightImperial': weightImperial,
     'bodyFatPct': bodyFatPct,
     'restingHrBpm': restingHrBpm,
     'totalWorkouts': totalWorkouts,
@@ -253,6 +272,8 @@ class ProfileStats extends Equatable {
     dateOfBirth,
     weightKg,
     heightCm,
+    heightImperial,
+    weightImperial,
     bodyFatPct,
     restingHrBpm,
     totalWorkouts,

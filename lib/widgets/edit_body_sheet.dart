@@ -40,6 +40,8 @@ class _EditBodySheetState extends State<EditBodySheet> {
   DateTime? _dateOfBirth;
   double? _heightCm;
   double? _weightKg;
+  bool _heightImperial = false;
+  bool _weightImperial = false;
   String? _dateError;
   String? _heightError;
   String? _weightError;
@@ -54,6 +56,8 @@ class _EditBodySheetState extends State<EditBodySheet> {
     _dateOfBirth = profile.dateOfBirth;
     _heightCm = profile.heightCm > 0 ? profile.heightCm : null;
     _weightKg = profile.weightKg > 0 ? profile.weightKg : null;
+    _heightImperial = profile.heightImperial;
+    _weightImperial = profile.weightImperial;
   }
 
   void _save() {
@@ -97,6 +101,8 @@ class _EditBodySheetState extends State<EditBodySheet> {
         dateOfBirth: dateOfBirth,
         heightCm: height,
         weightKg: weight,
+        heightImperial: _heightImperial,
+        weightImperial: _weightImperial,
       ),
     );
     Navigator.of(context).pop();
@@ -139,20 +145,26 @@ class _EditBodySheetState extends State<EditBodySheet> {
             const SizedBox(height: 20),
             HeightField(
               initialHeightCm: _heightCm,
+              initialImperial: _heightImperial,
               errorText: _heightError,
               onChanged: (value) => setState(() {
                 _heightCm = value;
                 if (value != null) _heightError = null;
               }),
+              onUnitChanged: (imperial) =>
+                  setState(() => _heightImperial = imperial),
             ),
             const SizedBox(height: 20),
             WeightField(
               initialWeightKg: _weightKg,
+              initialImperial: _weightImperial,
               errorText: _weightError,
               onChanged: (value) => setState(() {
                 _weightKg = value;
                 if (value != null) _weightError = null;
               }),
+              onUnitChanged: (imperial) =>
+                  setState(() => _weightImperial = imperial),
             ),
             const SizedBox(height: 24),
             AuthAction(label: 'Save changes', onPressed: _save),

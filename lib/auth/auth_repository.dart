@@ -119,6 +119,8 @@ abstract interface class AuthRepository {
     DateTime? dateOfBirth,
     double? heightCm,
     double? weightKg,
+    bool heightImperial = false,
+    bool weightImperial = false,
   });
 
   /// Signs an existing account in.

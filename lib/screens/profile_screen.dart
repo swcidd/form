@@ -301,15 +301,17 @@ class ProfileScreen extends StatelessWidget {
           children: [
             Expanded(
               child: StatTile(
-                value: _decimal(profile.weightKg, 1),
-                label: 'Weight (kg)',
+                value: profile.weightImperial
+                    ? _decimal(profile.weightKg * _poundsPerKilogram, 1)
+                    : _decimal(profile.weightKg, 1),
+                label: profile.weightImperial ? 'Weight (lb)' : 'Weight (kg)',
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: StatTile(
-                value: _decimal(profile.heightCm, 0),
-                label: 'Height (cm)',
+                value: _height(profile),
+                label: profile.heightImperial ? 'Height (ft)' : 'Height (cm)',
               ),
             ),
           ],
@@ -428,6 +430,21 @@ class ProfileScreen extends StatelessWidget {
   /// fact the app has not been told.
   static String _decimal(num value, int places) =>
       value == 0 ? '—' : value.toStringAsFixed(places);
+
+  /// The stored height is always centimetres; this writes it the way the
+  /// athlete chose at sign-up or in the body editor.
+  static String _height(ProfileStats profile) {
+    if (profile.heightCm <= 0) return '—';
+    if (!profile.heightImperial) return _decimal(profile.heightCm, 0);
+
+    final totalInches = (profile.heightCm / _centimetresPerInch).round();
+    final feet = totalInches ~/ 12;
+    final inches = totalInches % 12;
+    return '$feet\'$inches"';
+  }
+
+  static const double _centimetresPerInch = 2.54;
+  static const double _poundsPerKilogram = 2.2046226218;
 
   // ------------------------------------------------------------------ account
 

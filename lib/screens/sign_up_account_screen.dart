@@ -80,6 +80,8 @@ class _SignUpAccountScreenState extends State<SignUpAccountScreen> {
         dateOfBirth: widget.draft.dateOfBirth,
         heightCm: widget.draft.heightCm,
         weightKg: widget.draft.weightKg,
+        heightImperial: widget.draft.heightImperial,
+        weightImperial: widget.draft.weightImperial,
       );
       if (!mounted) return;
       switch (outcome) {

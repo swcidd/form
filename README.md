@@ -107,8 +107,9 @@ refusals.
 - **Create account** → four steps in the design's order: name, age,
   measurements, then the credentials. Age is entered as a date of birth in
   day, month and year lists. Height and weight use FEET | CENTIMETERS and
-  POUNDS | KILOGRAMS toggles, land in the athlete profile, and stay editable
-  there. The sign-up answers in
+  POUNDS | KILOGRAMS toggles; the chosen unit is saved and the profile keeps
+  showing it. Both land in the athlete profile and stay editable there. The
+  sign-up answers in
   the shape a verifying backend uses: signed in, or "check your inbox".
 - **Change password** → from the account card in the profile, with the current
   password checked by the store.
@@ -172,7 +173,7 @@ fallbacks are MIT and Unlicense).
 lib/
 ├── main.dart                 # gate: splash → welcome/sign-in → app, routes
 ├── auth/                     # AuthRepository seam, local implementation, hasher
-├── data/                     # AppDatabase (schema v7), repositories, session stats
+├── data/                     # AppDatabase (schema v8), repositories, session stats
 ├── models/                   # Workout, ExerciseLog, ExerciseSet, Profile, Account, Session
 ├── providers/                # AuthProvider, WorkoutProvider
 ├── screens/                  # welcome, sign in, sign-up steps, shell, home,
@@ -245,11 +246,11 @@ the keystore lives in a gitignored `android/key.properties`.
 - **Review**: every PR got inline review comments on the lines that carried a
   decision (identity, schema, lifecycle), not a rubber stamp, and was merged only
   with the suite green on the merged tree.
-- **Tests**: 324 widget, provider and database tests. The dangerous parts are
-  covered directly: the v3 → v7 migration builds an old database by hand, the
-  v5 → v7 and v6 → v7 migrations leave the date of birth unset, signing in as
-  somebody else asserts the old store is disposed, and the counting rules have
-  their own tests.
+- **Tests**: 328 widget, provider and database tests. The dangerous parts are
+  covered directly: the v3 → v8 migration builds an old database by hand, the
+  v5 → v8, v6 → v8 and v7 → v8 migrations leave the date of birth unset and the
+  units metric, signing in as somebody else asserts the old store is disposed,
+  and the counting rules have their own tests.
 
 ---
 

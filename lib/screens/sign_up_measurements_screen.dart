@@ -24,6 +24,8 @@ class SignUpMeasurementsScreen extends StatefulWidget {
 class _SignUpMeasurementsScreenState extends State<SignUpMeasurementsScreen> {
   double? _heightCm;
   double? _weightKg;
+  bool _heightImperial = false;
+  bool _weightImperial = false;
 
   String? _heightError;
   String? _weightError;
@@ -33,6 +35,8 @@ class _SignUpMeasurementsScreenState extends State<SignUpMeasurementsScreen> {
     super.initState();
     _heightCm = widget.draft.heightCm;
     _weightKg = widget.draft.weightKg;
+    _heightImperial = widget.draft.heightImperial;
+    _weightImperial = widget.draft.weightImperial;
   }
 
   void _continue() {
@@ -64,6 +68,8 @@ class _SignUpMeasurementsScreenState extends State<SignUpMeasurementsScreen> {
           draft: widget.draft.withMeasurements(
             heightCm: height!,
             weightKg: weight!,
+            heightImperial: _heightImperial,
+            weightImperial: _weightImperial,
           ),
         ),
       ),
@@ -91,6 +97,7 @@ class _SignUpMeasurementsScreenState extends State<SignUpMeasurementsScreen> {
                 const SizedBox(height: 24),
                 HeightField(
                   initialHeightCm: widget.draft.heightCm,
+                  initialImperial: _heightImperial,
                   errorText: _heightError,
                   onChanged: (value) {
                     setState(() {
@@ -98,10 +105,13 @@ class _SignUpMeasurementsScreenState extends State<SignUpMeasurementsScreen> {
                       if (value != null) _heightError = null;
                     });
                   },
+                  onUnitChanged: (imperial) =>
+                      setState(() => _heightImperial = imperial),
                 ),
                 const SizedBox(height: 20),
                 WeightField(
                   initialWeightKg: widget.draft.weightKg,
+                  initialImperial: _weightImperial,
                   errorText: _weightError,
                   onChanged: (value) {
                     setState(() {
@@ -109,6 +119,8 @@ class _SignUpMeasurementsScreenState extends State<SignUpMeasurementsScreen> {
                       if (value != null) _weightError = null;
                     });
                   },
+                  onUnitChanged: (imperial) =>
+                      setState(() => _weightImperial = imperial),
                 ),
               ],
             ),

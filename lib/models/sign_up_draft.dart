@@ -12,6 +12,8 @@ class SignUpDraft {
     this.dateOfBirth,
     this.heightCm,
     this.weightKg,
+    this.heightImperial = false,
+    this.weightImperial = false,
   });
 
   final String firstName;
@@ -25,6 +27,11 @@ class SignUpDraft {
 
   /// Null until the measurements step has a valid weight.
   final double? weightKg;
+
+  /// The unit the measurements step was left in, so the profile can show the
+  /// same one after the account is made.
+  final bool heightImperial;
+  final bool weightImperial;
 
   /// The single line an account is stored under.
   ///
@@ -42,11 +49,15 @@ class SignUpDraft {
   SignUpDraft withMeasurements({
     required double heightCm,
     required double weightKg,
+    required bool heightImperial,
+    required bool weightImperial,
   }) => SignUpDraft(
     firstName: firstName,
     lastName: lastName,
     dateOfBirth: dateOfBirth,
     heightCm: heightCm,
     weightKg: weightKg,
+    heightImperial: heightImperial,
+    weightImperial: weightImperial,
   );
 }

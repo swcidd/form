@@ -144,7 +144,13 @@ void main() {
   test('the profile comes back with the account', () async {
     final first = launch();
     first.updateProfile(
-      ProfileStats.empty().copyWith(name: 'Sherwin', weightKg: 78),
+      ProfileStats.empty().copyWith(
+        name: 'Sherwin',
+        weightKg: 78,
+        heightCm: 180,
+        heightImperial: true,
+        weightImperial: true,
+      ),
     );
 
     final second = launch();
@@ -152,6 +158,9 @@ void main() {
 
     expect(second.profile.name, 'Sherwin');
     expect(second.profile.weightKg, 78);
+    expect(second.profile.heightCm, 180);
+    expect(second.profile.heightImperial, isTrue);
+    expect(second.profile.weightImperial, isTrue);
   });
 
   test('a new id cannot collide with one the store already used', () async {

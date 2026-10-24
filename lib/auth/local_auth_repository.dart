@@ -70,6 +70,8 @@ class LocalAuthRepository implements AuthRepository {
     DateTime? dateOfBirth,
     double? heightCm,
     double? weightKg,
+    bool heightImperial = false,
+    bool weightImperial = false,
   }) async {
     _requireUsableEmail(email);
     _requireUsablePassword(password);
@@ -100,6 +102,8 @@ class LocalAuthRepository implements AuthRepository {
               dateOfBirth: dateOfBirth,
               heightCm: heightCm ?? 0,
               weightKg: weightKg ?? 0,
+              heightImperial: heightImperial,
+              weightImperial: weightImperial,
             ),
           ),
         );

@@ -394,6 +394,8 @@ void main() {
 
       expect(fake.lastHeightCm, closeTo(177.8, 0.01));
       expect(fake.lastWeightKg, closeTo(74.84, 0.01));
+      expect(fake.lastHeightImperial, isTrue);
+      expect(fake.lastWeightImperial, isTrue);
     });
 
     testWidgets('an empty account form says what is missing', (tester) async {

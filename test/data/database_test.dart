@@ -322,12 +322,18 @@ void main() {
       });
 
       // Start from the current file, then put the profile back to its v5
-      // shape — every column except the date of birth.
+      // shape — no date of birth and no remembered unit choices.
       final oldDb = AppDatabase();
       final db = await oldDb.open(path: path);
-      await db.execute(
-        'ALTER TABLE ${AppDatabase.profileTable} DROP COLUMN dateOfBirth',
-      );
+      for (final column in [
+        'dateOfBirth',
+        'heightImperial',
+        'weightImperial',
+      ]) {
+        await db.execute(
+          'ALTER TABLE ${AppDatabase.profileTable} DROP COLUMN $column',
+        );
+      }
       await db.insert(AppDatabase.profileTable, {
         'userId': device,
         'name': 'Sam',
@@ -341,14 +347,17 @@ void main() {
       final columns = await next.rawQuery(
         'PRAGMA table_info(${AppDatabase.profileTable})',
       );
-      expect(columns.map((column) => column['name']), contains('dateOfBirth'));
       expect(
-        (await WorkoutRepository(
-          nextDb,
-          userId: device,
-        ).loadProfile())?.dateOfBirth,
-        isNull,
+        columns.map((column) => column['name']),
+        containsAll(['dateOfBirth', 'heightImperial', 'weightImperial']),
       );
+      final profile = await WorkoutRepository(
+        nextDb,
+        userId: device,
+      ).loadProfile();
+      expect(profile?.dateOfBirth, isNull);
+      expect(profile?.heightImperial, isFalse);
+      expect(profile?.weightImperial, isFalse);
       await nextDb.close();
     });
 
@@ -367,9 +376,15 @@ void main() {
       // that ran that build must still open.
       final oldDb = AppDatabase();
       final db = await oldDb.open(path: path);
-      await db.execute(
-        'ALTER TABLE ${AppDatabase.profileTable} DROP COLUMN dateOfBirth',
-      );
+      for (final column in [
+        'dateOfBirth',
+        'heightImperial',
+        'weightImperial',
+      ]) {
+        await db.execute(
+          'ALTER TABLE ${AppDatabase.profileTable} DROP COLUMN $column',
+        );
+      }
       await db.execute(
         'ALTER TABLE ${AppDatabase.profileTable} '
         'ADD COLUMN age INTEGER NOT NULL DEFAULT 0',
@@ -387,14 +402,58 @@ void main() {
       final columns = await next.rawQuery(
         'PRAGMA table_info(${AppDatabase.profileTable})',
       );
-      expect(columns.map((column) => column['name']), contains('dateOfBirth'));
       expect(
-        (await WorkoutRepository(
-          nextDb,
-          userId: device,
-        ).loadProfile())?.dateOfBirth,
-        isNull,
+        columns.map((column) => column['name']),
+        containsAll(['dateOfBirth', 'heightImperial', 'weightImperial']),
       );
+      final profile = await WorkoutRepository(
+        nextDb,
+        userId: device,
+      ).loadProfile();
+      expect(profile?.dateOfBirth, isNull);
+      expect(profile?.heightImperial, isFalse);
+      expect(profile?.weightImperial, isFalse);
+      await nextDb.close();
+    });
+
+    test('migrating from version 7 remembers metric units', () async {
+      final path = p.join(
+        Directory.systemTemp.path,
+        'form_v7_units_migration_test.db',
+      );
+      final file = File(path);
+      if (file.existsSync()) file.deleteSync();
+      addTearDown(() {
+        if (file.existsSync()) file.deleteSync();
+      });
+
+      // v7 had the date of birth but no unit choice. A file from that build
+      // should open as metric without losing the date.
+      final oldDb = AppDatabase();
+      final db = await oldDb.open(path: path);
+      for (final column in ['heightImperial', 'weightImperial']) {
+        await db.execute(
+          'ALTER TABLE ${AppDatabase.profileTable} DROP COLUMN $column',
+        );
+      }
+      await db.insert(AppDatabase.profileTable, {
+        'userId': device,
+        'name': 'Sam',
+        'dateOfBirth': DateTime(1996, 6, 15).toIso8601String(),
+      });
+      await db.execute('PRAGMA user_version = 7');
+      await oldDb.close();
+
+      final nextDb = AppDatabase();
+      await nextDb.open(path: path);
+
+      final profile = await WorkoutRepository(
+        nextDb,
+        userId: device,
+      ).loadProfile();
+      expect(profile?.dateOfBirth, DateTime(1996, 6, 15));
+      expect(profile?.heightImperial, isFalse);
+      expect(profile?.weightImperial, isFalse);
       await nextDb.close();
     });
   });

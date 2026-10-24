@@ -182,7 +182,9 @@ the device account, so an upgraded install opens on its own training instead of
 an empty app. v7 adds a nullable `dateOfBirth` to the profile; rows written
 before the question existed keep no answer rather than inventing one. v6 wrote
 an integer age instead; a v6 file keeps that unused column and gains the date,
-so a build from that branch still opens.
+so a build from that branch still opens. v8 adds `heightImperial` and
+`weightImperial`, both defaulting to metric, so the profile can keep writing the
+measurements in the unit the athlete chose.
 
 ## Deliberately not here
 
@@ -197,9 +199,9 @@ The sign-up is four steps, in the design's order: name, age, measurements, then
 the credentials. Age is asked for as a date of birth in day, month and year
 lists; the profile stores the date and reads the age from it. Height is stored
 in centimetres and weight in kilograms; the FEET | CENTIMETERS and POUNDS |
-KILOGRAMS toggles convert what is typed,
-so a profile does not remember which unit it was given in. The same date and
-measurement fields edit the body from the profile. The confirmation-password field is still not there: it is a second
+KILOGRAMS toggles convert what is typed and record which unit was chosen, so
+the profile shows the same one. The same date and measurement fields edit the
+body from the profile. The confirmation-password field is still not there: it is a second
 entry for a value the app is about to hash anyway. The change-password sheet
 follows the same rule — current password and new password, no second copy — so
 the app asks for a password the same way everywhere.
@@ -213,5 +215,5 @@ the app asks for a password the same way everywhere.
 | `test/auth_provider_test.dart` | Status transitions, `busy` held in a `finally`, failures passed on |
 | `test/auth_screens_test.dart` | The screens and the gate, driven through the UI, including a sign-up that needs confirming |
 | `test/session_store_test.dart` | The app builds the store for the account the session names |
-| `test/data/database_test.dart` | v1→v7, v3→v7 on a genuinely old-shaped file, v5→v7, v6→v7, and per-account partitioning |
+| `test/data/database_test.dart` | v1→v8, v3→v8 on a genuinely old-shaped file, v5→v8, v6→v8, v7→v8, and per-account partitioning |
 | `test/profile_screen_test.dart` | Editing the body, and the account section: who it is, change the password, sign out, delete asking first |

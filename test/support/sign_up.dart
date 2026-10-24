@@ -19,6 +19,8 @@ Future<Session> signUp(
   DateTime? dateOfBirth,
   double? heightCm,
   double? weightKg,
+  bool heightImperial = false,
+  bool weightImperial = false,
 }) async {
   final outcome = await auth.createAccount(
     email: email,
@@ -27,6 +29,8 @@ Future<Session> signUp(
     dateOfBirth: dateOfBirth,
     heightCm: heightCm,
     weightKg: weightKg,
+    heightImperial: heightImperial,
+    weightImperial: weightImperial,
   );
   return switch (outcome) {
     SignedUp(:final session) => session,

@@ -20,7 +20,7 @@ class AppDatabase {
   final String fileName;
 
   /// Current schema version. Increment with every migration.
-  static const int version = 7;
+  static const int version = 8;
 
   static const String workoutsTable = 'workouts';
   static const String exerciseLogsTable = 'exercise_logs';
@@ -180,6 +180,8 @@ class AppDatabase {
       dateOfBirth   TEXT,
       weightKg      REAL    NOT NULL DEFAULT 0,
       heightCm      REAL    NOT NULL DEFAULT 0,
+      heightImperial INTEGER NOT NULL DEFAULT 0,
+      weightImperial INTEGER NOT NULL DEFAULT 0,
       bodyFatPct    REAL    NOT NULL DEFAULT 0,
       restingHrBpm  INTEGER NOT NULL DEFAULT 0,
       totalWorkouts INTEGER NOT NULL DEFAULT 0,
@@ -290,6 +292,20 @@ class AppDatabase {
     // ignored, because dropping a column is not worth the risk in a migration.
     if (from >= 4 && from < 7) {
       await db.execute('ALTER TABLE $profileTable ADD COLUMN dateOfBirth TEXT');
+    }
+
+    // v8 remembers which unit each measurement was entered in, so the profile
+    // can keep writing it the same way. Both default to metric for rows that
+    // predate the choice.
+    if (from >= 4 && from < 8) {
+      await db.execute(
+        'ALTER TABLE $profileTable '
+        'ADD COLUMN heightImperial INTEGER NOT NULL DEFAULT 0',
+      );
+      await db.execute(
+        'ALTER TABLE $profileTable '
+        'ADD COLUMN weightImperial INTEGER NOT NULL DEFAULT 0',
+      );
     }
   }
 
