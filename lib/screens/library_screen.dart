@@ -654,10 +654,14 @@ class _LibraryScreenState extends State<LibraryScreen> {
     return [
       for (final exercise in exercises)
         if (_inMuscle(exercise) &&
-            (_matches(exercise.name) || _matches(exercise.primaryMuscle)))
+            (_matches(exercise.name) || _matches(_muscleText(exercise))))
           exercise,
     ];
   }
+
+  /// Every muscle name on an entry, so a search finds the second one too.
+  String _muscleText(LibraryExercise exercise) =>
+      [...exercise.primaryMuscles, ...exercise.secondaryMuscles].join(' ');
 
   bool _inMuscle(LibraryExercise exercise) {
     if (_muscle == _allMuscles) return true;
@@ -665,7 +669,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
     // keep a muscle fallback for names that read like muscle groups.
     final needle = _muscle.toLowerCase();
     return exercise.category.toLowerCase() == needle ||
-        exercise.primaryMuscle.toLowerCase().contains(needle);
+        _muscleText(exercise).toLowerCase().contains(needle);
   }
 
   Widget _muscleChips() {
@@ -759,7 +763,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
               // The row shows the muscle it trains, so the search field has to
               // find it by that too - the same terms the catalogue matches on,
               // since a saved entry came from there.
-              _matches(entry.exercise.primaryMuscle),
+              _matches(_muscleText(entry.exercise)),
         )
         .toList();
 
@@ -1383,11 +1387,11 @@ class _ExerciseCard extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      if (exercise.tips != null) ...[
+                      if (exercise.tipsText != null) ...[
                         const SizedBox(height: 4),
                         Flexible(
                           child: Text(
-                            exercise.tips!,
+                            exercise.tipsText!,
                             style: text.annotation.copyWith(
                               color: AppColors.sage600,
                             ),
@@ -1400,7 +1404,7 @@ class _ExerciseCard extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  exercise.level.toUpperCase(),
+                  (exercise.level ?? 'beginner').toUpperCase(),
                   style: text.annotation.copyWith(
                     color: AppColors.sage600,
                     fontWeight: FontWeight.w600,

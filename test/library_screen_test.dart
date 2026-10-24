@@ -179,8 +179,8 @@ void main() {
       bundled: () async => const [
         LibraryExercise(
           name: 'Bundled Curl',
-          primaryMuscle: 'biceps',
-          instructions: 'Curl the bar.',
+          primaryMuscles: ['biceps'],
+          instructions: ['Curl the bar.'],
           equipment: ['Barbell'],
           category: 'strength',
         ),
@@ -262,11 +262,11 @@ void main() {
   group('a narrow screen', () {
     const longEntry = LibraryExercise(
       name: 'Standing Hamstring Stretch With A Very Long Name',
-      primaryMuscle: 'Hamstrings',
-      instructions: 'Reach for the toes.',
+      primaryMuscles: ['Hamstrings'],
+      instructions: ['Reach for the toes.'],
       equipment: [],
       category: 'stretching',
-      tips: 'Breathe out as you fold, and keep the back flat.',
+      tips: ['Breathe out as you fold, and keep the back flat.'],
     );
 
     testWidgets('lays every tab out on a 320dp phone', (tester) async {
@@ -367,8 +367,8 @@ void main() {
   group('saved exercises', () {
     const barbellCurl = LibraryExercise(
       name: 'Barbell Curl',
-      primaryMuscle: 'biceps',
-      instructions: 'Curl the bar.',
+      primaryMuscles: ['biceps'],
+      instructions: ['Curl the bar.'],
       equipment: ['Barbell'],
       category: 'strength',
     );
