@@ -217,9 +217,19 @@ flutter run
 ### Check it
 
 ```bash
-dart format --output=none --set-exit-if-changed lib test tool
-flutter analyze
-flutter test
+./tool/check.sh
+```
+
+That runs `dart format --output=none --set-exit-if-changed lib test tool`,
+`flutter analyze` and `flutter test`, in that order, stopping at the first one
+that fails. It is a script rather than a hosted workflow on purpose: it needs no
+account, no runner and no network, so it behaves the same on a fresh clone and on
+a machine that cannot reach a CI service.
+
+One line makes git refuse a push that would land a red tree:
+
+```bash
+git config core.hooksPath .githooks
 ```
 
 ### Build a release APK
