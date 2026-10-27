@@ -146,8 +146,6 @@ class _SetLoggingScreenState extends State<SetLoggingScreen> {
                             set: current.sets[activeSet],
                           ),
                         ],
-                        const SizedBox(height: 24),
-                        _UpNext(workout: workout, currentIndex: currentIndex),
                       ],
                     ),
                   ),
@@ -896,77 +894,6 @@ class _StepButton extends StatelessWidget {
           color: Theme.of(context).colorScheme.onSurface,
         ),
       ),
-    );
-  }
-}
-
-class _UpNext extends StatelessWidget {
-  const _UpNext({required this.workout, required this.currentIndex});
-
-  final Workout workout;
-  final int currentIndex;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final text = context.text;
-    final rest = [
-      for (var index = 0; index < workout.logs.length; index++)
-        if (index != currentIndex) index,
-    ];
-    if (rest.isEmpty) return const SizedBox.shrink();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(
-          'UP NEXT',
-          style: text.labelCaps.copyWith(color: scheme.onSurfaceVariant),
-        ),
-        const SizedBox(height: 10),
-        for (final index in rest)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: scheme.surface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: scheme.outlineVariant),
-              ),
-              child: Row(
-                children: [
-                  Text(
-                    (index + 1).toString().padLeft(2, '0'),
-                    style: text.exerciseMeta.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: scheme.primary,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      workout.logs[index].exercise.name.toUpperCase(),
-                      style: text.exerciseMeta.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: scheme.onSurface,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  Text(
-                    '${workout.logs[index].completedSets} / '
-                    '${workout.logs[index].totalSets}',
-                    style: text.annotation.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-      ],
     );
   }
 }
