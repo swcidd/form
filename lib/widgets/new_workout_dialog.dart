@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../models/exercise.dart';
+import '../models/library_exercise.dart';
 import '../models/taxonomy.dart';
 import '../models/workout.dart';
 import '../theme/app_colors.dart';
@@ -23,18 +25,36 @@ import '../theme/app_typography.dart';
 /// abandons it has nothing to undo, and the caller decides whether to open the
 /// new session or just leave it in the list.
 class NewWorkoutDialog extends StatefulWidget {
-  const NewWorkoutDialog({super.key, this.initialDate});
+  const NewWorkoutDialog({
+    super.key,
+    this.initialDate,
+    this.exercises = const [],
+  });
 
   final DateTime? initialDate;
+
+  /// Exercises the session already has, chosen in the Add Exercise picker.
+  ///
+  /// The picker runs first, so this dialog is the second half of one flow: the
+  /// user says what they are training, then names it. Sets are deliberately not
+  /// invented here - each exercise lands as a planned entry with no sets, which
+  /// the logging screen already handles ("No sets planned. Add one below.")
+  /// rather than opening on numbers nobody chose.
+  final List<LibraryExercise> exercises;
 
   /// Shows the dialog and resolves to the new workout, or null if dismissed.
   ///
   /// Null covers every way out - the back gesture, the barrier, Cancel - so
   /// callers do not have to distinguish them.
-  static Future<Workout?> show(BuildContext context, {DateTime? initialDate}) {
+  static Future<Workout?> show(
+    BuildContext context, {
+    DateTime? initialDate,
+    List<LibraryExercise> exercises = const [],
+  }) {
     return showDialog<Workout>(
       context: context,
-      builder: (_) => NewWorkoutDialog(initialDate: initialDate),
+      builder: (_) =>
+          NewWorkoutDialog(initialDate: initialDate, exercises: exercises),
     );
   }
 
@@ -76,7 +96,21 @@ class _NewWorkoutDialogState extends State<NewWorkoutDialog> {
         estimatedKcal: 0,
         targetMuscleGroups: const [],
         equipment: const [],
-        logs: const [],
+        logs: [
+          for (final exercise in widget.exercises)
+            ExerciseLog(
+              exercise: Exercise(
+                name: exercise.name,
+                // The catalogue allows an empty equipment list on a malformed
+                // saved row; a blank label is better than a made-up one.
+                equipment: exercise.equipment.isEmpty
+                    ? ''
+                    : exercise.equipment.first,
+                muscleGroups: exercise.primaryMuscles,
+              ),
+              sets: const [],
+            ),
+        ],
         modality: _modality,
         split: _split,
         goal: _goal,
@@ -92,13 +126,19 @@ class _NewWorkoutDialogState extends State<NewWorkoutDialog> {
   String _defaultTitle() => 'Training ${DateFormat('MMM d').format(_date)}';
 
   Future<void> _pickDate() async {
+    // Wide enough that no calendar position reaches the edge, and the seed is
+    // clamped anyway: `showDatePicker` asserts when its initial date falls
+    // outside the range, and the date arriving here is whichever day the
+    // calendar is pointed at.
+    final firstDate = DateTime(2000);
+    final lastDate = DateTime(2100);
     final picked = await showDatePicker(
       context: context,
-      initialDate: _date,
-      // Sessions are logged for today or earlier in this flow; scheduling
-      // ahead is what the calendar tab is for.
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now().add(const Duration(days: 1)),
+      initialDate: _date.isBefore(firstDate)
+          ? firstDate
+          : (_date.isAfter(lastDate) ? lastDate : _date),
+      firstDate: firstDate,
+      lastDate: lastDate,
     );
     if (picked != null) setState(() => _date = picked);
   }

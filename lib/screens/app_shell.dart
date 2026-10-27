@@ -1,15 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
 import '../navigation/app_tab.dart';
-import '../providers/workout_provider.dart';
 import '../widgets/app_nav_bar.dart';
-import '../widgets/new_workout_dialog.dart';
+import 'calendar_screen.dart';
 import 'home_screen.dart';
 import 'library_screen.dart';
 import 'profile_screen.dart';
 import 'progress_screen.dart';
-import 'workout_detail_screen.dart';
 
 /// Hosts the root tabs and owns which one is visible.
 ///
@@ -38,24 +35,6 @@ class _AppShellState extends State<AppShell> {
     setState(() => _active = tab);
   }
 
-  /// Called when the Workout tab is selected. Opens the pre-workout screen.
-  Future<void> _onWorkoutSelected() async {
-    final provider = context.read<WorkoutProvider>();
-    final target = provider.focusWorkout ?? provider.workouts.lastOrNull;
-    final navigator = Navigator.of(context);
-
-    if (target != null) {
-      navigator.pushNamed(WorkoutDetailScreen.routeFor(target.id));
-      return;
-    }
-
-    final created = await NewWorkoutDialog.show(context);
-    if (created == null) return;
-
-    final stored = provider.addWorkout(created);
-    navigator.pushNamed(WorkoutDetailScreen.routeFor(stored.id));
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -66,11 +45,7 @@ class _AppShellState extends State<AppShell> {
             _LazyTab(tab: tab, active: _active, select: _select),
         ],
       ),
-      bottomNavigationBar: AppNavBar(
-        selected: _active,
-        onSelected: _select,
-        onWorkoutPressed: _onWorkoutSelected,
-      ),
+      bottomNavigationBar: AppNavBar(selected: _active, onSelected: _select),
     );
   }
 }
@@ -118,25 +93,9 @@ class _LazyTabState extends State<_LazyTab> {
     return switch (tab) {
       AppTab.home => HomeScreen(onSelectTab: widget.select),
       AppTab.progress => const ProgressScreen(),
-      AppTab.workout => const WorkoutTabScreen(),
+      AppTab.workout => const CalendarScreen(),
       AppTab.library => const LibraryScreen(),
       AppTab.profile => const ProfileScreen(),
     };
-  }
-}
-
-/// Workout tab - shows the pre-workout screen or creates a new workout.
-class WorkoutTabScreen extends StatelessWidget {
-  const WorkoutTabScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    // Trigger the workout action when this tab becomes visible
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final shell = context.findAncestorStateOfType<_AppShellState>();
-      shell?._onWorkoutSelected();
-    });
-
-    return const SizedBox.shrink();
   }
 }
