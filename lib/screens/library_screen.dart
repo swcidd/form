@@ -14,6 +14,7 @@ import '../providers/workout_provider.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/new_workout_dialog.dart';
+import 'exercise_detail_screen.dart';
 import 'workout_detail_screen.dart';
 
 /// Which list the library is showing.
@@ -673,10 +674,18 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 itemCount: exercises.length,
                 itemBuilder: (context, index) {
                   final exercise = exercises[index];
-                  return _ExerciseCard(
-                    exercise: exercise,
-                    saved: provider.isSaved(exercise.id),
-                    onToggleSaved: () => provider.toggleSavedExercise(exercise),
+                  // Wrapped here rather than inside the card so the bookmark,
+                  // which has its own gesture, still wins taps on itself.
+                  return GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => Navigator.of(context)
+                        .pushNamed(ExerciseDetailScreen.routeFor(exercise.id)),
+                    child: _ExerciseCard(
+                      exercise: exercise,
+                      saved: provider.isSaved(exercise.id),
+                      onToggleSaved: () =>
+                          provider.toggleSavedExercise(exercise),
+                    ),
                   );
                 },
               ),
