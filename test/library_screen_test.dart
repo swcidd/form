@@ -117,7 +117,7 @@ void main() {
 
       // 18 Oct 2026 is a Sunday, so the week runs Mon 12 → Sun 18: the five
       // finished sessions at offsets 1, 2, 3, 5 and 6, plus today's plan.
-      expect(find.text('THIS WEEK'), findsOneWidget);
+      expect(find.text('CURRENT PROGRAM'), findsOneWidget);
       expect(find.text('5 of 4 sessions done'), findsOneWidget);
       expect(find.text('WEEK OF OCT 12'), findsOneWidget);
 
@@ -325,9 +325,9 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // The panel is labelled THIS WEEK, so it cannot answer with a plan from
+      // The panel is labelled CURRENT PROGRAM, so it cannot answer with a plan from
       // three weeks out; the rotation is where that session belongs.
-      expect(find.text('THIS WEEK'), findsOneWidget);
+      expect(find.text('CURRENT PROGRAM'), findsOneWidget);
       expect(find.text('NOTHING PLANNED'), findsOneWidget);
       expect(find.text('0 of 4 sessions done'), findsOneWidget);
       expect(find.text('SESSION THREE WEEKS OUT'), findsOneWidget);
@@ -403,8 +403,15 @@ void main() {
 
       expect(find.text('SAVED EXERCISES'), findsOneWidget);
       expect(find.text('1 exercise'), findsOneWidget);
-      expect(find.text('Barbell Curl'), findsOneWidget);
-      expect(find.textContaining('biceps · saved'), findsOneWidget);
+      expect(find.text('BARBELL CURL'), findsOneWidget);
+      expect(find.text('biceps  ·  Strength'), findsOneWidget);
+      // The row carries its own saved-on stamp ("SAVED OCT 27"). The section
+      // heading above it also starts with SAVED, so this matches the stamp's
+      // shape rather than the word, which would find both.
+      expect(
+        find.textContaining(RegExp(r'^SAVED [A-Z]{3} \d{1,2}$')),
+        findsOneWidget,
+      );
     });
 
     testWidgets('removing it from Saved leaves the empty state', (
@@ -448,7 +455,7 @@ void main() {
       await tester.enterText(find.byType(TextField), 'biceps');
       await tester.pump();
 
-      expect(find.text('Barbell Curl'), findsOneWidget);
+      expect(find.text('BARBELL CURL'), findsOneWidget);
       expect(find.textContaining('No saved exercises match'), findsNothing);
     });
   });

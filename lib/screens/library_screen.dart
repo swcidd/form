@@ -8,6 +8,7 @@ import '../data/exercise_catalog.dart';
 import '../data/exercise_images.dart';
 import '../exercise_library.dart';
 import '../models/saved_exercise.dart';
+import '../models/taxonomy.dart';
 import '../models/workout.dart';
 import '../providers/workout_provider.dart';
 import '../theme/app_colors.dart';
@@ -65,17 +66,12 @@ class _LibraryScreenState extends State<LibraryScreen> {
   String _query = '';
 
   /// Narrowing applied inside Discover, on top of [ExerciseCatalog]'s own
-  /// loading. "All" is the catalogue as it came back.
-  static const String _allMuscles = 'All';
-  String _muscle = _allMuscles;
-
-  /// Categories the bundled and live sets both use.
-  static const List<String> _muscleFilters = [
-    _allMuscles,
-    'Strength',
-    'Stretching',
-    'Strongman',
-  ];
+  /// loading. Null is "All" — the catalogue as it came back.
+  ///
+  /// Driven by [ExerciseCategory] rather than a hand-written list: Plyometrics
+  /// and Powerlifting already shipped in the bundled set without a chip, and a
+  /// category that is only in the data is a category nobody can filter by.
+  ExerciseCategory? _category;
 
   @override
   void initState() {
@@ -142,6 +138,13 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final provider = context.watch<WorkoutProvider>();
+    final hasRotation = _rotation(provider).isNotEmpty;
+    // The empty library has no search field in the design: there is nothing
+    // to narrow, and the first move should be the loudest thing on screen.
+    final showSearch = _tab != LibraryTab.myWorkouts || hasRotation;
+    final showProgram = hasRotation;
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: CustomScrollView(
@@ -162,10 +165,19 @@ class _LibraryScreenState extends State<LibraryScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _searchField(),
-                  const SizedBox(height: 16),
+                  if (showSearch) ...[
+                    _searchField(),
+                    const SizedBox(height: 16),
+                  ],
                   _filterPills(),
                   const SizedBox(height: 16),
+                  // The current program heads every list, as it does in the
+                  // frames: it is the context the rest of the library sits in,
+                  // not a fourth destination of its own.
+                  if (showProgram) ...[
+                    _weekCard(provider),
+                    const SizedBox(height: 16),
+                  ],
                   switch (_tab) {
                     LibraryTab.myWorkouts => _myWorkouts(),
                     LibraryTab.discover => _discover(),
@@ -183,6 +195,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   Widget _header() {
+    final scheme = Theme.of(context).colorScheme;
     final text = context.text;
 
     return Row(
@@ -193,33 +206,41 @@ class _LibraryScreenState extends State<LibraryScreen> {
             children: [
               Text(
                 'THE TRAINING LIBRARY',
-                style: text.labelCaps.copyWith(color: AppColors.sage600),
+                style: text.annotation.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: scheme.onSurfaceVariant,
+                ),
               ),
               const SizedBox(height: 5),
-              Text('YOUR WORK. YOUR WAY.', style: text.programName),
+              Text(
+                'YOUR WORK. YOUR WAY.',
+                style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -1.28,
+                  color: scheme.onSurface,
+                ),
+              ),
             ],
           ),
         ),
-        _SquareButton(
-          icon: Icons.add_rounded,
-          tooltip: 'New workout',
-          onPressed: _createWorkout,
-        ),
+        _AddButton(tooltip: 'New workout', onPressed: _createWorkout),
       ],
     );
   }
 
   Widget _searchField() {
+    final scheme = Theme.of(context).colorScheme;
+
     return Container(
       height: 48,
       padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(
-        color: AppColors.sage50,
+        color: scheme.surfaceContainer,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         children: [
-          const Icon(Icons.search_rounded, size: 18, color: AppColors.sage600),
+          Icon(Icons.search_rounded, size: 18, color: scheme.onSurfaceVariant),
           const SizedBox(width: 10),
           Expanded(
             child: TextField(
@@ -233,11 +254,12 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 // scale resolves through google_fonts, and a hand-written
                 // family would fall back to the platform default.
                 hintStyle: Theme.of(context).textTheme.bodyMedium
-                    ?.copyWith(color: AppColors.sage600),
+                    ?.copyWith(color: scheme.onSurfaceVariant),
                 border: InputBorder.none,
                 isDense: true,
               ),
-              style: Theme.of(context).textTheme.bodyMedium,
+              style: Theme.of(context).textTheme.bodyMedium
+                  ?.copyWith(color: scheme.onSurface),
             ),
           ),
           if (_query.isNotEmpty)
@@ -248,10 +270,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
               },
               tooltip: 'Clear search',
               visualDensity: VisualDensity.compact,
-              icon: const Icon(
+              icon: Icon(
                 Icons.close_rounded,
                 size: 18,
-                color: AppColors.sage600,
+                color: scheme.onSurfaceVariant,
               ),
             ),
         ],
@@ -296,8 +318,6 @@ class _LibraryScreenState extends State<LibraryScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _weekCard(provider),
-        const SizedBox(height: 20),
         _sectionHeading('MY ROTATION', _count(visible.length, 'workout')),
         const SizedBox(height: 12),
         if (visible.isEmpty)
@@ -375,6 +395,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
         (done > 0 ? 'WEEK IN THE BOOKS' : 'NOTHING PLANNED');
 
     return _HeroPanel(
+      minHeight: 160,
       shade: const ColoredBox(color: Color(0x73121512)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -383,14 +404,17 @@ class _LibraryScreenState extends State<LibraryScreen> {
           Row(
             children: [
               Text(
-                'THIS WEEK',
-                style: text.labelCaps.copyWith(color: AppColors.lime),
+                'CURRENT PROGRAM',
+                style: text.annotation.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.lime,
+                ),
               ),
               const Spacer(),
               const Icon(
-                Icons.arrow_upward_rounded,
+                Icons.north_east_rounded,
                 size: 20,
-                color: AppColors.white,
+                color: AppColors.warmCream,
               ),
             ],
           ),
@@ -413,13 +437,19 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 borderRadius: BorderRadius.circular(2),
                 child: Stack(
                   children: [
-                    Container(
-                      height: 3,
-                      color: AppColors.white.withValues(alpha: 0.25),
+                    // The track and fill are fixed over the photograph: this
+                    // card keeps its dark scrim in both themes, so a surface
+                    // token from the current theme would disappear in light.
+                    const ColoredBox(
+                      color: AppColors.inkMuted,
+                      child: SizedBox(height: 3, width: double.infinity),
                     ),
                     FractionallySizedBox(
                       widthFactor: ratio,
-                      child: Container(height: 3, color: AppColors.lime),
+                      child: const ColoredBox(
+                        color: AppColors.lime,
+                        child: SizedBox(height: 3),
+                      ),
                     ),
                   ],
                 ),
@@ -442,6 +472,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
   /// name, time and exercise count; this offers the action that creates a real
   /// session instead of a routine nobody chose.
   Widget _emptyLibrary() {
+    final scheme = Theme.of(context).colorScheme;
     final text = context.text;
 
     return Column(
@@ -453,13 +484,13 @@ class _LibraryScreenState extends State<LibraryScreen> {
             width: 64,
             height: 64,
             decoration: BoxDecoration(
-              color: AppColors.sage50,
+              color: scheme.surfaceContainer,
               borderRadius: BorderRadius.circular(16),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.fitness_center_rounded,
               size: 32,
-              color: AppColors.ink,
+              color: scheme.onSurface,
             ),
           ),
         ),
@@ -474,7 +505,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
           'No workouts yet. Start with the basics,\n'
           "then build a library that's yours.",
           style: text.exerciseMeta.copyWith(
-            color: AppColors.sage600,
+            color: scheme.onSurfaceVariant,
             height: 1.5,
           ),
           textAlign: TextAlign.center,
@@ -484,7 +515,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
         const SizedBox(height: 20),
         Text(
           'OTHER WAYS TO START',
-          style: text.labelCaps.copyWith(color: AppColors.sage600),
+          style: text.labelCaps.copyWith(color: scheme.onSurfaceVariant),
         ),
         const SizedBox(height: 10),
         _OutlineButton(
@@ -495,7 +526,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
         const SizedBox(height: 4),
         Text(
           'Choose your exercises. Make it your own.',
-          style: text.annotation.copyWith(color: AppColors.sage600),
+          style: text.annotation.copyWith(color: scheme.onSurfaceVariant),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 12),
@@ -509,6 +540,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   Widget _firstWorkoutCard() {
+    final scheme = Theme.of(context).colorScheme;
     final text = context.text;
 
     return _HeroPanel(
@@ -553,8 +585,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 child: FilledButton(
                   onPressed: _createWorkout,
                   style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.lime,
-                    foregroundColor: AppColors.ink,
+                    backgroundColor: scheme.primary,
+                    foregroundColor: scheme.onPrimary,
                     shape: const RoundedRectangleBorder(
                       borderRadius: AppRadius.control,
                     ),
@@ -604,7 +636,12 @@ class _LibraryScreenState extends State<LibraryScreen> {
               _offlineBanner(),
               const SizedBox(height: 12),
             ],
-            _muscleChips(),
+            _categoryChips(),
+            const SizedBox(height: 16),
+            _sectionHeading(
+              'DISCOVER EXERCISES',
+              _count(exercises.length, 'exercise'),
+            ),
             const SizedBox(height: 12),
             if (exercises.isEmpty)
               Padding(
@@ -654,7 +691,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
   List<LibraryExercise> _filtered(List<LibraryExercise> exercises) {
     return [
       for (final exercise in exercises)
-        if (_inMuscle(exercise) &&
+        if (_inCategory(exercise) &&
             (_matches(exercise.name) || _matches(_muscleText(exercise))))
           exercise,
     ];
@@ -664,33 +701,34 @@ class _LibraryScreenState extends State<LibraryScreen> {
   String _muscleText(LibraryExercise exercise) =>
       [...exercise.primaryMuscles, ...exercise.secondaryMuscles].join(' ');
 
-  bool _inMuscle(LibraryExercise exercise) {
-    if (_muscle == _allMuscles) return true;
-    // The chips name categories ("Strength"), so match on the category and
-    // keep a muscle fallback for names that read like muscle groups.
-    final needle = _muscle.toLowerCase();
-    return exercise.category.toLowerCase() == needle ||
-        _muscleText(exercise).toLowerCase().contains(needle);
+  bool _inCategory(LibraryExercise exercise) {
+    final selected = _category;
+    if (selected == null) return true;
+    // The chip names a category; an entry whose category the catalogue does
+    // not recognise stays visible under "All" only, rather than disappearing
+    // from every filter.
+    return ExerciseCategory.tryParse(exercise.category) == selected;
   }
 
-  Widget _muscleChips() {
+  Widget _categoryChips() {
     final text = context.text;
+    final options = <ExerciseCategory?>[null, ...ExerciseCategory.values];
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
-          for (final muscle in _muscleFilters)
+          for (final category in options)
             Padding(
               padding: const EdgeInsets.only(right: 8),
               child: _Pill(
-                label: muscle,
-                selected: muscle == _muscle,
+                label: category?.label ?? 'All',
+                selected: category == _category,
                 labelStyle: text.annotation.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
                 compact: true,
-                onTap: () => setState(() => _muscle = muscle),
+                onTap: () => setState(() => _category = category),
               ),
             ),
         ],
@@ -701,26 +739,27 @@ class _LibraryScreenState extends State<LibraryScreen> {
   /// The offline notice: the grid is real either way, so this states where it
   /// came from instead of pretending the request answered.
   Widget _offlineBanner() {
+    final scheme = Theme.of(context).colorScheme;
     final text = context.text;
 
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 4, 4, 4),
       decoration: BoxDecoration(
-        color: AppColors.sage50,
+        color: scheme.surfaceContainer,
         borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
         children: [
-          const Icon(
+          Icon(
             Icons.cloud_off_rounded,
             size: 16,
-            color: AppColors.sage600,
+            color: scheme.onSurfaceVariant,
           ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               "Offline catalogue — wger.de couldn't be reached.",
-              style: text.previousPerf.copyWith(color: AppColors.sage600),
+              style: text.previousPerf.copyWith(color: scheme.onSurfaceVariant),
             ),
           ),
           TextButton(onPressed: _reload, child: const Text('Retry')),
@@ -801,7 +840,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
         const SizedBox(height: 8),
         Text(
           'Keep an exercise from Discover and it waits here.',
-          style: context.text.exerciseMeta.copyWith(color: AppColors.sage600),
+          style: context.text.exerciseMeta.copyWith(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 16),
@@ -817,32 +858,41 @@ class _LibraryScreenState extends State<LibraryScreen> {
   // --------------------------------------------------------------- shared bits
 
   Widget _sectionHeading(String label, String trailing) {
+    final scheme = Theme.of(context).colorScheme;
     final text = context.text;
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: text.labelCaps.copyWith(color: AppColors.sage600)),
+        Text(
+          label,
+          style: text.annotation.copyWith(
+            fontWeight: FontWeight.w600,
+            color: scheme.onSurfaceVariant,
+          ),
+        ),
         Text(
           trailing,
-          style: text.previousPerf.copyWith(color: AppColors.sage600),
+          style: text.previousPerf.copyWith(color: scheme.onSurfaceVariant),
         ),
       ],
     );
   }
 
   Widget _note(String message) {
+    final scheme = Theme.of(context).colorScheme;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.white,
+        color: scheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.hairline),
+        border: Border.all(color: scheme.outlineVariant),
       ),
       child: Text(
         message,
         style: context.text.exerciseMeta.copyWith(
-          color: AppColors.sage600,
+          color: scheme.onSurfaceVariant,
           height: 1.5,
         ),
       ),
@@ -861,7 +911,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
     return Text(
       'Exercise data: wger.de (CC BY-SA 3.0/4.0) · exercemus (MIT) · '
       'free-exercise-db (public domain). Exercise photos: Unsplash.',
-      style: context.text.annotation.copyWith(color: AppColors.sage600),
+      style: context.text.annotation.copyWith(
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+      ),
     );
   }
 
@@ -937,6 +989,7 @@ class _RotationEntry {
         '${workout.logs.length} '
             '${workout.logs.length == 1 ? 'exercise' : 'exercises'}',
       if (workout.durationMin > 0) '${workout.durationMin} min',
+      if (workout.modality != null) workout.modality!.label,
       if (workout.targetMuscleGroups.isNotEmpty)
         workout.targetMuscleGroups.first,
     ];
@@ -965,6 +1018,8 @@ class _Pill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -972,16 +1027,16 @@ class _Pill extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: selected ? AppColors.ink : AppColors.warmCream,
+          color: scheme.surfaceContainer,
           borderRadius: BorderRadius.circular(100),
           border: Border.all(
-            color: selected ? AppColors.ink : AppColors.hairline,
+            color: selected ? scheme.onSurface : scheme.outlineVariant,
           ),
         ),
         child: Text(
           label,
           style: labelStyle.copyWith(
-            color: selected ? AppColors.lime : AppColors.sage600,
+            color: selected ? scheme.primary : scheme.onSurfaceVariant,
           ),
         ),
       ),
@@ -989,15 +1044,13 @@ class _Pill extends StatelessWidget {
   }
 }
 
-/// A square icon button, matching the header's plus in the design.
-class _SquareButton extends StatelessWidget {
-  const _SquareButton({
-    required this.icon,
-    required this.tooltip,
-    required this.onPressed,
-  });
+/// The bare plus in the header.
+///
+/// The design sets a 22px glyph on the page rather than on a filled tile, so
+/// the button keeps a full 44px target without drawing a surface around it.
+class _AddButton extends StatelessWidget {
+  const _AddButton({required this.tooltip, required this.onPressed});
 
-  final IconData icon;
   final String tooltip;
   final VoidCallback onPressed;
 
@@ -1006,11 +1059,11 @@ class _SquareButton extends StatelessWidget {
     return IconButton(
       onPressed: onPressed,
       tooltip: tooltip,
-      icon: Icon(icon, size: 22),
+      icon: const Icon(Icons.add_rounded, size: 22),
       style: IconButton.styleFrom(
-        foregroundColor: AppColors.ink,
-        backgroundColor: AppColors.sage50,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
+        backgroundColor: Colors.transparent,
+        minimumSize: const Size(44, 44),
       ),
     );
   }
@@ -1025,7 +1078,7 @@ class _HeroPanel extends StatelessWidget {
   const _HeroPanel({
     required this.child,
     required this.shade,
-    this.minHeight = 168,
+    this.minHeight = 160,
   });
 
   final Widget child;
@@ -1068,6 +1121,7 @@ class _RotationRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final text = context.text;
 
     return GestureDetector(
@@ -1075,9 +1129,9 @@ class _RotationRow extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: AppColors.white,
+          color: scheme.surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.hairline),
+          border: Border.all(color: scheme.outlineVariant),
         ),
         child: Row(
           children: [
@@ -1085,13 +1139,13 @@ class _RotationRow extends StatelessWidget {
               width: 50,
               height: 50,
               decoration: BoxDecoration(
-                color: AppColors.sage50,
+                color: scheme.surfaceContainerHigh,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(
                 _iconFor(entry.workout.targetMuscleGroups),
                 size: 26,
-                color: AppColors.ink,
+                color: scheme.onSurface,
               ),
             ),
             const SizedBox(width: 14),
@@ -1101,7 +1155,10 @@ class _RotationRow extends StatelessWidget {
                 children: [
                   Text(
                     entry.label,
-                    style: text.labelCaps.copyWith(color: AppColors.sage600),
+                    style: text.annotation.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: scheme.onSurfaceVariant,
+                    ),
                   ),
                   Text(
                     entry.title.toUpperCase(),
@@ -1116,7 +1173,7 @@ class _RotationRow extends StatelessWidget {
                     Text(
                       entry.meta,
                       style: text.previousPerf.copyWith(
-                        color: AppColors.sage600,
+                        color: scheme.onSurfaceVariant,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -1124,10 +1181,10 @@ class _RotationRow extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(
-              Icons.arrow_outward_rounded,
+            Icon(
+              Icons.north_east_rounded,
               size: 18,
-              color: AppColors.sage600,
+              color: scheme.onSurfaceVariant,
             ),
           ],
         ),
@@ -1169,6 +1226,8 @@ class _Bookmark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
     return IconButton(
       onPressed: onToggle,
       tooltip: isSaved ? 'Remove from saved' : 'Save this exercise',
@@ -1178,14 +1237,26 @@ class _Bookmark extends StatelessWidget {
       icon: Icon(
         isSaved ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
         size: 20,
-        color: isSaved ? AppColors.ink : AppColors.sage600,
+        color: isSaved ? scheme.primary : scheme.onSurfaceVariant,
       ),
       style: IconButton.styleFrom(
-        backgroundColor: AppColors.white.withValues(alpha: 0.9),
+        backgroundColor: scheme.surface.withValues(alpha: 0.9),
         shape: const CircleBorder(),
       ),
     );
   }
+}
+
+/// The symbol a saved exercise leads with.
+IconData _iconForCategory(String category) {
+  return switch (ExerciseCategory.tryParse(category)) {
+    ExerciseCategory.cardio => Icons.directions_run_rounded,
+    ExerciseCategory.mobility => Icons.self_improvement_rounded,
+    ExerciseCategory.plyometrics => Icons.bolt_rounded,
+    ExerciseCategory.calisthenics ||
+    ExerciseCategory.calisthenicSkills => Icons.accessibility_new_rounded,
+    _ => Icons.fitness_center_rounded,
+  };
 }
 
 /// One kept exercise, with the way out of the list.
@@ -1197,15 +1268,22 @@ class _SavedRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final text = context.text;
     final exercise = entry.exercise;
+
+    final meta = <String>[
+      if (exercise.primaryMuscle.isNotEmpty) exercise.primaryMuscle,
+      exercise.categoryLabel,
+      if (exercise.level != null) exercise.level!,
+    ].join('  ·  ');
 
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.white,
+        color: scheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.hairline),
+        border: Border.all(color: scheme.outlineVariant),
       ),
       child: Row(
         children: [
@@ -1213,13 +1291,13 @@ class _SavedRow extends StatelessWidget {
             width: 50,
             height: 50,
             decoration: BoxDecoration(
-              color: AppColors.sage50,
+              color: scheme.surfaceContainerHigh,
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Icon(
-              Icons.bookmark_rounded,
-              size: 24,
-              color: AppColors.ink,
+            child: Icon(
+              _iconForCategory(exercise.category),
+              size: 26,
+              color: scheme.onSurface,
             ),
           ),
           const SizedBox(width: 14),
@@ -1228,17 +1306,25 @@ class _SavedRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  exercise.name,
-                  style: text.exerciseMeta.copyWith(
+                  'SAVED ${DateFormat('MMM d').format(entry.savedAt).toUpperCase()}',
+                  style: text.annotation.copyWith(
                     fontWeight: FontWeight.w600,
+                    color: scheme.onSurfaceVariant,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
-                  '${exercise.primaryMuscle} · saved '
-                  '${DateFormat('MMM d').format(entry.savedAt)}',
-                  style: text.annotation.copyWith(color: AppColors.sage600),
+                  exercise.name.toUpperCase(),
+                  style: text.programBadge,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  meta,
+                  style: text.previousPerf.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -1249,10 +1335,10 @@ class _SavedRow extends StatelessWidget {
             onPressed: onRemove,
             tooltip: 'Remove from saved',
             visualDensity: VisualDensity.compact,
-            icon: const Icon(
+            icon: Icon(
               Icons.bookmark_remove_rounded,
               size: 20,
-              color: AppColors.sage600,
+              color: scheme.onSurfaceVariant,
             ),
           ),
         ],
@@ -1275,6 +1361,8 @@ class _OutlineButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
     return SizedBox(
       height: 48,
       child: OutlinedButton.icon(
@@ -1282,8 +1370,8 @@ class _OutlineButton extends StatelessWidget {
         icon: Icon(icon, size: 18),
         label: Text(label),
         style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.ink,
-          side: const BorderSide(color: AppColors.hairline),
+          foregroundColor: scheme.onSurface,
+          side: BorderSide(color: scheme.outlineVariant),
           shape: const RoundedRectangleBorder(borderRadius: AppRadius.control),
         ),
       ),
@@ -1308,20 +1396,21 @@ class _ExerciseCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final text = context.text;
     final bundled = ExerciseImages.bundledAsset(exercise);
-    const placeholder = Icon(
+    final placeholder = Icon(
       Icons.fitness_center_rounded,
       size: 30,
-      color: AppColors.ink,
+      color: scheme.onSurface,
     );
 
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.white,
+        color: scheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.hairline),
+        border: Border.all(color: scheme.outlineVariant),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1332,7 +1421,7 @@ class _ExerciseCard extends StatelessWidget {
                 width: double.infinity,
                 height: 80,
                 decoration: BoxDecoration(
-                  color: AppColors.sage50,
+                  color: scheme.surfaceContainerHigh,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: ClipRRect(
@@ -1392,7 +1481,7 @@ class _ExerciseCard extends StatelessWidget {
                       Text(
                         exercise.primaryMuscle,
                         style: text.annotation.copyWith(
-                          color: AppColors.sage600,
+                          color: scheme.onSurfaceVariant,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -1403,7 +1492,7 @@ class _ExerciseCard extends StatelessWidget {
                           child: Text(
                             exercise.tipsText!,
                             style: text.annotation.copyWith(
-                              color: AppColors.sage600,
+                              color: scheme.onSurfaceVariant,
                             ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
@@ -1414,9 +1503,10 @@ class _ExerciseCard extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  (exercise.level ?? 'beginner').toUpperCase(),
+                  '${categoryLabel(exercise.category).toUpperCase()} · '
+                  '${(exercise.level ?? 'beginner').toUpperCase()}',
                   style: text.annotation.copyWith(
-                    color: AppColors.sage600,
+                    color: scheme.onSurfaceVariant,
                     fontWeight: FontWeight.w600,
                   ),
                   maxLines: 1,
