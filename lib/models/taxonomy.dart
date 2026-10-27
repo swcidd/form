@@ -165,7 +165,8 @@ enum TrainingGoal {
   hypertrophy('hypertrophy', 'Hypertrophy'),
   endurance('endurance', 'Endurance'),
   power('power', 'Power'),
-  general('general', 'General');
+  general('general', 'General'),
+  skills('skills', 'Skills');
 
   const TrainingGoal(this.wire, this.label);
 
