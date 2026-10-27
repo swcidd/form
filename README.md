@@ -217,9 +217,19 @@ flutter run
 ### Check it
 
 ```bash
-dart format --output=none --set-exit-if-changed lib test tool
-flutter analyze
-flutter test
+./tool/check.sh
+```
+
+That runs `dart format --output=none --set-exit-if-changed lib test tool`,
+`flutter analyze` and `flutter test`, in that order, stopping at the first one
+that fails. It is a script rather than a hosted workflow on purpose: it needs no
+account, no runner and no network, so it behaves the same on a fresh clone and on
+a machine that cannot reach a CI service.
+
+One line makes git refuse a push that would land a red tree:
+
+```bash
+git config core.hooksPath .githooks
 ```
 
 ### Build a release APK
@@ -246,7 +256,7 @@ the keystore lives in a gitignored `android/key.properties`.
 - **Review**: every PR got inline review comments on the lines that carried a
   decision (identity, schema, lifecycle), not a rubber stamp, and was merged only
   with the suite green on the merged tree.
-- **Tests**: 328 widget, provider and database tests. The dangerous parts are
+- **Tests**: 347 widget, provider and database tests. The dangerous parts are
   covered directly: the v3 → v8 migration builds an old database by hand, the
   v5 → v8, v6 → v8 and v7 → v8 migrations leave the date of birth unset and the
   units metric, signing in as somebody else asserts the old store is disposed,
