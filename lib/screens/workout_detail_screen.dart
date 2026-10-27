@@ -2,17 +2,26 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../models/exercise.dart';
+import '../models/library_exercise.dart';
 import '../models/workout.dart';
 import '../providers/workout_provider.dart';
 import '../theme/app_typography.dart';
+import 'add_exercise_screen.dart';
 import 'edit_workout_screen.dart';
 import 'set_logging_screen.dart';
 
-/// Pre-workout screen: what the session is, and the button that starts it.
+/// Pre-workout screen: what the session is, and how the user works on it.
 ///
-/// The layout follows the Figma "Train · Lower body detail" frame: a compact
-/// toolbar, a photographic title band, the focus the plan was built around,
-/// the exercise line-up with its rest notes, and one full-width action.
+/// The layout follows the Figma "Library · Selected Workout Session" frames —
+/// the filled one and the empty one: a compact toolbar, a photographic title
+/// band, the focus the plan was built around, the exercise line-up (or the
+/// framed empty block when there is none), and the action band that adds an
+/// exercise and starts the session.
+///
+/// It is also the hub for everything else about the session, which is why the
+/// edit affordance sits beside the line-up rather than in the toolbar: the
+/// frame puts it there, and it is what the user reaches for while reading the
+/// plan.
 class WorkoutDetailScreen extends StatelessWidget {
   const WorkoutDetailScreen({super.key, this.route});
 
@@ -34,6 +43,8 @@ class WorkoutDetailScreen extends StatelessWidget {
     final workout = id == null ? null : provider.byId(id);
 
     if (workout == null) return const _NotFound();
+
+    final hasExercises = workout.logs.isNotEmpty;
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -60,11 +71,13 @@ class WorkoutDetailScreen extends StatelessWidget {
                           _Focus(workout: workout),
                           const SizedBox(height: 8),
                         ],
-                        _LineupHeading(count: workout.logs.length),
-                        if (workout.logs.isEmpty)
-                          const _NoExercises()
+                        _LineupHeading(
+                          onEdit: () => _openEditor(context, workout),
+                        ),
+                        if (hasExercises)
+                          _Lineup(logs: workout.logs)
                         else
-                          _Lineup(logs: workout.logs),
+                          const _EmptyExercises(),
                       ],
                     ),
                   ),
@@ -72,11 +85,66 @@ class WorkoutDetailScreen extends StatelessWidget {
               ],
             ),
           ),
-          _StartWorkoutButton(workout: workout),
+          _ActionBand(
+            hasExercises: hasExercises,
+            onAddExercise: () => _addExercises(context, workout),
+            onStart: () =>
+                Navigator.of(context)
+                    .pushNamed(SetLoggingScreen.routeFor(workout.id)),
+          ),
         ],
       ),
     );
   }
+
+  /// Opens the editor for [workout]. A plain push, because the edit screen
+  /// writes the change through the store itself.
+  void _openEditor(BuildContext context, Workout workout) {
+    Navigator.of(context).pushNamed(EditWorkoutScreen.routeFor(workout.id));
+  }
+
+  /// Runs the Add Exercise picker and appends what it returns to the line-up.
+  ///
+  /// Nothing is written until the picker hands something back: a dismissed
+  /// screen — the back gesture, or Cancel — returns null, so backing out of the
+  /// picker leaves the session exactly as it was. The append is done against
+  /// the workout as the store holds it now rather than the copy this build
+  /// captured, so a picker that outlived an edit still lands on the latest
+  /// record.
+  Future<void> _addExercises(BuildContext context, Workout workout) async {
+    final provider = context.read<WorkoutProvider>();
+    final picked = await Navigator.of(context)
+        .pushNamed<List<LibraryExercise>>(AddExerciseScreen.routeName);
+    if (picked == null || picked.isEmpty) return;
+
+    final current = provider.byId(workout.id);
+    if (current == null) return;
+    provider.updateWorkout(
+      current.copyWith(
+        logs: [
+          ...current.logs,
+          for (final exercise in picked) _logFrom(exercise),
+        ],
+      ),
+    );
+  }
+
+  /// One catalogue entry as a planned log, mapped the same way the
+  /// new-workout dialog maps a picked exercise.
+  ///
+  /// No sets are invented: an exercise chosen here lands with everything the
+  /// logging screen already knows how to fill in, rather than opening on
+  /// numbers nobody chose.
+  static ExerciseLog _logFrom(LibraryExercise exercise) => ExerciseLog(
+    exercise: Exercise(
+      name: exercise.name,
+      // The catalogue allows an empty equipment list on a malformed saved row;
+      // a blank label is better than a made-up one.
+      equipment: exercise.equipment.isEmpty ? '' : exercise.equipment.first,
+      muscleGroups: exercise.primaryMuscles,
+    ),
+    sets: const [],
+  );
 
   static String? _idFromPath(String? routeName) {
     if (routeName == null) return null;
@@ -156,7 +224,7 @@ class _Toolbar extends StatelessWidget {
             const SizedBox(width: 8),
             GestureDetector(
               behavior: HitTestBehavior.opaque,
-              onTap: () => _showActions(context),
+              onTap: () => _confirmDelete(context),
               child: SizedBox(
                 width: 44,
                 height: 44,
@@ -173,12 +241,14 @@ class _Toolbar extends StatelessWidget {
     );
   }
 
-  /// Edit and delete, behind the toolbar's overflow.
+  /// The toolbar's overflow: the session's one remaining destructive action.
   ///
-  /// Both are rare next to logging a set, and the design keeps the toolbar to
-  /// one action per side. Edit is the only way into the edit screen, and delete
-  /// is the only way to remove a session, so neither can be dropped.
-  Future<void> _showActions(BuildContext context) async {
+  /// The design's toolbar is icon-only and shows no overflow, but delete is the
+  /// only way to remove a session and there is nowhere else in the frame to put
+  /// it, so it stays behind the gesture it has always been behind rather than
+  /// being dropped. It is on its own now — edit has moved into the line-up
+  /// header, where the frame draws it.
+  Future<void> _confirmDelete(BuildContext context) async {
     final provider = context.read<WorkoutProvider>();
     final navigator = Navigator.of(context);
 
@@ -189,11 +259,6 @@ class _Toolbar extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.edit_outlined),
-              title: const Text('Edit workout'),
-              onTap: () => Navigator.of(sheet).pop('edit'),
-            ),
-            ListTile(
               leading: const Icon(Icons.delete_outline_rounded),
               title: const Text('Delete session'),
               onTap: () => Navigator.of(sheet).pop('delete'),
@@ -203,10 +268,6 @@ class _Toolbar extends StatelessWidget {
       ),
     );
 
-    if (choice == 'edit') {
-      await navigator.pushNamed(EditWorkoutScreen.routeFor(workout.id));
-      return;
-    }
     if (choice != 'delete') return;
     // The sheet awaited above; the screen may be gone by now.
     if (!context.mounted) return;
@@ -361,9 +422,9 @@ class _Focus extends StatelessWidget {
 }
 
 class _LineupHeading extends StatelessWidget {
-  const _LineupHeading({required this.count});
+  const _LineupHeading({required this.onEdit});
 
-  final int count;
+  final VoidCallback onEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -379,11 +440,25 @@ class _LineupHeading extends StatelessWidget {
             style: text.labelCaps.copyWith(color: scheme.onSurfaceVariant),
           ),
           const Spacer(),
-          Text(
-            '$count ${count == 1 ? 'exercise' : 'exercises'}',
-            style: text.annotation.copyWith(
-              fontSize: 11,
-              color: scheme.onSurfaceVariant,
+          // The frame's 90x44 Edit action: edit lives here now rather than in
+          // the toolbar's overflow, because the line-up is what it changes.
+          GestureDetector(
+            onTap: onEdit,
+            behavior: HitTestBehavior.opaque,
+            child: SizedBox(
+              width: 90,
+              height: 44,
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: Text(
+                  'Edit workout',
+                  style: text.exerciseMeta.copyWith(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: scheme.primary,
+                  ),
+                ),
+              ),
             ),
           ),
         ],
@@ -487,77 +562,194 @@ class _ExerciseRow extends StatelessWidget {
   }
 }
 
-class _NoExercises extends StatelessWidget {
-  const _NoExercises();
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 20),
-      child: Text(
-        'This session has no exercises yet. Add one on the logging screen '
-        'when you start training.',
-        style: context.text.annotation.copyWith(
-          height: 1.5,
-          color: scheme.onSurfaceVariant,
-        ),
-      ),
-    );
-  }
-}
-
-class _StartWorkoutButton extends StatelessWidget {
-  const _StartWorkoutButton({required this.workout});
-
-  final Workout workout;
+/// The empty variant of the line-up: the framed block the empty frame draws in
+/// place of the exercise rows.
+///
+/// A surface rather than bare text, so an empty session reads as a deliberate
+/// state instead of a section that failed to load — and the Add Exercise action
+/// in the band below is the way out of it.
+class _EmptyExercises extends StatelessWidget {
+  const _EmptyExercises();
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final text = context.text;
 
+    return Container(
+      height: 336,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainerHigh,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(
+              Icons.fitness_center_rounded,
+              size: 28,
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'NOTHING LINED UP YET',
+            textAlign: TextAlign.center,
+            style: text.programBadge.copyWith(fontSize: 26),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'This session has no exercises yet.',
+            textAlign: TextAlign.center,
+            style: text.exerciseMeta.copyWith(
+              fontSize: 13,
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The action band at the foot of the screen: add to the line-up, and start.
+///
+/// Laid out from the frame's 112-tall band — two 56-tall controls side by side
+/// with a 12 gap, sized 152 and 190 so they fill the frame's 354 of content
+/// width exactly. The empty session drops the band to Add Exercise alone,
+/// because there is nothing yet to start.
+class _ActionBand extends StatelessWidget {
+  const _ActionBand({
+    required this.hasExercises,
+    required this.onAddExercise,
+    required this.onStart,
+  });
+
+  final bool hasExercises;
+  final VoidCallback onAddExercise;
+  final VoidCallback onStart;
+
+  @override
+  Widget build(BuildContext context) {
     return SafeArea(
       top: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 8, 24, 12),
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
         child: SizedBox(
           height: 56,
-          child: FilledButton(
-            onPressed: () {
-              Navigator.of(context)
-                  .pushNamed(SetLoggingScreen.routeFor(workout.id));
-            },
-            style: FilledButton.styleFrom(
-              backgroundColor: scheme.primary,
-              foregroundColor: scheme.onPrimary,
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+          child: Row(
+            children: [
+              Expanded(
+                flex: 152,
+                child: _AddExerciseButton(onPressed: onAddExercise),
               ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Start workout',
-                  style: text.labelCaps.copyWith(
-                    fontSize: 14,
-                    letterSpacing: 0,
-                    fontWeight: FontWeight.w700,
-                    color: scheme.onPrimary,
-                  ),
-                ),
-                Icon(
-                  Icons.play_arrow_rounded,
-                  size: 22,
-                  color: scheme.onPrimary,
+              if (hasExercises) ...[
+                const SizedBox(width: 12),
+                Expanded(
+                  flex: 190,
+                  child: _StartWorkoutButton(onPressed: onStart),
                 ),
               ],
-            ),
+            ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// The design's secondary action: a tonal 56-tall control with the add glyph.
+class _AddExerciseButton extends StatelessWidget {
+  const _AddExerciseButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final text = context.text;
+
+    return FilledButton(
+      onPressed: onPressed,
+      style: FilledButton.styleFrom(
+        backgroundColor: scheme.surfaceContainerHigh,
+        foregroundColor: scheme.onSurface,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
+      // The label gives way before the control does: at the frame's width both
+      // sit side by side with room to spare, but a 320dp phone cannot hold the
+      // two at their full size, and ellipsis beats an overflow stripe.
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.add_rounded, size: 22, color: scheme.onSurface),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              'Add Exercise',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: text.exerciseMeta.copyWith(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: scheme.onSurface,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The design's primary action: an ink-filled control that opens the log.
+class _StartWorkoutButton extends StatelessWidget {
+  const _StartWorkoutButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final text = context.text;
+
+    return FilledButton(
+      onPressed: onPressed,
+      style: FilledButton.styleFrom(
+        backgroundColor: scheme.primary,
+        foregroundColor: scheme.onPrimary,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Flexible(
+            child: Text(
+              'Start workout',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: text.labelCaps.copyWith(
+                fontSize: 14,
+                letterSpacing: 0,
+                fontWeight: FontWeight.w700,
+                color: scheme.onPrimary,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Icon(Icons.play_arrow_rounded, size: 22, color: scheme.onPrimary),
+        ],
       ),
     );
   }
