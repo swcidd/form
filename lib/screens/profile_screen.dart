@@ -11,6 +11,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/brand_app_bar.dart';
 import '../widgets/change_password_sheet.dart';
+import '../widgets/edit_body_sheet.dart';
 import '../widgets/progress_bar.dart';
 import '../widgets/pressable.dart';
 import '../widgets/section_header.dart';
@@ -61,7 +62,11 @@ class ProfileScreen extends StatelessWidget {
           const SizedBox(height: 12),
           _weeklyTarget(context, provider),
           const SizedBox(height: 28),
-          const SectionHeader(label: 'Body'),
+          SectionHeader(
+            label: 'Body',
+            actionLabel: 'Edit',
+            onAction: () => showEditBodySheet(context),
+          ),
           const SizedBox(height: 12),
           _body(profile),
           const SizedBox(height: 28),
@@ -296,15 +301,17 @@ class ProfileScreen extends StatelessWidget {
           children: [
             Expanded(
               child: StatTile(
-                value: _decimal(profile.weightKg, 1),
-                label: 'Weight (kg)',
+                value: profile.weightImperial
+                    ? _decimal(profile.weightKg * _poundsPerKilogram, 1)
+                    : _decimal(profile.weightKg, 1),
+                label: profile.weightImperial ? 'Weight (lb)' : 'Weight (kg)',
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: StatTile(
-                value: _decimal(profile.heightCm, 0),
-                label: 'Height (cm)',
+                value: _height(profile),
+                label: profile.heightImperial ? 'Height (ft)' : 'Height (cm)',
               ),
             ),
           ],
@@ -314,11 +321,22 @@ class ProfileScreen extends StatelessWidget {
           children: [
             Expanded(
               child: StatTile(
+                value: profile.age == 0 ? '—' : '${profile.age}',
+                label: 'Age',
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: StatTile(
                 value: _decimal(profile.bodyFatPct, 1),
                 label: 'Body fat (%)',
               ),
             ),
-            const SizedBox(width: 12),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
             Expanded(
               child: StatTile(
                 value: _decimal(profile.restingHrBpm, 0),
@@ -412,6 +430,21 @@ class ProfileScreen extends StatelessWidget {
   /// fact the app has not been told.
   static String _decimal(num value, int places) =>
       value == 0 ? '—' : value.toStringAsFixed(places);
+
+  /// The stored height is always centimetres; this writes it the way the
+  /// athlete chose at sign-up or in the body editor.
+  static String _height(ProfileStats profile) {
+    if (profile.heightCm <= 0) return '—';
+    if (!profile.heightImperial) return _decimal(profile.heightCm, 0);
+
+    final totalInches = (profile.heightCm / _centimetresPerInch).round();
+    final feet = totalInches ~/ 12;
+    final inches = totalInches % 12;
+    return '$feet\'$inches"';
+  }
+
+  static const double _centimetresPerInch = 2.54;
+  static const double _poundsPerKilogram = 2.2046226218;
 
   // ------------------------------------------------------------------ account
 

@@ -9,10 +9,12 @@ import '../theme/app_typography.dart';
 /// anywhere else. Shared so the sign-in and create-account screens cannot set
 /// them at different sizes.
 class AuthIntro extends StatelessWidget {
-  const AuthIntro({super.key, required this.title, required this.subtitle});
+  const AuthIntro({super.key, required this.title, this.subtitle});
 
   final String title;
-  final String subtitle;
+
+  /// The sentence under the heading. Sign-up omits it.
+  final String? subtitle;
 
   @override
   Widget build(BuildContext context) {
@@ -30,14 +32,16 @@ class AuthIntro extends StatelessWidget {
             height: 1.1,
           ),
         ),
-        const SizedBox(height: 6),
-        Text(
-          subtitle,
-          style: text.exerciseMeta.copyWith(
-            fontSize: 13,
-            color: scheme.onSurfaceVariant,
+        if (subtitle != null) ...[
+          const SizedBox(height: 6),
+          Text(
+            subtitle!,
+            style: text.exerciseMeta.copyWith(
+              fontSize: 13,
+              color: scheme.onSurfaceVariant,
+            ),
           ),
-        ),
+        ],
       ],
     );
   }

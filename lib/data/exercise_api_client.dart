@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
-import '../exercise_library.dart';
+import '../models/library_exercise.dart';
 
 /// Raised when the wger REST API cannot be reached or sends unusable data.
 ///

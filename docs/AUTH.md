@@ -65,7 +65,7 @@ uses:
 
 | Seam | Supabase | What the app already does with it |
 | --- | --- | --- |
-| `createAccount` | `signUp(email:, password:, data: {'display_name': …})`; a null session means the confirmation mail is on its way | returns `ConfirmationSent`, the create-account screen becomes "check your inbox" |
+| `createAccount` | `signUp(email:, password:, data: {'display_name': …, 'date_of_birth': …, 'height_cm': …, 'weight_kg': …})`; a null session means the confirmation mail is on its way | returns `ConfirmationSent`, the account step becomes "check your inbox" |
 | `signIn` | `signInWithPassword`; `email_not_confirmed` maps to `emailNotConfirmed` | the same banner vocabulary, no new screen |
 | `restoreSession` | `currentSession`, refreshed by the client | the gate opens on the right account before the first frame |
 | `changePassword` | `signInWithPassword` with the typed current password, then `updateUser(password:)` | the same sheet, including "that is not your current password" |
@@ -73,9 +73,10 @@ uses:
 | `continueOffline` | nothing to call — the device account is local by design | the demo keeps working with the radio off |
 
 Supabase keeps its own access and refresh tokens inside its client, so `Session`
-stays the three facts the app actually reads: `userId`, `issuedAt` and the two
-display fields. No token is written to the app's own tables, and no screen would
-have to learn what one is.
+stays the facts the app actually reads: `userId`, `issuedAt`, `email` and
+`displayName`. No token is written to the app's own tables, and no screen would
+have to learn what one is. The sign-up measurements are seeded into the local
+profile, where the profile screen reads and edits them.
 
 Two things this deliberately does *not* do: ship a project URL or key (there is
 no project, and the assignment rules out credentials in a public repository),
@@ -178,25 +179,32 @@ Migration v4 rebuilds rather than alters, because SQLite cannot change a primary
 key in place and the key on the id alone means the second account to create a
 workout silently fails to save it. Rows written before accounts existed belong to
 the device account, so an upgraded install opens on its own training instead of
-an empty app.
+an empty app. v7 adds a nullable `dateOfBirth` to the profile; rows written
+before the question existed keep no answer rather than inventing one. v6 wrote
+an integer age instead; a v6 file keeps that unused column and gains the date,
+so a build from that branch still opens. v8 adds `heightImperial` and
+`weightImperial`, both defaulting to metric, so the profile can keep writing the
+measurements in the unit the athlete chose.
 
 ## Deliberately not here
 
 | Not built | Why |
 | --- | --- |
-| The design's date-of-birth step | No column stores it and no screen reads it. It would be a form field kept for its own sake. |
 | Apple and Google sign-in | Inert without a credential provider; they would be buttons that fail. |
 | "Forgot password?" | A local account has no recovery channel. The honest version of that button is "delete the account and start again", which the profile already offers, and which says what it takes. |
 | Email verification, password reset by email, sync | All of them are the server's job, and there is no server. |
 | Encryption of the training data | Out of scope for this submission, and worth saying plainly rather than implying the account protects it. |
 
-The sign-up screen is also one screen rather than the design's three
-(Name → Age → Account): name is optional, email and password are the two things
-an account actually needs, and the confirmation-password field is a second entry
-for a value the app is about to hash anyway. The change-password sheet follows
-the same rule — current password and new password, no second copy — so the app
-asks for a password the same way everywhere. These deviations are recorded in
-the pull request that added the screens.
+The sign-up is four steps, in the design's order: name, age, measurements, then
+the credentials. Age is asked for as a date of birth in day, month and year
+lists; the profile stores the date and reads the age from it. Height is stored
+in centimetres and weight in kilograms; the FEET | CENTIMETERS and POUNDS |
+KILOGRAMS toggles convert what is typed and record which unit was chosen, so
+the profile shows the same one. The same date and measurement fields edit the
+body from the profile. The confirmation-password field is still not there: it is a second
+entry for a value the app is about to hash anyway. The change-password sheet
+follows the same rule — current password and new password, no second copy — so
+the app asks for a password the same way everywhere.
 
 ## Tests
 
@@ -207,5 +215,5 @@ the pull request that added the screens.
 | `test/auth_provider_test.dart` | Status transitions, `busy` held in a `finally`, failures passed on |
 | `test/auth_screens_test.dart` | The screens and the gate, driven through the UI, including a sign-up that needs confirming |
 | `test/session_store_test.dart` | The app builds the store for the account the session names |
-| `test/data/database_test.dart` | v1→v3, v3→v4 on a genuinely old-shaped file, and per-account partitioning |
-| `test/profile_screen_test.dart` | The account section: who it is, change the password, sign out, delete asking first |
+| `test/data/database_test.dart` | v1→v8, v3→v8 on a genuinely old-shaped file, v5→v8, v6→v8, v7→v8, and per-account partitioning |
+| `test/profile_screen_test.dart` | Editing the body, and the account section: who it is, change the password, sign out, delete asking first |

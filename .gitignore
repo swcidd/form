@@ -33,6 +33,10 @@ migrate_working_dir/
 /build/
 /coverage/
 
+# Flutter writes golden-mismatch diffs beside the test that produced them, so
+# tool/screenshot_test.dart drops its failing images in here.
+/tool/failures/
+
 # Symbolication related
 app.*.symbols
 

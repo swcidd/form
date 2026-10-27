@@ -3,10 +3,11 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 
-import '../exercise_library.dart';
+import '../models/library_exercise.dart';
 import '../models/exercise.dart';
 import '../models/profile_stats.dart';
 import '../models/saved_exercise.dart';
+import '../models/taxonomy.dart';
 import '../models/workout.dart';
 import 'app_database.dart';
 
@@ -170,8 +171,13 @@ class WorkoutRepository {
       role: row['role']! as String,
       memberSince: row['memberSince']! as String,
       isPro: (row['isPro']! as int) == 1,
+      dateOfBirth: row['dateOfBirth'] is String
+          ? DateTime.tryParse(row['dateOfBirth'] as String)
+          : null,
       weightKg: (row['weightKg']! as num).toDouble(),
       heightCm: (row['heightCm']! as num).toDouble(),
+      heightImperial: (row['heightImperial']! as int) == 1,
+      weightImperial: (row['weightImperial']! as int) == 1,
       bodyFatPct: (row['bodyFatPct']! as num).toDouble(),
       restingHrBpm: row['restingHrBpm']! as int,
       totalWorkouts: row['totalWorkouts']! as int,
@@ -276,30 +282,40 @@ class WorkoutRepository {
       where: 'userId = ?',
       whereArgs: [userId],
     );
-    await db.insert(AppDatabase.profileTable, {
-      'userId': userId,
-      'name': profile.name,
-      'handle': profile.handle,
-      'role': profile.role,
-      'memberSince': profile.memberSince,
-      'isPro': profile.isPro ? 1 : 0,
-      'weightKg': profile.weightKg,
-      'heightCm': profile.heightCm,
-      'bodyFatPct': profile.bodyFatPct,
-      'restingHrBpm': profile.restingHrBpm,
-      'totalWorkouts': profile.totalWorkouts,
-      'totalKcal': profile.totalKcal,
-      'totalHours': profile.totalHours,
-      'streakDays': profile.streakDays,
-      'badgeCount': profile.badgeCount,
-      'records': jsonEncode([
-        for (final record in profile.records) record.toJson(),
-      ]),
-      'achievements': jsonEncode([
-        for (final badge in profile.achievements) badge.toJson(),
-      ]),
-    });
+    await db.insert(AppDatabase.profileTable, profileToRow(userId, profile));
   }
+
+  /// The row [saveProfile] writes, shared with sign-up so a new account's
+  /// measurements land in one place.
+  static Map<String, Object?> profileToRow(
+    String userId,
+    ProfileStats profile,
+  ) => {
+    'userId': userId,
+    'name': profile.name,
+    'handle': profile.handle,
+    'role': profile.role,
+    'memberSince': profile.memberSince,
+    'isPro': profile.isPro ? 1 : 0,
+    'dateOfBirth': profile.dateOfBirth?.toIso8601String(),
+    'weightKg': profile.weightKg,
+    'heightCm': profile.heightCm,
+    'heightImperial': profile.heightImperial ? 1 : 0,
+    'weightImperial': profile.weightImperial ? 1 : 0,
+    'bodyFatPct': profile.bodyFatPct,
+    'restingHrBpm': profile.restingHrBpm,
+    'totalWorkouts': profile.totalWorkouts,
+    'totalKcal': profile.totalKcal,
+    'totalHours': profile.totalHours,
+    'streakDays': profile.streakDays,
+    'badgeCount': profile.badgeCount,
+    'records': jsonEncode([
+      for (final record in profile.records) record.toJson(),
+    ]),
+    'achievements': jsonEncode([
+      for (final badge in profile.achievements) badge.toJson(),
+    ]),
+  };
 
   /// Discards this account's workouts, profile and saved exercises. Used by
   /// tests and by the "start over" action.
@@ -333,6 +349,10 @@ class WorkoutRepository {
     'estimatedKcal': workout.estimatedKcal,
     'targetMuscleGroups': jsonEncode(workout.targetMuscleGroups),
     'equipment': jsonEncode(workout.equipment),
+    'modality': workout.modality?.wire ?? '',
+    'split': workout.split?.wire ?? '',
+    'goal': workout.goal?.wire ?? '',
+    'kind': workout.kind.wire,
   };
 
   Workout _workoutFromRow(Map<String, Object?> row, List<ExerciseLog> logs) {
@@ -348,6 +368,10 @@ class WorkoutRepository {
       targetMuscleGroups: _decodeStrings(row['targetMuscleGroups']),
       equipment: _decodeStrings(row['equipment']),
       logs: logs,
+      modality: Modality.tryParse(row['modality'] as String?),
+      split: WorkoutSplit.tryParse(row['split'] as String?),
+      goal: TrainingGoal.tryParse(row['goal'] as String?),
+      kind: WorkoutKind.tryParse(row['kind'] as String?) ?? WorkoutKind.session,
     );
   }
 

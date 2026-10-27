@@ -1,4 +1,4 @@
-import '../exercise_library.dart';
+import '../models/library_exercise.dart';
 
 /// Chooses the photograph a catalogue card shows.
 ///

@@ -7,7 +7,7 @@ import '../theme/app_typography.dart';
 import '../widgets/auth_action.dart';
 import '../widgets/auth_form_area.dart';
 import '../widgets/auth_hero.dart';
-import 'create_account_screen.dart';
+import 'sign_up_name_screen.dart';
 import 'sign_in_screen.dart';
 
 /// The first thing a new install shows.
@@ -60,7 +60,7 @@ class WelcomeScreen extends StatelessWidget {
                   busy: auth.busy,
                   onPressed: () =>
                       Navigator.of(context)
-                          .pushNamed(CreateAccountScreen.routeName),
+                          .pushNamed(SignUpNameScreen.routeName),
                 ),
                 const SizedBox(height: 12),
                 AuthAction(

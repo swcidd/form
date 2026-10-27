@@ -104,8 +104,13 @@ are checked against Supabase Auth's API: a sign-up can answer "signed in" or
 refusals.
 
 - **Continue offline** → the device account: no password, everything works.
-- **Create account** → its own user id, its own empty store. The sign-up answers
-  in the shape a verifying backend uses: signed in, or "check your inbox".
+- **Create account** → four steps in the design's order: name, age,
+  measurements, then the credentials. Age is entered as a date of birth in
+  day, month and year lists. Height and weight use FEET | CENTIMETERS and
+  POUNDS | KILOGRAMS toggles; the chosen unit is saved and the profile keeps
+  showing it. Both land in the athlete profile and stay editable there. The
+  sign-up answers in
+  the shape a verifying backend uses: signed in, or "check your inbox".
 - **Change password** → from the account card in the profile, with the current
   password checked by the store.
 - **Sign out** → back to the welcome screen; your data stays.
@@ -150,14 +155,14 @@ fallbacks are MIT and Unlicense).
 | --- | --- | --- |
 | Framework | Flutter 3.47 / Dart 3.13 | One codebase, first-class animation, good tooling. |
 | State | `provider` 6.1 (`ChangeNotifier`) | Small enough to read in one sitting; no code generation. |
-| Storage | `sqflite` 2.4 + `path` | Real SQL: the app queries by day, by week and by exercise. |
+| Storage | `sqflite` 2.4 + `sqflite_common_ffi` + `path` | Real SQL: the app queries by day, by week and by exercise. The FFI factory makes the same store run on desktop, where the plugin has no implementation. |
 | Network | `http` 1.6 | The assignment's requirement, and enough for one JSON API. |
 | Crypto | `crypto` 3.0 | HMAC-SHA256 for PBKDF2, no platform channel required. |
 | Dates | `intl` 0.20 | Weekday and month formatting without a locale bundle. |
 | Type | `google_fonts` 9.0 | Inter + Barlow Condensed, **bundled** so nothing is fetched at runtime. |
 | Equality | `equatable` 2.1 | Value equality on models, so `==` in tests means what it looks like. |
 | Vectors | `flutter_svg` 2.3 | Lucide icons without shipping a bitmap per size. |
-| Tests | `flutter_test`, `sqflite_common_ffi` | The real schema runs against a real SQLite file in tests. |
+| Tests | `flutter_test`, `sqflite_common_ffi` | The real schema runs against a real SQLite file in tests, on the same factory. |
 | Build tools | `flutter_launcher_icons`, `flutter_native_splash` | Icon and splash generated from checked-in artwork. |
 
 ---
@@ -168,10 +173,10 @@ fallbacks are MIT and Unlicense).
 lib/
 ├── main.dart                 # gate: splash → welcome/sign-in → app, routes
 ├── auth/                     # AuthRepository seam, local implementation, hasher
-├── data/                     # AppDatabase (schema v4), repositories, session stats
+├── data/                     # AppDatabase (schema v8), repositories, session stats
 ├── models/                   # Workout, ExerciseLog, ExerciseSet, Profile, Account, Session
 ├── providers/                # AuthProvider, WorkoutProvider
-├── screens/                  # welcome, sign in, create account, shell, home,
+├── screens/                  # welcome, sign in, sign-up steps, shell, home,
 │                             # progress, workout, library, profile
 ├── theme/                    # colours, typography, motion tokens, page transitions
 └── widgets/                  # nav bar, section header, cards, auth fields…
@@ -241,10 +246,11 @@ the keystore lives in a gitignored `android/key.properties`.
 - **Review**: every PR got inline review comments on the lines that carried a
   decision (identity, schema, lifecycle), not a rubber stamp, and was merged only
   with the suite green on the merged tree.
-- **Tests**: 301 widget, provider and database tests. The dangerous parts are
-  covered directly: the v3 → v4 migration builds an old database by hand, signing
-  in as somebody else asserts the old store is disposed, and the counting rules
-  have their own tests.
+- **Tests**: 328 widget, provider and database tests. The dangerous parts are
+  covered directly: the v3 → v8 migration builds an old database by hand, the
+  v5 → v8, v6 → v8 and v7 → v8 migrations leave the date of birth unset and the
+  units metric, signing in as somebody else asserts the old store is disposed,
+  and the counting rules have their own tests.
 
 ---
 
@@ -267,7 +273,7 @@ screenshots side by side rather than by reading either screen's code.
 | Requirement | Where |
 | --- | --- |
 | REST API over `http`, JSON, loading/success/error | `lib/exercise_library.dart` + `Discover` |
-| 4+ screens | 11: welcome, sign in, create account, home, progress, workout, library, profile, workout detail, set logger, summary |
+| 4+ screens | 13: welcome, sign in, sign-up name, sign-up age, sign-up account, home, progress, workout, library, profile, workout detail, set logger, summary |
 | 3+ reusable widgets | `AuthField`, `AuthAction`, `AppNavBar`, `WorkoutCard`, `SectionHeader`, `EmptyState`… |
 | Provider state management | `AuthProvider`, `WorkoutProvider` |
 | CRUD | Sessions, exercises, sets, profile, saved exercises |

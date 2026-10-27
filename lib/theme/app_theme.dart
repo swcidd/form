@@ -130,7 +130,7 @@ abstract final class AppTheme {
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: scheme.surfaceContainerLowest,
-        indicatorColor: isLight ? AppColors.sage100 : AppColors.inkSubtle,
+        indicatorColor: Colors.transparent,
         height: 68,
         elevation: 0,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
@@ -138,14 +138,18 @@ abstract final class AppTheme {
           (states) => IconThemeData(
             size: 22,
             color: states.contains(WidgetState.selected)
-                ? scheme.onSurface
+                ? scheme.primary
                 : scheme.onSurfaceVariant,
           ),
         ),
         labelTextStyle: WidgetStateProperty.resolveWith(
-          (states) => AppTypography.textTheme(scheme).labelMedium?.copyWith(
+          (states) => AppTypography.textTheme(scheme).labelSmall?.copyWith(
+            fontSize: 10,
+            fontWeight: states.contains(WidgetState.selected)
+                ? FontWeight.w700
+                : FontWeight.w500,
             color: states.contains(WidgetState.selected)
-                ? scheme.onSurface
+                ? scheme.primary
                 : scheme.onSurfaceVariant,
           ),
         ),
@@ -226,8 +230,8 @@ abstract final class AppTheme {
     surfaceContainerHighest: AppColors.sage50,
   );
 
-  /// FORM dark: ink canvas, cream text. Placeholder until dark frames exist.
-  /// Mirrors light semantic roles with inverted values.
+  /// FORM dark: ink canvas, cream text, lime accents.
+  /// Mirrors the semantic roles in the Figma Theme collection.
   static const ColorScheme _darkScheme = ColorScheme(
     brightness: Brightness.dark,
     primary: AppColors.lime,
@@ -237,29 +241,29 @@ abstract final class AppTheme {
     secondary: AppColors.sage300,
     onSecondary: AppColors.ink,
     secondaryContainer: AppColors.inkSubtle,
-    onSecondaryContainer: AppColors.cream,
+    onSecondaryContainer: AppColors.warmCream,
     tertiary: AppColors.lime,
     onTertiary: AppColors.ink,
     tertiaryContainer: AppColors.inkSubtle,
     onTertiaryContainer: AppColors.lime,
     error: AppColors.rust,
-    onError: AppColors.cream,
+    onError: AppColors.warmCream,
     errorContainer: Color(0xFF3D1A12),
     onErrorContainer: AppColors.peach,
     surface: AppColors.inkMuted,
-    onSurface: AppColors.cream,
+    onSurface: AppColors.warmCream,
     onSurfaceVariant: AppColors.sage300,
-    outline: AppColors.sage500,
+    outline: AppColors.inkSubtle,
     outlineVariant: AppColors.inkSubtle,
     shadow: Color(0x00000000),
     scrim: Color(0x00000000),
-    inverseSurface: AppColors.cream,
+    inverseSurface: AppColors.warmCream,
     onInverseSurface: AppColors.ink,
     inversePrimary: AppColors.ink,
     surfaceContainerLowest: AppColors.ink,
     surfaceContainerLow: AppColors.inkMuted,
     surfaceContainer: AppColors.inkSubtle,
     surfaceContainerHigh: AppColors.inkSubtle,
-    surfaceContainerHighest: AppColors.sage100,
+    surfaceContainerHighest: Color(0xFF2B312A),
   );
 }

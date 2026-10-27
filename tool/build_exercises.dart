@@ -73,6 +73,10 @@ const Set<String> _levels = {'beginner', 'intermediate', 'expert'};
 const Set<String> _forces = {'pull', 'push', 'static'};
 const Set<String> _mechanics = {'compound', 'isolation'};
 const Set<String> _categories = {
+  'calisthenics',
+  'calisthenic_skills',
+  'cardio',
+  'mobility',
   'plyometrics',
   'powerlifting',
   'strength',

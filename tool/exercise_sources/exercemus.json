@@ -130,7 +130,7 @@
       "primary_muscles": [
         "adductors"
       ],
-       "secondary_muscles": [],
+      "secondary_muscles": [],
       "video": "https://www.youtube.com/watch?v=h1xQabdHdes"
     },
     {
@@ -1114,6 +1114,400 @@
         "incline bench press",
         "medium-grip bench press"
       ]
+    },
+    {
+      "category": "calisthenics",
+      "description": "A vertical pull from a dead hang to chin over the bar.",
+      "equipment": [
+        "none"
+      ],
+      "instructions": [
+        "Hang from a bar with an overhand grip slightly wider than your shoulders.",
+        "Pull your shoulder blades down and back before bending the elbows.",
+        "Drive your elbows toward your ribs until your chin clears the bar.",
+        "Lower yourself under control to a full hang."
+      ],
+      "name": "Pull-Up",
+      "primary_muscles": [
+        "lats"
+      ],
+      "secondary_muscles": [
+        "biceps",
+        "middle back",
+        "forearms"
+      ],
+      "variations_on": []
+    },
+    {
+      "category": "calisthenics",
+      "description": "A supinated vertical pull that loads the biceps more than a pull-up.",
+      "equipment": [
+        "none"
+      ],
+      "instructions": [
+        "Hang from a bar with an underhand grip at shoulder width.",
+        "Pull your chest toward the bar, keeping the ribs down.",
+        "Clear the bar with your chin, then lower to a straight-arm hang."
+      ],
+      "name": "Chin-Up",
+      "primary_muscles": [
+        "lats"
+      ],
+      "secondary_muscles": [
+        "biceps",
+        "middle back"
+      ],
+      "variations_on": []
+    },
+    {
+      "category": "calisthenics",
+      "description": "A bodyweight press on parallel bars with a forward lean.",
+      "equipment": [
+        "none"
+      ],
+      "instructions": [
+        "Support yourself on parallel bars with straight arms.",
+        "Lean the torso forward and bend the elbows to lower yourself.",
+        "Stop when the upper arms are parallel to the floor.",
+        "Press back up without shrugging."
+      ],
+      "name": "Chest Dip",
+      "primary_muscles": [
+        "chest"
+      ],
+      "secondary_muscles": [
+        "triceps",
+        "shoulders"
+      ],
+      "variations_on": []
+    },
+    {
+      "category": "calisthenics",
+      "description": "The foundational horizontal press, done on the floor.",
+      "equipment": [
+        "none"
+      ],
+      "instructions": [
+        "Set your hands slightly wider than your shoulders.",
+        "Hold a straight line from heels to head with the glutes and abs braced.",
+        "Lower until the chest is a fist's width from the floor.",
+        "Press back up without letting the hips sag."
+      ],
+      "name": "Push-Up",
+      "primary_muscles": [
+        "chest"
+      ],
+      "secondary_muscles": [
+        "triceps",
+        "shoulders",
+        "abdominals"
+      ],
+      "variations_on": []
+    },
+    {
+      "category": "calisthenics",
+      "description": "A vertical press patterned after a handstand, done from a pike.",
+      "equipment": [
+        "none"
+      ],
+      "instructions": [
+        "From a push-up position, walk your feet toward your hands and lift the hips.",
+        "Keep the legs as straight as your hamstrings allow.",
+        "Lower the crown of your head toward the floor between your hands.",
+        "Press back to a straight-arm pike."
+      ],
+      "name": "Pike Push-Up",
+      "primary_muscles": [
+        "shoulders"
+      ],
+      "secondary_muscles": [
+        "triceps",
+        "traps"
+      ],
+      "variations_on": []
+    },
+    {
+      "category": "calisthenics",
+      "description": "A horizontal pull under a bar or table.",
+      "equipment": [
+        "none"
+      ],
+      "instructions": [
+        "Lie under a fixed bar at hip height and take an overhand grip.",
+        "Hang with straight arms and a straight body.",
+        "Pull your chest to the bar, squeezing the shoulder blades.",
+        "Lower under control without dropping the hips."
+      ],
+      "name": "Inverted Row",
+      "primary_muscles": [
+        "middle back"
+      ],
+      "secondary_muscles": [
+        "lats",
+        "biceps",
+        "forearms"
+      ],
+      "variations_on": []
+    },
+    {
+      "category": "calisthenics",
+      "description": "A full-range squat with no load beyond bodyweight.",
+      "equipment": [
+        "none"
+      ],
+      "instructions": [
+        "Stand with feet about shoulder width apart and toes slightly out.",
+        "Sit the hips back and down, keeping the heels down.",
+        "Descend to at least parallel, or as far as the hips allow without the back rounding.",
+        "Drive through the whole foot to stand."
+      ],
+      "name": "Bodyweight Squat",
+      "primary_muscles": [
+        "quads"
+      ],
+      "secondary_muscles": [
+        "glutes",
+        "hamstrings",
+        "calves"
+      ],
+      "variations_on": []
+    },
+    {
+      "category": "calisthenics",
+      "description": "A floor-based hip extension that teaches the glutes to finish.",
+      "equipment": [
+        "none"
+      ],
+      "instructions": [
+        "Lie on your back with knees bent and feet flat under the knees.",
+        "Press through the heels and lift the hips until knees, hips and shoulders align.",
+        "Squeeze the glutes at the top without arching the lower back.",
+        "Lower slowly and repeat."
+      ],
+      "name": "Glute Bridge",
+      "primary_muscles": [
+        "glutes"
+      ],
+      "secondary_muscles": [
+        "hamstrings",
+        "abdominals"
+      ],
+      "variations_on": []
+    },
+    {
+      "category": "calisthenics",
+      "description": "A hanging flexion drill for the lower abs.",
+      "equipment": [
+        "none"
+      ],
+      "instructions": [
+        "Hang from a bar with an overhand grip and relaxed shoulders.",
+        "Curl the pelvis and bring the knees toward the chest.",
+        "Pause without swinging, then lower with control."
+      ],
+      "name": "Hanging Knee Raise",
+      "primary_muscles": [
+        "abdominals"
+      ],
+      "secondary_muscles": [
+        "forearms"
+      ],
+      "variations_on": []
+    },
+    {
+      "category": "calisthenics",
+      "description": "A static hold that trains the trunk to resist extension.",
+      "equipment": [
+        "none"
+      ],
+      "instructions": [
+        "Set the elbows under the shoulders and extend the legs behind you.",
+        "Brace the abs and squeeze the glutes so the body forms one line.",
+        "Breathe steadily and hold without letting the hips drop."
+      ],
+      "name": "Plank",
+      "primary_muscles": [
+        "abdominals"
+      ],
+      "secondary_muscles": [
+        "shoulders",
+        "glutes"
+      ],
+      "variations_on": []
+    },
+    {
+      "category": "calisthenics",
+      "description": "A gymnastics trunk hold with a rounded lower back.",
+      "equipment": [
+        "none"
+      ],
+      "instructions": [
+        "Lie on your back and press the lower back into the floor.",
+        "Lift the shoulder blades and legs a few inches off the ground.",
+        "Reach the arms overhead and hold the position without arching."
+      ],
+      "name": "Hollow Body Hold",
+      "primary_muscles": [
+        "abdominals"
+      ],
+      "secondary_muscles": [
+        "quads"
+      ],
+      "variations_on": []
+    },
+    {
+      "category": "calisthenics",
+      "description": "A moving plank that raises the heart rate.",
+      "equipment": [
+        "none"
+      ],
+      "instructions": [
+        "Start in a high plank with the shoulders over the hands.",
+        "Drive one knee toward the chest, then switch legs.",
+        "Keep the hips low and the trunk steady as the legs alternate."
+      ],
+      "name": "Mountain Climber",
+      "primary_muscles": [
+        "abdominals"
+      ],
+      "secondary_muscles": [
+        "shoulders",
+        "quads"
+      ],
+      "variations_on": []
+    },
+    {
+      "category": "calisthenic_skills",
+      "description": "A wall-supported inversion that develops the balance and overhead strength a freestanding handstand needs.",
+      "equipment": [
+        "none"
+      ],
+      "instructions": [
+        "Kick up to a wall with the hands one hand-width from it.",
+        "Push the floor away, stack the wrists under the shoulders and squeeze the legs together.",
+        "Hold the line with the ribs down; come down before the back arches."
+      ],
+      "name": "Handstand Hold",
+      "primary_muscles": [
+        "shoulders"
+      ],
+      "secondary_muscles": [
+        "triceps",
+        "traps",
+        "abdominals"
+      ],
+      "variations_on": []
+    },
+    {
+      "category": "calisthenic_skills",
+      "description": "A support hold with the legs held straight and parallel to the floor.",
+      "equipment": [
+        "none"
+      ],
+      "instructions": [
+        "Support yourself on parallel bars or the floor with straight arms.",
+        "Depress the shoulders and lift the legs until the hips are at ninety degrees.",
+        "Point the toes and hold the legs parallel to the ground."
+      ],
+      "name": "L-Sit",
+      "primary_muscles": [
+        "abdominals"
+      ],
+      "secondary_muscles": [
+        "quads",
+        "triceps",
+        "shoulders"
+      ],
+      "variations_on": []
+    },
+    {
+      "category": "calisthenic_skills",
+      "description": "A tucked regression of the front lever that trains straight-arm pulling strength.",
+      "equipment": [
+        "none"
+      ],
+      "instructions": [
+        "Hang from a bar with an overhand grip.",
+        "Pull the shoulder blades down and back, then lift the knees to the chest.",
+        "Hold the back parallel to the floor with straight arms and a tucked pelvis."
+      ],
+      "name": "Tuck Front Lever",
+      "primary_muscles": [
+        "lats"
+      ],
+      "secondary_muscles": [
+        "abdominals",
+        "middle back",
+        "biceps"
+      ],
+      "variations_on": []
+    },
+    {
+      "category": "calisthenic_skills",
+      "description": "A first balance drill for the handstand, supported on the arms.",
+      "equipment": [
+        "none"
+      ],
+      "instructions": [
+        "Place the hands flat and rest the knees on the backs of the upper arms.",
+        "Lean forward until the feet leave the floor.",
+        "Hold the balance with the gaze slightly ahead of the hands."
+      ],
+      "name": "Frog Stand",
+      "primary_muscles": [
+        "shoulders"
+      ],
+      "secondary_muscles": [
+        "chest",
+        "triceps",
+        "abdominals"
+      ],
+      "variations_on": []
+    },
+    {
+      "category": "calisthenic_skills",
+      "description": "A vertical press that builds toward the freestanding handstand push-up.",
+      "equipment": [
+        "none"
+      ],
+      "instructions": [
+        "Kick up to a wall with the back to it and hands under the shoulders.",
+        "Lower the head toward the floor under control.",
+        "Press back to a straight-arm handstand without arching the back."
+      ],
+      "name": "Wall Handstand Push-Up",
+      "primary_muscles": [
+        "shoulders"
+      ],
+      "secondary_muscles": [
+        "triceps",
+        "traps"
+      ],
+      "variations_on": []
+    },
+    {
+      "category": "calisthenic_skills",
+      "description": "The pull-to-press transition drilled as separate steps before the full rep.",
+      "equipment": [
+        "none"
+      ],
+      "instructions": [
+        "Hang from a bar and pull explosively until the chest reaches the bar.",
+        "Practise the transition with a false grip and a tight, hollow body.",
+        "Finish by pressing to a straight-arm support above the bar.",
+        "Regress to a jumping muscle-up until the transition is clean."
+      ],
+      "name": "Muscle-Up Progression",
+      "primary_muscles": [
+        "lats"
+      ],
+      "secondary_muscles": [
+        "chest",
+        "triceps",
+        "biceps",
+        "abdominals"
+      ],
+      "variations_on": []
     }
   ]
 }
