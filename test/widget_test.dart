@@ -116,7 +116,7 @@ void main() {
       expect(find.byType(WorkoutCard), findsNothing);
     });
 
-    testWidgets('tapping Workout tab with no sessions opens create form', (
+    testWidgets('the Workout tab opens the calendar, not a form', (
       tester,
     ) async {
       await tester.pumpWidget(emptyApp());
@@ -125,11 +125,13 @@ void main() {
       await _tapDestination(tester, 'Workout');
       await tester.pumpAndSettle();
 
-      // With nothing logged the Workout tab opens the
-      // create form instead. That is the only sensible next step for an
-      // account with no sessions, and the one the user is reaching for.
+      // Opening a form on arrival asks the user to create a session before
+      // they have seen the calendar they are planning against.
       expect(find.text('Workout Detail'), findsNothing);
-      expect(find.text('New workout'), findsOneWidget);
+      expect(find.byType(NewWorkoutDialog), findsNothing);
+      expect(find.text('PLAN THE WEEK.'), findsOneWidget);
+      expect(find.text('Nothing planned yet'), findsOneWidget);
+      expect(find.text('Plan a workout'), findsOneWidget);
     });
 
     testWidgets('the dashboard leads with no general health metrics', (
@@ -288,14 +290,22 @@ void main() {
   });
 
   group('new workout dialog', () {
-    testWidgets('tapping Workout tab with no sessions opens create form', (
-      tester,
-    ) async {
+    testWidgets('the calendar opens the create form', (tester) async {
       await tester.pumpWidget(emptyApp());
       await tester.pumpAndSettle();
 
       await _tapDestination(tester, 'Workout');
       await tester.pumpAndSettle();
+      await tester.tap(find.text('Plan a workout'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      // Planning opens the exercise picker first; the form follows the pick.
+      // Pumped rather than settled because the catalogue load never settles
+      // without a network.
+      await tester.tap(find.text('Next'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
 
       expect(find.byType(NewWorkoutDialog), findsOneWidget);
       expect(find.text('New workout'), findsOneWidget);
@@ -304,21 +314,33 @@ void main() {
       expect(find.text('Start'), findsOneWidget);
     });
 
-    testWidgets(
-      'tapping Workout tab with planned session opens pre-workout screen',
-      (tester) async {
-        await tester.pumpWidget(seededApp());
-        await tester.pumpAndSettle();
+    testWidgets('a planned day opens its session from the calendar', (
+      tester,
+    ) async {
+      await tester.pumpWidget(seededApp());
+      await tester.pumpAndSettle();
 
-        await _tapDestination(tester, 'Workout');
-        await tester.pumpAndSettle();
+      await _tapDestination(tester, 'Workout');
+      await tester.pumpAndSettle();
 
-        // A planned session is a better answer than a form: opening the form
-        // would offer to create a second session for a day that already has one.
-        expect(find.byType(NewWorkoutDialog), findsNothing);
-        expect(find.text('THE LINEUP'), findsOneWidget);
-      },
-    );
+      // A planned session is a better answer than a form: opening the form
+      // would offer to create a second session for a day that already has one.
+      expect(find.byType(NewWorkoutDialog), findsNothing);
+      expect(find.text('1 SESSION'), findsOneWidget);
+
+      // The tile is one opaque tap target, so the label inside it is not the
+      // widget that receives the tap.
+      await tester.tap(
+        find.descendant(
+          of: find.byType(ListView),
+          matching: find.textContaining('UPPER BODY'),
+        ),
+        warnIfMissed: false,
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('THE LINEUP'), findsOneWidget);
+    });
 
     testWidgets('starting creates the workout and opens it', (tester) async {
       final provider = WorkoutProvider();
@@ -327,6 +349,16 @@ void main() {
 
       await _tapDestination(tester, 'Workout');
       await tester.pumpAndSettle();
+      await tester.tap(find.text('Plan a workout'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      // Planning opens the exercise picker first; the form follows the pick.
+      // Pumped rather than settled because the catalogue load never settles
+      // without a network.
+      await tester.tap(find.text('Next'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
 
       await tester.enterText(find.byType(TextFormField), 'Leg Day');
       await tester.tap(find.text('Start'));
@@ -352,6 +384,16 @@ void main() {
 
       await _tapDestination(tester, 'Workout');
       await tester.pumpAndSettle();
+      await tester.tap(find.text('Plan a workout'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      // Planning opens the exercise picker first; the form follows the pick.
+      // Pumped rather than settled because the catalogue load never settles
+      // without a network.
+      await tester.tap(find.text('Next'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
       await tester.tap(find.text('Start'));
       await tester.pumpAndSettle();
 
@@ -369,6 +411,16 @@ void main() {
 
       await _tapDestination(tester, 'Workout');
       await tester.pumpAndSettle();
+      await tester.tap(find.text('Plan a workout'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      // Planning opens the exercise picker first; the form follows the pick.
+      // Pumped rather than settled because the catalogue load never settles
+      // without a network.
+      await tester.tap(find.text('Next'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
       await tester.tap(find.text('Cancel'));
       await tester.pumpAndSettle();
 
@@ -379,7 +431,7 @@ void main() {
   });
 
   group('workout tab', () {
-    testWidgets('tapping Workout tab opens the pre-workout screen', (
+    testWidgets('tapping Workout tab opens the training calendar', (
       tester,
     ) async {
       await tester.pumpWidget(seededApp());
@@ -388,7 +440,9 @@ void main() {
       await _tapDestination(tester, 'Workout');
       await tester.pumpAndSettle();
 
-      expect(find.text('THE LINEUP'), findsOneWidget);
+      expect(find.text('PLAN THE WEEK.'), findsOneWidget);
+      expect(find.text('1 SESSION'), findsOneWidget);
+      expect(find.text('Start workout'), findsOneWidget);
     });
 
     testWidgets('Workout tab is a regular destination', (tester) async {

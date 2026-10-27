@@ -5,6 +5,7 @@ import '../models/exercise.dart';
 import '../models/workout.dart';
 import '../providers/workout_provider.dart';
 import '../theme/app_typography.dart';
+import 'edit_workout_screen.dart';
 import 'set_logging_screen.dart';
 
 /// Pre-workout screen: what the session is, and the button that starts it.
@@ -153,11 +154,88 @@ class _Toolbar extends StatelessWidget {
               style: text.annotation.copyWith(color: scheme.onSurfaceVariant),
             ),
             const SizedBox(width: 8),
-            Icon(Icons.more_horiz_rounded, size: 22, color: scheme.onSurface),
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => _showActions(context),
+              child: SizedBox(
+                width: 44,
+                height: 44,
+                child: Icon(
+                  Icons.more_horiz_rounded,
+                  size: 22,
+                  color: scheme.onSurface,
+                ),
+              ),
+            ),
           ],
         ),
       ),
     );
+  }
+
+  /// Edit and delete, behind the toolbar's overflow.
+  ///
+  /// Both are rare next to logging a set, and the design keeps the toolbar to
+  /// one action per side. Edit is the only way into the edit screen, and delete
+  /// is the only way to remove a session, so neither can be dropped.
+  Future<void> _showActions(BuildContext context) async {
+    final provider = context.read<WorkoutProvider>();
+    final navigator = Navigator.of(context);
+
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      builder: (sheet) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.edit_outlined),
+              title: const Text('Edit workout'),
+              onTap: () => Navigator.of(sheet).pop('edit'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline_rounded),
+              title: const Text('Delete session'),
+              onTap: () => Navigator.of(sheet).pop('delete'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (choice == 'edit') {
+      await navigator.pushNamed(EditWorkoutScreen.routeFor(workout.id));
+      return;
+    }
+    if (choice != 'delete') return;
+    // The sheet awaited above; the screen may be gone by now.
+    if (!context.mounted) return;
+
+    // Deleting takes the session out of the week's counts and off the
+    // calendar, and nothing in the app can bring it back.
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: const Text('Delete this session?'),
+        content: const Text(
+          'It will be removed from your calendar and your training history.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialog).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialog).pop(true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    provider.deleteWorkout(workout.id);
+    navigator.maybePop();
   }
 }
 

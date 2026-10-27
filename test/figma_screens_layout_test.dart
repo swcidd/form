@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
 import 'package:plus_one/providers/workout_provider.dart';
+import 'package:plus_one/screens/calendar_screen.dart';
 import 'package:plus_one/screens/progress_screen.dart';
 import 'package:plus_one/screens/set_logging_screen.dart';
 import 'package:plus_one/screens/workout_detail_screen.dart';
@@ -47,6 +48,7 @@ void main() {
           route: RouteSettings(name: WorkoutDetailScreen.routeFor(workout.id)),
         ),
         const ProgressScreen(),
+        const CalendarScreen(),
       ];
 
       for (final screen in screens) {

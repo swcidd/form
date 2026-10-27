@@ -16,13 +16,11 @@ class AppNavBar extends StatelessWidget {
     super.key,
     required this.selected,
     required this.onSelected,
-    required this.onWorkoutPressed,
     this.iconSize = 22,
   });
 
   final AppTab selected;
   final ValueChanged<AppTab> onSelected;
-  final VoidCallback onWorkoutPressed;
   final double iconSize;
 
   @override
