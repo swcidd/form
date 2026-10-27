@@ -142,12 +142,27 @@ void main() {
     test('loads the single canonical asset', () async {
       final exercises = await ExerciseLibrary.loadAll();
 
-      expect(exercises, hasLength(56));
+      expect(exercises, hasLength(74));
       expect(exercises.every((e) => e.name.isNotEmpty), isTrue);
       expect(exercises.every((e) => e.id.isNotEmpty), isTrue);
       expect(exercises.every((e) => e.primaryMuscles.isNotEmpty), isTrue);
       expect(exercises.every((e) => e.equipment.isNotEmpty), isTrue);
       expect(exercises.every((e) => e.instructions.isNotEmpty), isTrue);
+    });
+
+    test('ships the calisthenics and skill categories', () async {
+      final exercises = await ExerciseLibrary.loadAll();
+      final categories = exercises.map((e) => e.category).toSet();
+
+      expect(
+        categories,
+        containsAll(['calisthenics', 'calisthenic_skills', 'plyometrics']),
+      );
+      expect(exercises.where((e) => e.category == 'calisthenics'), isNotEmpty);
+      expect(
+        exercises.where((e) => e.category == 'calisthenic_skills'),
+        isNotEmpty,
+      );
     });
 
     test('serves one entry per stable id and per normalised name', () async {

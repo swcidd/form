@@ -10,6 +10,7 @@ import 'package:plus_one/exercise_library.dart';
 import 'package:plus_one/models/exercise.dart';
 import 'package:plus_one/models/profile_stats.dart';
 import 'package:plus_one/models/saved_exercise.dart';
+import 'package:plus_one/models/taxonomy.dart';
 import 'package:plus_one/models/session.dart';
 import 'package:plus_one/models/workout.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -454,6 +455,59 @@ void main() {
       expect(profile?.dateOfBirth, DateTime(1996, 6, 15));
       expect(profile?.heightImperial, isFalse);
       expect(profile?.weightImperial, isFalse);
+      await nextDb.close();
+    });
+
+    test('migrating from version 8 adds the classification axes', () async {
+      final path = p.join(
+        Directory.systemTemp.path,
+        'form_v8_taxonomy_migration_test.db',
+      );
+      final file = File(path);
+      if (file.existsSync()) file.deleteSync();
+      addTearDown(() {
+        if (file.existsSync()) file.deleteSync();
+      });
+
+      // A v8 file has sessions but no modality/split/goal/kind. The columns
+      // are added empty, and the session still opens as an unclassified
+      // session rather than being coerced into Strength.
+      final oldDb = AppDatabase();
+      final db = await oldDb.open(path: path);
+      for (final column in ['modality', 'split', 'goal', 'kind']) {
+        await db.execute(
+          'ALTER TABLE ${AppDatabase.workoutsTable} DROP COLUMN $column',
+        );
+      }
+      await db.insert(AppDatabase.workoutsTable, {
+        'userId': device,
+        'id': 'w1',
+        'title': 'Upper body',
+        'date': DateTime(2026, 10, 6).millisecondsSinceEpoch,
+        'status': 'planned',
+      });
+      await db.execute('PRAGMA user_version = 8');
+      await oldDb.close();
+
+      final nextDb = AppDatabase();
+      final next = await nextDb.open(path: path);
+      final columns = await next.rawQuery(
+        'PRAGMA table_info(${AppDatabase.workoutsTable})',
+      );
+      expect(
+        columns.map((column) => column['name']),
+        containsAll(['modality', 'split', 'goal', 'kind']),
+      );
+
+      final workouts = await WorkoutRepository(
+        nextDb,
+        userId: device,
+      ).loadWorkouts();
+      expect(workouts, hasLength(1));
+      expect(workouts.single.modality, isNull);
+      expect(workouts.single.split, isNull);
+      expect(workouts.single.goal, isNull);
+      expect(workouts.single.kind, WorkoutKind.session);
       await nextDb.close();
     });
   });

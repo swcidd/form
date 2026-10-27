@@ -1,9 +1,23 @@
 import 'package:equatable/equatable.dart';
 
 import 'exercise.dart';
+import 'taxonomy.dart';
 
 /// Lifecycle of a workout once it exists on the calendar.
-enum WorkoutStatus { planned, completed, rest }
+///
+/// `rest` stays for the rest days the calendar writes; `inProgress` and
+/// `skipped` are the two later states a scheduled session can end in.
+enum WorkoutStatus { planned, inProgress, completed, skipped, rest }
+
+extension WorkoutStatusLabel on WorkoutStatus {
+  String get label => switch (this) {
+    WorkoutStatus.planned => 'Planned',
+    WorkoutStatus.inProgress => 'In progress',
+    WorkoutStatus.completed => 'Completed',
+    WorkoutStatus.skipped => 'Skipped',
+    WorkoutStatus.rest => 'Rest',
+  };
+}
 
 /// A single training session.
 class Workout extends Equatable {
@@ -20,6 +34,10 @@ class Workout extends Equatable {
     this.startTime = '',
     this.place = '',
     this.hasNewPR = false,
+    this.modality,
+    this.split,
+    this.goal,
+    this.kind = WorkoutKind.session,
   });
 
   final String id;
@@ -41,6 +59,22 @@ class Workout extends Equatable {
   final List<String> equipment;
   final List<ExerciseLog> logs;
   final bool hasNewPR;
+
+  /// What the session is, what it is organised around, and what it is for.
+  ///
+  /// Nullable rather than defaulted: sessions created before these questions
+  /// existed have no honest answer, and inventing "General" would put a value
+  /// in the UI the user never chose.
+  final Modality? modality;
+  final WorkoutSplit? split;
+  final TrainingGoal? goal;
+
+  /// Routine or logged session. Everything the app writes today is a session;
+  /// the axis exists so a template can be stored without pretending it is one.
+  final WorkoutKind kind;
+
+  /// Short / medium / long, derived from the planned minutes.
+  DurationBand get durationBand => DurationBand.fromMinutes(durationMin);
 
   int get totalSets => logs.fold(0, (sum, log) => sum + log.totalSets);
 
@@ -73,6 +107,10 @@ class Workout extends Equatable {
     List<String>? equipment,
     List<ExerciseLog>? logs,
     bool? hasNewPR,
+    Modality? modality,
+    WorkoutSplit? split,
+    TrainingGoal? goal,
+    WorkoutKind? kind,
   }) {
     return Workout(
       id: id ?? this.id,
@@ -87,6 +125,10 @@ class Workout extends Equatable {
       equipment: equipment ?? this.equipment,
       logs: logs ?? this.logs,
       hasNewPR: hasNewPR ?? this.hasNewPR,
+      modality: modality ?? this.modality,
+      split: split ?? this.split,
+      goal: goal ?? this.goal,
+      kind: kind ?? this.kind,
     );
   }
 
@@ -108,6 +150,11 @@ class Workout extends Equatable {
           .map((l) => ExerciseLog.fromJson(l as Map<String, dynamic>))
           .toList(),
       hasNewPR: json['hasNewPR'] as bool? ?? false,
+      modality: Modality.tryParse(json['modality'] as String?),
+      split: WorkoutSplit.tryParse(json['split'] as String?),
+      goal: TrainingGoal.tryParse(json['goal'] as String?),
+      kind:
+          WorkoutKind.tryParse(json['kind'] as String?) ?? WorkoutKind.session,
     );
   }
 
@@ -124,6 +171,10 @@ class Workout extends Equatable {
     'equipment': equipment,
     'logs': logs.map((l) => l.toJson()).toList(),
     'hasNewPR': hasNewPR,
+    'modality': modality?.wire,
+    'split': split?.wire,
+    'goal': goal?.wire,
+    'kind': kind.wire,
   };
 
   @override
@@ -140,5 +191,9 @@ class Workout extends Equatable {
     equipment,
     logs,
     hasNewPR,
+    modality,
+    split,
+    goal,
+    kind,
   ];
 }

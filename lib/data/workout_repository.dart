@@ -7,6 +7,7 @@ import '../exercise_library.dart';
 import '../models/exercise.dart';
 import '../models/profile_stats.dart';
 import '../models/saved_exercise.dart';
+import '../models/taxonomy.dart';
 import '../models/workout.dart';
 import 'app_database.dart';
 
@@ -348,6 +349,10 @@ class WorkoutRepository {
     'estimatedKcal': workout.estimatedKcal,
     'targetMuscleGroups': jsonEncode(workout.targetMuscleGroups),
     'equipment': jsonEncode(workout.equipment),
+    'modality': workout.modality?.wire ?? '',
+    'split': workout.split?.wire ?? '',
+    'goal': workout.goal?.wire ?? '',
+    'kind': workout.kind.wire,
   };
 
   Workout _workoutFromRow(Map<String, Object?> row, List<ExerciseLog> logs) {
@@ -363,6 +368,10 @@ class WorkoutRepository {
       targetMuscleGroups: _decodeStrings(row['targetMuscleGroups']),
       equipment: _decodeStrings(row['equipment']),
       logs: logs,
+      modality: Modality.tryParse(row['modality'] as String?),
+      split: WorkoutSplit.tryParse(row['split'] as String?),
+      goal: TrainingGoal.tryParse(row['goal'] as String?),
+      kind: WorkoutKind.tryParse(row['kind'] as String?) ?? WorkoutKind.session,
     );
   }
 

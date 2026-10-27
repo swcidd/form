@@ -1,17 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../models/taxonomy.dart';
 import '../models/workout.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 
 /// The form for creating a workout, presented as a centred dialog.
 ///
-/// Two fields only, because this is reached from the bar rather than chosen
+/// Four questions, because this is reached from the bar rather than chosen
 /// deliberately. A lifter tapping the action mid-session wants to start
-/// training, not fill in a questionnaire: the questions here are the two that
-/// change what the next screen shows. Everything else - exercises, sets - is
-/// added from the workout itself once it exists.
+/// training, not fill in a questionnaire, so every row is a single tap and
+/// nothing is required: a session created without touching them stays
+/// unclassified rather than being called "General strength" on the user's
+/// behalf. The questions are the ones that change what the next screen shows -
+/// its name, its date, and the three classification axes the library filters
+/// and the detail header read. Everything else - exercises, sets - is added
+/// from the workout itself once it exists.
 ///
 /// Returns the created [Workout] through [Navigator.pop], rather than writing
 /// to the provider directly. The dialog owns no store, so a caller that
@@ -41,6 +46,12 @@ class _NewWorkoutDialogState extends State<NewWorkoutDialog> {
   final _name = TextEditingController();
   late DateTime _date;
 
+  /// The three classification axes. Left null until the user taps one, so the
+  /// dialog never claims a session is "General strength" on their behalf.
+  Modality? _modality;
+  WorkoutSplit? _split;
+  TrainingGoal? _goal;
+
   @override
   void initState() {
     super.initState();
@@ -66,6 +77,9 @@ class _NewWorkoutDialogState extends State<NewWorkoutDialog> {
         targetMuscleGroups: const [],
         equipment: const [],
         logs: const [],
+        modality: _modality,
+        split: _split,
+        goal: _goal,
       ),
     );
   }
@@ -95,74 +109,106 @@ class _NewWorkoutDialogState extends State<NewWorkoutDialog> {
 
     return AlertDialog(
       title: const Text('New workout'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('NAME THIS SESSION', style: context.text.labelCaps),
-          const SizedBox(height: 8),
-          TextFormField(
-            controller: _name,
-            autofocus: true,
-            textCapitalization: TextCapitalization.sentences,
-            textInputAction: TextInputAction.done,
-            decoration: InputDecoration(
-              hintText: _defaultTitle(),
-              border: OutlineInputBorder(
-                borderRadius: AppRadius.control,
-                borderSide: BorderSide(color: scheme.outlineVariant),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('NAME THIS SESSION', style: context.text.labelCaps),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _name,
+              autofocus: true,
+              textCapitalization: TextCapitalization.sentences,
+              textInputAction: TextInputAction.done,
+              decoration: InputDecoration(
+                hintText: _defaultTitle(),
+                border: OutlineInputBorder(
+                  borderRadius: AppRadius.control,
+                  borderSide: BorderSide(color: scheme.outlineVariant),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: AppRadius.control,
+                  borderSide: BorderSide(color: scheme.outlineVariant),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: AppRadius.control,
+                  borderSide: BorderSide(color: scheme.primary, width: 1.5),
+                ),
+                // Deliberately no validator. An untitled session is still a
+                // real one, and forcing a name here is friction in front of
+                // the one thing the lifter opened the app to do.
+                helperText: 'Leave blank to use the date.',
               ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: AppRadius.control,
-                borderSide: BorderSide(color: scheme.outlineVariant),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: AppRadius.control,
-                borderSide: BorderSide(color: scheme.primary, width: 1.5),
-              ),
-              // Deliberately no validator. An untitled session is still a
-              // real one, and forcing a name here is friction in front of
-              // the one thing the lifter opened the app to do.
-              helperText: 'Leave blank to use the date.',
+              onFieldSubmitted: (_) => _submit(),
             ),
-            onFieldSubmitted: (_) => _submit(),
-          ),
-          const SizedBox(height: 18),
-          Text('DATE', style: context.text.labelCaps),
-          const SizedBox(height: 8),
-          InkWell(
-            onTap: _pickDate,
-            borderRadius: AppRadius.control,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-              decoration: BoxDecoration(
-                borderRadius: AppRadius.control,
-                border: Border.all(color: scheme.outlineVariant),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.calendar_today_outlined,
-                    size: 18,
-                    color: scheme.onSurfaceVariant,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      DateFormat('EEEE, MMM d').format(_date),
-                      style: Theme.of(context).textTheme.bodyLarge,
+            const SizedBox(height: 18),
+            Text('MODALITY', style: context.text.labelCaps),
+            const SizedBox(height: 8),
+            _ChoiceWrap<Modality>(
+              values: Modality.values,
+              selected: _modality,
+              labelOf: (value) => value.label,
+              onSelected: (value) => setState(() => _modality = value),
+            ),
+            const SizedBox(height: 18),
+            Text('SPLIT', style: context.text.labelCaps),
+            const SizedBox(height: 8),
+            _ChoiceWrap<WorkoutSplit>(
+              values: WorkoutSplit.values,
+              selected: _split,
+              labelOf: (value) => value.label,
+              onSelected: (value) => setState(() => _split = value),
+            ),
+            const SizedBox(height: 18),
+            Text('GOAL', style: context.text.labelCaps),
+            const SizedBox(height: 8),
+            _ChoiceWrap<TrainingGoal>(
+              values: TrainingGoal.values,
+              selected: _goal,
+              labelOf: (value) => value.label,
+              onSelected: (value) => setState(() => _goal = value),
+            ),
+            const SizedBox(height: 18),
+            Text('DATE', style: context.text.labelCaps),
+            const SizedBox(height: 8),
+            InkWell(
+              onTap: _pickDate,
+              borderRadius: AppRadius.control,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 14,
+                ),
+                decoration: BoxDecoration(
+                  borderRadius: AppRadius.control,
+                  border: Border.all(color: scheme.outlineVariant),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.calendar_today_outlined,
+                      size: 18,
+                      color: scheme.onSurfaceVariant,
                     ),
-                  ),
-                  Icon(
-                    Icons.expand_more_rounded,
-                    size: 18,
-                    color: scheme.outline,
-                  ),
-                ],
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        DateFormat('EEEE, MMM d').format(_date),
+                        style: Theme.of(context).textTheme.bodyLarge,
+                      ),
+                    ),
+                    Icon(
+                      Icons.expand_more_rounded,
+                      size: 18,
+                      color: scheme.outline,
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
       actions: [
         TextButton(
@@ -174,6 +220,57 @@ class _NewWorkoutDialogState extends State<NewWorkoutDialog> {
           icon: const Icon(Icons.play_arrow_rounded, size: 18),
           label: const Text('Start'),
         ),
+      ],
+    );
+  }
+}
+
+/// A wrapping row of single-select pills.
+///
+/// Wrapping rather than scrolling: seven modalities do not fit one line on a
+/// 320dp phone, and a horizontal scroll would hide the three new disciplines
+/// behind a gesture nobody knows is there.
+class _ChoiceWrap<T> extends StatelessWidget {
+  const _ChoiceWrap({
+    required this.values,
+    required this.selected,
+    required this.labelOf,
+    required this.onSelected,
+  });
+
+  final List<T> values;
+  final T? selected;
+  final String Function(T value) labelOf;
+  final ValueChanged<T> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: [
+        for (final value in values)
+          ChoiceChip(
+            label: Text(
+              labelOf(value),
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: value == selected
+                    ? scheme.onPrimary
+                    : scheme.onSurfaceVariant,
+              ),
+            ),
+            selected: value == selected,
+            showCheckmark: false,
+            visualDensity: VisualDensity.compact,
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            selectedColor: scheme.primary,
+            backgroundColor: scheme.surfaceContainerHigh,
+            side: BorderSide(color: scheme.outlineVariant),
+            onSelected: (_) => onSelected(value),
+          ),
       ],
     );
   }

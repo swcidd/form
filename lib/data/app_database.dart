@@ -20,7 +20,7 @@ class AppDatabase {
   final String fileName;
 
   /// Current schema version. Increment with every migration.
-  static const int version = 8;
+  static const int version = 9;
 
   static const String workoutsTable = 'workouts';
   static const String exerciseLogsTable = 'exercise_logs';
@@ -122,6 +122,10 @@ class AppDatabase {
       estimatedKcal      INTEGER NOT NULL DEFAULT 0,
       targetMuscleGroups TEXT    NOT NULL DEFAULT '[]',
       equipment          TEXT    NOT NULL DEFAULT '[]',
+      modality           TEXT    NOT NULL DEFAULT '',
+      split              TEXT    NOT NULL DEFAULT '',
+      goal               TEXT    NOT NULL DEFAULT '',
+      kind               TEXT    NOT NULL DEFAULT 'session',
       PRIMARY KEY (userId, id)
     )
   ''';
@@ -294,6 +298,27 @@ class AppDatabase {
       await db.execute('ALTER TABLE $profileTable ADD COLUMN dateOfBirth TEXT');
     }
 
+    // v9 adds the session's classification axes: what modality it is, the
+    // split it follows, its goal, and whether it is a routine or a logged
+    // session. Empty strings mean "not classified", which is the honest state
+    // of every session created before these questions existed.
+    if (from >= 4 && from < 9) {
+      // A file rewound from a later build already has these columns; adding
+      // them again is a duplicate-column failure. Check rather than assume.
+      for (final step in const [
+        ("modality", "TEXT NOT NULL DEFAULT ''"),
+        ("split", "TEXT NOT NULL DEFAULT ''"),
+        ("goal", "TEXT NOT NULL DEFAULT ''"),
+        ("kind", "TEXT NOT NULL DEFAULT 'session'"),
+      ]) {
+        if (!await _hasColumn(db, workoutsTable, step.$1)) {
+          await db.execute(
+            'ALTER TABLE $workoutsTable ADD COLUMN ${step.$1} ${step.$2}',
+          );
+        }
+      }
+    }
+
     // v8 remembers which unit each measurement was entered in, so the profile
     // can keep writing it the same way. Both default to metric for rows that
     // predate the choice.
@@ -307,6 +332,17 @@ class AppDatabase {
         'ADD COLUMN weightImperial INTEGER NOT NULL DEFAULT 0',
       );
     }
+  }
+
+  /// Whether [table] already has [column], for migrations that add columns a
+  /// later build's file may already carry.
+  static Future<bool> _hasColumn(
+    Database db,
+    String table,
+    String column,
+  ) async {
+    final rows = await db.rawQuery('PRAGMA table_info($table)');
+    return rows.any((row) => row['name'] == column);
   }
 
   /// Fills in the `userId` column of everything written before there were

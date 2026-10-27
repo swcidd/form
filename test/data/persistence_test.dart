@@ -5,6 +5,7 @@ import 'package:plus_one/exercise_library.dart';
 import 'package:plus_one/models/exercise.dart';
 import 'package:plus_one/models/profile_stats.dart';
 import 'package:plus_one/models/session.dart';
+import 'package:plus_one/models/taxonomy.dart';
 import 'package:plus_one/models/workout.dart';
 import 'package:plus_one/providers/workout_provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -128,6 +129,32 @@ void main() {
     expect(restored.logs.single.sets.single.completed, isTrue);
     // One set, ticked: the session the user finished reads as finished.
     expect(restored.status, WorkoutStatus.completed);
+  });
+
+  test('the classification axes survive the restart', () async {
+    final first = launch();
+    final stored = first.addWorkout(
+      planned().copyWith(
+        modality: Modality.calisthenics,
+        split: WorkoutSplit.pull,
+        goal: TrainingGoal.strength,
+        kind: WorkoutKind.routine,
+      ),
+    );
+
+    final second = launch();
+    await second.load();
+
+    final restored = second.byId(stored.id)!;
+    expect(restored.modality, Modality.calisthenics);
+    expect(restored.split, WorkoutSplit.pull);
+    expect(restored.goal, TrainingGoal.strength);
+    expect(restored.kind, WorkoutKind.routine);
+    // The band is derived on read, so it cannot drift from the minutes.
+    expect(
+      restored.durationBand,
+      DurationBand.fromMinutes(restored.durationMin),
+    );
   });
 
   test('a workout deleted before the restart stays deleted', () async {

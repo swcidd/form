@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:flutter/services.dart' show rootBundle;
 
+import 'models/taxonomy.dart' as taxonomy;
+
 /// One entry in the bundled exercise catalogue.
 ///
 /// The two upstream data sets are merged by `tool/build_exercises.dart` into
@@ -53,7 +55,10 @@ class LibraryExercise {
   /// catalogue entry.
   final List<String> equipment;
 
-  /// strength | stretching | plyometrics | strongman | powerlifting.
+  /// One of [ExerciseCategory]'s wire names: strength, cardio, stretching
+  /// (Mobility), plyometrics, calisthenics, calisthenic_skills, strongman or
+  /// powerlifting. Kept as text so a catalogue row written by an older build
+  /// still parses; [type] is the typed view.
   final String category;
 
   /// beginner | intermediate | expert, or null when the source had no level.
@@ -80,6 +85,15 @@ class LibraryExercise {
   /// Stable identity. The build script's id wins; a payload written before the
   /// canonical catalogue keeps working through the name-derived fallback.
   String get id => catalogueId ?? keyFor(name);
+
+  /// The typed category, or null when the row carries a value this build does
+  /// not know. Unknown stays visible rather than being coerced to Strength.
+  taxonomy.ExerciseCategory? get type =>
+      taxonomy.ExerciseCategory.tryParse(category);
+
+  /// Display label for [category], falling back to a title-cased version of
+  /// the raw value for rows this build has no enum for.
+  String get categoryLabel => taxonomy.categoryLabel(category);
 
   /// Convenience for cards and older callers: the first primary muscle.
   String get primaryMuscle =>
