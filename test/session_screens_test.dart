@@ -121,8 +121,8 @@ void main() {
     // The seeded history holds the same exercise yesterday at 40 kg, so the
     // header names it and the PREVIOUS column fills in instead of a dash.
     expect(find.text('No previous data'), findsNothing);
-    expect(find.text('Last time: 40.0 kg × 10'), findsOneWidget);
-    expect(find.text('40.0 × 10'), findsWidgets);
+    expect(find.text('Last time  40 kg × 10'), findsOneWidget);
+    expect(find.text('40 × 10'), findsWidgets);
   });
 
   testWidgets('the summary renders its session without mock chrome', (
@@ -164,12 +164,12 @@ void main() {
     await tester.pump();
 
     // 8x60 + 8x60 + 12x14, the completed sets of the seeded plan.
-    expect(find.text('1128'), findsOneWidget);
-    expect(find.text('45 min'), findsOneWidget);
+    expect(find.text('1,128'), findsOneWidget);
+    expect(find.text('45:00'), findsOneWidget);
 
     final headline =
         '${DateFormat('EEE, MMM d').format(workout.date).toUpperCase()} / '
-        '${workout.title}';
+        '${workout.title.toUpperCase()}';
     expect(find.text(headline), findsOneWidget);
 
     // The invented date, duration and percentage are gone, and the session
@@ -215,12 +215,13 @@ void main() {
     // claim can be checked against the log.
     expect(find.text('NEW PERSONAL RECORD'), findsOneWidget);
     expect(find.text('100'), findsOneWidget);
-    expect(find.text('kg × 5'), findsOneWidget);
-    expect(find.text('90 kg × 5'), findsOneWidget);
+    expect(find.text('KG × 5'), findsOneWidget);
+    expect(find.text('90 kg × 5'), findsNothing);
     expect(
       find.text(
         'previous best · '
-        '${DateFormat('MMM d').format(_today.subtract(const Duration(days: 10)))}',
+        '${DateFormat('MMM d').format(_today.subtract(const Duration(days: 10)))}'
+        '  ·  90 kg × 5',
       ),
       findsOneWidget,
     );
@@ -246,7 +247,7 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text(workout.title), findsOneWidget);
+    expect(find.text(workout.title.toUpperCase()), findsOneWidget);
     expect(find.text('THE LINEUP'), findsOneWidget);
     // The plan's own focus, and none of the canned Lower Body session that
     // used to be built for every id.
@@ -301,10 +302,10 @@ void main() {
     );
     await tester.pump();
 
-    // A session created a moment ago has nothing planned on it, so the screen
-    // says that rather than showing a line-up it does not have.
-    expect(find.text('Leg Day'), findsOneWidget);
-    expect(find.text('THE LINEUP'), findsNothing);
+    // A session created a moment ago has nothing planned on it. The heading
+    // stays put; the body says what is missing.
+    expect(find.text('LEG DAY'), findsOneWidget);
+    expect(find.text('THE LINEUP'), findsOneWidget);
     expect(find.textContaining('no exercises yet'), findsOneWidget);
     // Nothing to focus on yet, so the section is left out rather than empty.
     expect(find.text("TODAY'S FOCUS"), findsNothing);

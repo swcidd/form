@@ -186,14 +186,18 @@ class WorkoutProvider extends ChangeNotifier {
 
   /// The session the dashboard should push the user toward: today's plan if
   /// it exists, otherwise the next one on the calendar.
+  /// A session that is still to be trained: planned, or already started.
+  static bool _isOpen(Workout workout) =>
+      workout.status == WorkoutStatus.planned ||
+      workout.status == WorkoutStatus.inProgress;
+
   Workout? get focusWorkout {
     final todayWorkouts = workoutsOn(_today);
     for (final workout in todayWorkouts) {
-      if (workout.status == WorkoutStatus.planned) return workout;
+      if (_isOpen(workout)) return workout;
     }
     for (final workout in _workouts) {
-      if (workout.date.isAfter(_today) &&
-          workout.status == WorkoutStatus.planned) {
+      if (workout.date.isAfter(_today) && _isOpen(workout)) {
         return workout;
       }
     }
@@ -291,7 +295,7 @@ class WorkoutProvider extends ChangeNotifier {
   /// drift. Null means the week has nothing left to do.
   Workout? get focusWorkoutThisWeek {
     for (final workout in workoutsInCurrentWeek) {
-      if (workout.status != WorkoutStatus.planned) continue;
+      if (!_isOpen(workout)) continue;
       if (_dayOnly(workout.date).isBefore(_today)) continue;
       return workout;
     }
@@ -490,6 +494,29 @@ class WorkoutProvider extends ChangeNotifier {
     );
 
     updateWorkout(updated);
+  }
+
+  /// Changes the weight or reps on one set without completing it.
+  ///
+  /// The logging screen writes stepper changes straight through, so the value
+  /// the user sees is the value that will be persisted when they log the set.
+  bool updateSet(
+    String workoutId,
+    int logIndex,
+    int setIndex, {
+    int? reps,
+    double? weightKg,
+  }) {
+    return _mapLogs(workoutId, (logs) {
+      if (logIndex < 0 || logIndex >= logs.length) return null;
+      final log = logs[logIndex];
+      if (setIndex < 0 || setIndex >= log.sets.length) return null;
+      final sets = List.of(log.sets);
+      sets[setIndex] = sets[setIndex].copyWith(reps: reps, weightKg: weightKg);
+      final updated = List.of(logs);
+      updated[logIndex] = log.copyWith(sets: sets);
+      return updated;
+    });
   }
 
   /// Appends a set to one exercise so the user can add volume mid-session

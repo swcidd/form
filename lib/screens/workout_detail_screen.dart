@@ -4,21 +4,17 @@ import 'package:provider/provider.dart';
 import '../models/exercise.dart';
 import '../models/workout.dart';
 import '../providers/workout_provider.dart';
-import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import 'set_logging_screen.dart';
 
 /// Pre-workout screen: what the session is, and the button that starts it.
 ///
-/// Reachable from the dashboard through the named `/workout-detail` route,
-/// which carries the workout id. The session comes from the provider by that
-/// id, so the screen shows the user's own plan; an id that is not in the store
-/// gets a not-found state rather than a made-up session.
+/// The layout follows the Figma "Train · Lower body detail" frame: a compact
+/// toolbar, a photographic title band, the focus the plan was built around,
+/// the exercise line-up with its rest notes, and one full-width action.
 class WorkoutDetailScreen extends StatelessWidget {
   const WorkoutDetailScreen({super.key, this.route});
 
-  /// The route the shell pushes. Accepting the [RouteSettings] lets the screen
-  /// read the id out of a `/workout-detail/:id` path as well as a route argument.
   final RouteSettings? route;
 
   static String routeFor(String id) => '$routeName/$id';
@@ -40,31 +36,42 @@ class WorkoutDetailScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: CustomScrollView(
-        slivers: [
-          _HeroSliver(workout: workout),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: AppSpacing.pageHorizontal,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (workout.targetMuscleGroups.isNotEmpty ||
-                      workout.equipment.isNotEmpty) ...[
-                    _TrainingIntent(workout: workout),
-                    const SizedBox(height: 24),
-                  ],
-                  if (workout.logs.isEmpty)
-                    const _NoExercises()
-                  else
-                    _ExerciseList(workout: workout),
-                  const SizedBox(height: 24),
-                  _StartWorkoutButton(workout: workout),
-                  const SizedBox(height: 32),
-                ],
-              ),
+      body: Column(
+        children: [
+          Expanded(
+            child: CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(
+                  child: SafeArea(
+                    bottom: false,
+                    child: _Toolbar(workout: workout),
+                  ),
+                ),
+                SliverToBoxAdapter(child: _Hero(workout: workout)),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (workout.targetMuscleGroups.isNotEmpty ||
+                            workout.equipment.isNotEmpty) ...[
+                          _Focus(workout: workout),
+                          const SizedBox(height: 8),
+                        ],
+                        _LineupHeading(count: workout.logs.length),
+                        if (workout.logs.isEmpty)
+                          const _NoExercises()
+                        else
+                          _Lineup(logs: workout.logs),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
+          _StartWorkoutButton(workout: workout),
         ],
       ),
     );
@@ -78,8 +85,6 @@ class WorkoutDetailScreen extends StatelessWidget {
   }
 }
 
-/// Shown when the id in the route is not in the store - a session that was
-/// deleted on another screen, or a link to one that never existed.
 class _NotFound extends StatelessWidget {
   const _NotFound();
 
@@ -114,9 +119,8 @@ class _NotFound extends StatelessWidget {
   }
 }
 
-/// Hero section with photograph, scrim, category badge, and title.
-class _HeroSliver extends StatelessWidget {
-  const _HeroSliver({required this.workout});
+class _Toolbar extends StatelessWidget {
+  const _Toolbar({required this.workout});
 
   final Workout workout;
 
@@ -125,78 +129,31 @@ class _HeroSliver extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final text = context.text;
 
-    return SliverAppBar(
-      expandedHeight: 280,
-      pinned: false,
-      stretch: true,
-      backgroundColor: scheme.onSurface,
-      flexibleSpace: FlexibleSpaceBar(
-        stretchModes: const [StretchMode.zoomBackground],
-        background: Stack(
-          fit: StackFit.expand,
+    return SizedBox(
+      height: 56,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Row(
           children: [
-            // Hero photograph
-            Image.asset(
-              'assets/images/workout_hero.png',
-              fit: BoxFit.cover,
-              errorBuilder: (_, _, _) =>
-                  Container(color: scheme.surfaceContainerHighest),
-            ),
-            // Scrim gradient
-            const DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                  colors: [
-                    Color(0xFF121512), // ink
-                    Color(0x00121512), // transparent
-                  ],
-                  stops: [0.0, 1.0],
+            GestureDetector(
+              onTap: () => Navigator.of(context).maybePop(),
+              child: SizedBox(
+                width: 44,
+                height: 44,
+                child: Icon(
+                  Icons.arrow_back_rounded,
+                  size: 22,
+                  color: scheme.onSurface,
                 ),
               ),
             ),
-            // Content
-            SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    // Category badge (lime), from the session's own focus.
-                    if (workout.targetMuscleGroups.isNotEmpty)
-                      Text(
-                        workout.targetMuscleGroups
-                            .take(2)
-                            .join(' / ')
-                            .toUpperCase(),
-                        style: Theme.of(context).textTheme.labelMedium
-                            ?.copyWith(
-                              color: AppColors.lime,
-                              fontWeight: FontWeight.w600,
-                            ),
-                      ),
-                    const SizedBox(height: 8),
-                    // Workout title (Barlow Condensed Bold 48)
-                    Text(workout.title, style: text.dataHero),
-                    const SizedBox(height: 4),
-                    // Meta line, counted off the session rather than stated.
-                    Text(
-                      [
-                        if (workout.durationMin > 0)
-                          '${workout.durationMin} min',
-                        if (workout.logs.isNotEmpty)
-                          '${workout.logs.length} '
-                              '${workout.logs.length == 1 ? 'exercise' : 'exercises'}',
-                        if (workout.totalSets > 0) '${workout.totalSets} sets',
-                      ].join('  ·  '),
-                      style: text.exerciseMeta,
-                    ),
-                  ],
-                ),
-              ),
+            const Spacer(),
+            Text(
+              workout.date.day.toString().padLeft(2, '0'),
+              style: text.annotation.copyWith(color: scheme.onSurfaceVariant),
             ),
+            const SizedBox(width: 8),
+            Icon(Icons.more_horiz_rounded, size: 22, color: scheme.onSurface),
           ],
         ),
       ),
@@ -204,134 +161,170 @@ class _HeroSliver extends StatelessWidget {
   }
 }
 
-/// What the session is for: the muscle groups it targets and the equipment it
-/// needs, both taken from the plan itself.
-///
-/// Replaces a paragraph of invented coaching copy, which told every user to
-/// leave two reps in reserve on every session regardless of what they had
-/// planned or what they had logged before.
-class _TrainingIntent extends StatelessWidget {
-  const _TrainingIntent({required this.workout});
+class _Hero extends StatelessWidget {
+  const _Hero({required this.workout});
 
   final Workout workout;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final text = context.text;
+    final focus = [
+      if (workout.modality != null) workout.modality!.label.toUpperCase(),
+      if (workout.split != null) workout.split!.label.toUpperCase(),
+    ].join(' / ');
+    final meta = [
+      if (workout.durationMin > 0) '${workout.durationMin} min',
+      '${workout.logs.length} '
+          '${workout.logs.length == 1 ? 'exercise' : 'exercises'}',
+      '${workout.totalSets} sets',
+    ].join('  /  ');
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text("TODAY'S FOCUS", style: text.labelCaps),
-        const SizedBox(height: 10),
-        if (workout.targetMuscleGroups.isNotEmpty)
-          _Chips(
-            values: workout.targetMuscleGroups,
-            background: scheme.primaryContainer,
-            foreground: scheme.onPrimaryContainer,
+    return SizedBox(
+      height: 112,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.asset(
+            'assets/images/workout_hero.png',
+            fit: BoxFit.cover,
+            excludeFromSemantics: true,
+            errorBuilder: (_, _, _) => ColoredBox(
+              color: Theme.of(context).colorScheme.surfaceContainerHigh,
+            ),
           ),
-        if (workout.targetMuscleGroups.isNotEmpty &&
-            workout.equipment.isNotEmpty)
-          const SizedBox(height: 8),
-        if (workout.equipment.isNotEmpty)
-          _Chips(
-            values: workout.equipment,
-            background: scheme.surfaceContainerHigh,
-            foreground: scheme.onSurfaceVariant,
-          ),
-      ],
-    );
-  }
-}
-
-/// A wrapped row of pills. Wraps rather than scrolls: a long equipment list has
-/// to stay readable at a glance without a gesture nobody knows is there.
-class _Chips extends StatelessWidget {
-  const _Chips({
-    required this.values,
-    required this.background,
-    required this.foreground,
-  });
-
-  final List<String> values;
-  final Color background;
-  final Color foreground;
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        for (final value in values)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          const DecoratedBox(
             decoration: BoxDecoration(
-              color: background,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              value,
-              style: Theme.of(context).textTheme.labelMedium
-                  ?.copyWith(color: foreground),
+              gradient: LinearGradient(
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+                colors: [Color(0xE8121512), Color(0x21121512)],
+              ),
             ),
           ),
-      ],
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  focus.isEmpty
+                      ? workout.targetMuscleGroups
+                            .take(2)
+                            .join(' / ')
+                            .toUpperCase()
+                      : focus,
+                  style: text.labelCaps.copyWith(
+                    fontSize: 10,
+                    color: const Color(0xFFD5FC61),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  workout.title.toUpperCase(),
+                  style: text.dataHero.copyWith(
+                    fontSize: 44,
+                    height: 0.98,
+                    color: const Color(0xFFF2F1E9),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  meta,
+                  style: text.annotation.copyWith(
+                    fontSize: 12,
+                    color: const Color(0xFFF2F1E9),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
-/// A session with no exercises on it yet - what the create dialog produces.
-class _NoExercises extends StatelessWidget {
-  const _NoExercises();
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: scheme.outlineVariant),
-      ),
-      child: Text(
-        'This session has no exercises yet. Add one on the logging screen '
-        'when you start training.',
-        style: context.text.annotation.copyWith(height: 1.5),
-      ),
-    );
-  }
-}
-
-/// Exercise list with numbering, names, set schemes, and rest times.
-class _ExerciseList extends StatelessWidget {
-  const _ExerciseList({required this.workout});
+class _Focus extends StatelessWidget {
+  const _Focus({required this.workout});
 
   final Workout workout;
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final text = context.text;
+    final values = [...workout.targetMuscleGroups, ...workout.equipment];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(children: [Text('THE LINEUP', style: text.labelCaps)]),
-        const SizedBox(height: 12),
-        ListView.separated(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: workout.logs.length,
-          separatorBuilder: (_, _) => const SizedBox(height: 12),
-          itemBuilder: (context, index) {
-            final log = workout.logs[index];
-            return _ExerciseRow(index: index, log: log);
-          },
+        Text(
+          "TODAY'S FOCUS",
+          style: text.labelCaps.copyWith(color: scheme.onSurfaceVariant),
         ),
+        const SizedBox(height: 5),
+        Text(
+          values.join('  ·  '),
+          style: text.exerciseMeta.copyWith(
+            fontSize: 13,
+            height: 1.5,
+            color: scheme.onSurfaceVariant,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _LineupHeading extends StatelessWidget {
+  const _LineupHeading({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final text = context.text;
+
+    return SizedBox(
+      height: 44,
+      child: Row(
+        children: [
+          Text(
+            'THE LINEUP',
+            style: text.labelCaps.copyWith(color: scheme.onSurfaceVariant),
+          ),
+          const Spacer(),
+          Text(
+            '$count ${count == 1 ? 'exercise' : 'exercises'}',
+            style: text.annotation.copyWith(
+              fontSize: 11,
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Lineup extends StatelessWidget {
+  const _Lineup({required this.logs});
+
+  final List<ExerciseLog> logs;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        for (var index = 0; index < logs.length; index++)
+          _ExerciseRow(index: index, log: logs[index]),
       ],
     );
   }
@@ -348,50 +341,66 @@ class _ExerciseRow extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final text = context.text;
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        borderRadius: AppRadius.card,
-        border: Border.all(color: scheme.outlineVariant),
-      ),
+    return SizedBox(
+      height: 56,
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Number badge
-          Container(
-            width: 42,
-            alignment: Alignment.centerLeft,
+          SizedBox(
+            width: 28,
             child: Text(
               (index + 1).toString().padLeft(2, '0'),
-              style: text.programBadge.copyWith(color: scheme.onSurfaceVariant),
+              style: text.dataMetric.copyWith(
+                fontSize: 23,
+                color: scheme.onSurfaceVariant,
+              ),
             ),
           ),
           const SizedBox(width: 12),
-          // Exercise info
           Expanded(
             child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  log.exercise.name.toUpperCase(),
-                  style: Theme.of(context).textTheme.titleLarge
-                      ?.copyWith(fontWeight: FontWeight.w600),
+                  log.exercise.name,
+                  style: text.exerciseMeta.copyWith(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: scheme.onSurface,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${log.setScheme}  ·  ${log.heaviestWeight} kg',
-                  style: text.previousPerf,
+                  '${log.sets.length} sets × ${log.setScheme}'
+                  '${log.heaviestWeight == '0' ? '' : '  ·  ${log.heaviestWeight} kg'}',
+                  style: text.annotation.copyWith(
+                    fontSize: 12,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
-          // Rest time
-          Text('${log.restSeconds}s rest', style: text.setDim),
+          SizedBox(
+            width: 72,
+            child: Text(
+              '${log.restSeconds}s rest',
+              textAlign: TextAlign.end,
+              style: text.annotation.copyWith(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: scheme.onSurface,
+              ),
+            ),
+          ),
           const SizedBox(width: 8),
           Icon(
             Icons.chevron_right_rounded,
-            size: 18,
+            size: 16,
             color: scheme.onSurfaceVariant,
           ),
         ],
@@ -400,7 +409,27 @@ class _ExerciseRow extends StatelessWidget {
   }
 }
 
-/// Start workout CTA button.
+class _NoExercises extends StatelessWidget {
+  const _NoExercises();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 20),
+      child: Text(
+        'This session has no exercises yet. Add one on the logging screen '
+        'when you start training.',
+        style: context.text.annotation.copyWith(
+          height: 1.5,
+          color: scheme.onSurfaceVariant,
+        ),
+      ),
+    );
+  }
+}
+
 class _StartWorkoutButton extends StatelessWidget {
   const _StartWorkoutButton({required this.workout});
 
@@ -409,24 +438,47 @@ class _StartWorkoutButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final text = context.text;
 
-    return SizedBox(
-      width: double.infinity,
-      height: 56,
-      child: ElevatedButton.icon(
-        onPressed: () {
-          Navigator.of(context)
-              .pushNamed(SetLoggingScreen.routeFor(workout.id));
-        },
-        icon: const Icon(Icons.play_arrow_rounded, size: 20),
-        label: Text(
-          'Start ${workout.title}',
-          style: Theme.of(context).textTheme.labelLarge,
-        ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: scheme.primary,
-          foregroundColor: scheme.onPrimary,
-          shape: const RoundedRectangleBorder(borderRadius: AppRadius.control),
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 8, 24, 12),
+        child: SizedBox(
+          height: 56,
+          child: FilledButton(
+            onPressed: () {
+              Navigator.of(context)
+                  .pushNamed(SetLoggingScreen.routeFor(workout.id));
+            },
+            style: FilledButton.styleFrom(
+              backgroundColor: scheme.primary,
+              foregroundColor: scheme.onPrimary,
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Start workout',
+                  style: text.labelCaps.copyWith(
+                    fontSize: 14,
+                    letterSpacing: 0,
+                    fontWeight: FontWeight.w700,
+                    color: scheme.onPrimary,
+                  ),
+                ),
+                Icon(
+                  Icons.play_arrow_rounded,
+                  size: 22,
+                  color: scheme.onPrimary,
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
