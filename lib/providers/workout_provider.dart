@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../data/workout_repository.dart';
-import '../exercise_library.dart';
+import '../models/library_exercise.dart';
 import '../models/exercise.dart';
 import '../models/metric.dart';
 import '../models/profile_stats.dart';

@@ -6,7 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../data/exercise_catalog.dart';
 import '../data/exercise_images.dart';
-import '../exercise_library.dart';
+import '../models/library_exercise.dart';
 import '../models/saved_exercise.dart';
 import '../models/taxonomy.dart';
 import '../models/workout.dart';

@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 
-import '../exercise_library.dart';
+import '../models/library_exercise.dart';
 import '../models/exercise.dart';
 import '../models/profile_stats.dart';
 import '../models/saved_exercise.dart';

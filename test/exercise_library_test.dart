@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:plus_one/exercise_library.dart';
+import 'package:plus_one/data/exercise_library.dart';
+import 'package:plus_one/models/library_exercise.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

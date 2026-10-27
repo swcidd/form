@@ -8,7 +8,7 @@ import 'package:provider/provider.dart';
 
 import 'package:plus_one/data/exercise_api_client.dart';
 import 'package:plus_one/data/exercise_catalog.dart';
-import 'package:plus_one/exercise_library.dart';
+import 'package:plus_one/models/library_exercise.dart';
 import 'package:plus_one/main.dart';
 import 'package:plus_one/models/workout.dart';
 import 'package:plus_one/providers/workout_provider.dart';
