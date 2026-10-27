@@ -119,14 +119,21 @@ class WorkoutDetailScreen extends StatelessWidget {
 
     final current = provider.byId(workout.id);
     if (current == null) return;
-    provider.updateWorkout(
-      current.copyWith(
-        logs: [
-          ...current.logs,
-          for (final exercise in picked) _logFrom(exercise),
-        ],
-      ),
-    );
+
+    // The picker does not know what the session already holds, so picking
+    // something twice would add a second log for the same exercise. Skipped
+    // rather than merged: this screen appends, and deciding which of two
+    // prescriptions for one exercise wins is not a call to make silently.
+    final already = {
+      for (final log in current.logs) log.exercise.name.toLowerCase(),
+    };
+    final added = [
+      for (final exercise in picked)
+        if (!already.contains(exercise.name.toLowerCase())) _logFrom(exercise),
+    ];
+    if (added.isEmpty) return;
+
+    provider.updateWorkout(current.copyWith(logs: [...current.logs, ...added]));
   }
 
   /// One catalogue entry as a planned log, mapped the same way the
@@ -442,20 +449,26 @@ class _LineupHeading extends StatelessWidget {
           const Spacer(),
           // The frame's 90x44 Edit action: edit lives here now rather than in
           // the toolbar's overflow, because the line-up is what it changes.
-          GestureDetector(
-            onTap: onEdit,
-            behavior: HitTestBehavior.opaque,
-            child: SizedBox(
-              width: 90,
-              height: 44,
-              child: Align(
-                alignment: Alignment.centerRight,
-                child: Text(
-                  'Edit workout',
-                  style: text.exerciseMeta.copyWith(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: scheme.primary,
+          // Announced as a button: a bare GestureDetector reads as plain text
+          // to a screen reader, and this is the only way into editing.
+          Semantics(
+            button: true,
+            label: 'Edit workout',
+            child: GestureDetector(
+              onTap: onEdit,
+              behavior: HitTestBehavior.opaque,
+              child: SizedBox(
+                width: 90,
+                height: 44,
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    'Edit workout',
+                    style: text.exerciseMeta.copyWith(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: scheme.primary,
+                    ),
                   ),
                 ),
               ),
