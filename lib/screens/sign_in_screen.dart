@@ -97,7 +97,7 @@ class _SignInScreenState extends State<SignInScreen> {
             kicker: 'WELCOME BACK / KEEP BUILDING',
             headline: 'BACK TO\nYOUR STRONG.',
             onBack: () => Navigator.of(context).maybePop(),
-            height: 300,
+            height: 318,
           ),
           AuthFormArea(
             top: AutofillGroup(

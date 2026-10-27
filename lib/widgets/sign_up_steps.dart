@@ -36,7 +36,7 @@ class SignUpSteps extends StatelessWidget {
                 Container(
                   height: 2,
                   color: index == current
-                      ? scheme.onSurface
+                      ? scheme.primary
                       : scheme.outlineVariant,
                 ),
                 const SizedBox(height: 10),

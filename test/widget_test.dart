@@ -30,7 +30,7 @@ void main() {
 
       expect(scheme.brightness, Brightness.dark);
       expect(scheme.surface, AppColors.inkMuted);
-      expect(scheme.onSurface, AppColors.cream);
+      expect(scheme.onSurface, AppColors.warmCream);
       expect(scheme.primary, AppColors.lime);
       expect(scheme.onPrimary, AppColors.ink);
     });
@@ -184,7 +184,7 @@ void main() {
 
       // The screen shows the session that was tapped, by id, rather than the
       // canned example it used to build for every route.
-      expect(find.text('Upper Body Hypertrophy & Core'), findsOneWidget);
+      expect(find.text('UPPER BODY HYPERTROPHY & CORE'), findsOneWidget);
       expect(find.textContaining('LOWER BODY'), findsNothing);
       expect(find.text('THE LINEUP'), findsOneWidget);
     });
@@ -216,7 +216,7 @@ void main() {
       expect(find.text('UP NEXT'), findsOneWidget);
 
       await _tapDestination(tester, 'Progress');
-      expect(find.text('Estimated 1RM'), findsOneWidget);
+      expect(find.text('ESTIMATED 1-REP MAX'), findsOneWidget);
 
       await _tapDestination(tester, 'Profile');
       expect(find.text('Alex Mercer'), findsOneWidget);
@@ -283,7 +283,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // The progress tab should now be visible - check for progress content
-      expect(find.text('Estimated 1RM'), findsOneWidget);
+      expect(find.text('ESTIMATED 1-REP MAX'), findsOneWidget);
     });
   });
 
@@ -338,9 +338,10 @@ void main() {
       expect(provider.workouts.single.title, 'Leg Day');
       expect(provider.workouts.single.status, WorkoutStatus.planned);
 
-      // A session created a moment ago has nothing on it yet, so the screen
-      // says that instead of showing a line-up it does not have.
-      expect(find.text('THE LINEUP'), findsNothing);
+      // A session created a moment ago has nothing on it yet. The line-up
+      // heading stays so the screen has a stable shape, and the empty body
+      // explains what to do next.
+      expect(find.text('THE LINEUP'), findsOneWidget);
       expect(find.textContaining('no exercises yet'), findsOneWidget);
     });
 
