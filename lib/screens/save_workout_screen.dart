@@ -74,10 +74,10 @@ class _SaveWorkoutScreenState extends State<SaveWorkoutScreen> {
     return Uri.decodeComponent(segments[1]);
   }
 
-  /// Writes the session back whole rather than through `copyWith`.
+  /// Names the session and records what kind of training it is.
   ///
-  /// `copyWith` treats null as "leave unchanged", so a classification the user
-  /// tapped off could never be cleared.
+  /// `copyWith` takes `null` on a classification as "clear it", so a group the
+  /// user tapped off ends up unset rather than keeping the value they removed.
   void _save() {
     final provider = context.read<WorkoutProvider>();
     final workout = _current();
@@ -85,23 +85,11 @@ class _SaveWorkoutScreenState extends State<SaveWorkoutScreen> {
     if (workout == null) return;
 
     final trimmed = _name.text.trim();
-    final updated = Workout(
-      id: workout.id,
+    final updated = workout.copyWith(
       title: trimmed.isEmpty ? SaveWorkoutScreen.draftTitle : trimmed,
-      date: workout.date,
-      status: workout.status,
-      startTime: workout.startTime,
-      place: workout.place,
-      durationMin: workout.durationMin,
-      estimatedKcal: workout.estimatedKcal,
-      targetMuscleGroups: workout.targetMuscleGroups,
-      equipment: workout.equipment,
-      logs: workout.logs,
-      hasNewPR: workout.hasNewPR,
       modality: _modality,
       split: _split,
       goal: _goal,
-      kind: workout.kind,
     );
 
     provider.updateWorkout(updated);

@@ -114,39 +114,16 @@ class _EditorState extends State<_Editor> {
   /// [Workout.copyWith] treats a null argument as "leave it alone", which is
   /// the right default everywhere else and the wrong one here: a user clearing
   /// the selected modality means unset, not unchanged. The common path stays on
-  /// copyWith and only a cleared classification rebuilds the record, because
-  /// there is no sentinel that would let copyWith express null.
+  /// The session as the form currently reads it.
+  ///
+  /// `copyWith` takes `null` on a classification as "clear it", so a group the
+  /// user tapped off ends up unset rather than keeping the value they removed.
   Workout _edited() {
-    final base = widget.workout.copyWith(
+    return widget.workout.copyWith(
       title: _name.text.trim(),
       modality: _modality,
       split: _split,
       goal: _goal,
-    );
-
-    final clearing =
-        (_modality == null && base.modality != null) ||
-        (_split == null && base.split != null) ||
-        (_goal == null && base.goal != null);
-    if (!clearing) return base;
-
-    return Workout(
-      id: base.id,
-      title: base.title,
-      date: base.date,
-      status: base.status,
-      startTime: base.startTime,
-      place: base.place,
-      durationMin: base.durationMin,
-      estimatedKcal: base.estimatedKcal,
-      targetMuscleGroups: base.targetMuscleGroups,
-      equipment: base.equipment,
-      logs: base.logs,
-      hasNewPR: base.hasNewPR,
-      modality: _modality,
-      split: _split,
-      goal: _goal,
-      kind: base.kind,
     );
   }
 

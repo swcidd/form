@@ -94,6 +94,14 @@ class Workout extends Equatable {
 
   bool get isDone => completedSets == totalSets && totalSets > 0;
 
+  /// Sentinel for the three classification fields below.
+  ///
+  /// Without it, `null` has to mean "leave this alone" - and then a
+  /// classification can never be *cleared*: tapping a selected pill off would
+  /// quietly keep the old value. Callers omit an argument to keep it and pass
+  /// `null` to clear it.
+  static const Object _unset = Object();
+
   Workout copyWith({
     String? id,
     String? title,
@@ -107,9 +115,9 @@ class Workout extends Equatable {
     List<String>? equipment,
     List<ExerciseLog>? logs,
     bool? hasNewPR,
-    Modality? modality,
-    WorkoutSplit? split,
-    TrainingGoal? goal,
+    Object? modality = _unset,
+    Object? split = _unset,
+    Object? goal = _unset,
     WorkoutKind? kind,
   }) {
     return Workout(
@@ -125,9 +133,11 @@ class Workout extends Equatable {
       equipment: equipment ?? this.equipment,
       logs: logs ?? this.logs,
       hasNewPR: hasNewPR ?? this.hasNewPR,
-      modality: modality ?? this.modality,
-      split: split ?? this.split,
-      goal: goal ?? this.goal,
+      modality: identical(modality, _unset)
+          ? this.modality
+          : modality as Modality?,
+      split: identical(split, _unset) ? this.split : split as WorkoutSplit?,
+      goal: identical(goal, _unset) ? this.goal : goal as TrainingGoal?,
       kind: kind ?? this.kind,
     );
   }
