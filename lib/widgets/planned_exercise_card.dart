@@ -256,17 +256,22 @@ class _NumberField extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
 
     return SizedBox(
-      height: 40,
+      // 52 rather than 40: at 40 with dense padding the field read as a label
+      // with a line under it rather than somewhere to type a weight.
+      height: 52,
       child: TextFormField(
         initialValue: value == 0 ? '' : _trim(value),
         keyboardType: const TextInputType.numberWithOptions(decimal: true),
         textAlign: TextAlign.center,
-        style: context.text.annotation,
+        style: context.text.annotation.copyWith(fontSize: 15),
         decoration: InputDecoration(
           hintText: '—',
-          contentPadding: EdgeInsets.zero,
-          isDense: true,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+          hintStyle: context.text.annotation.copyWith(
+            fontSize: 15,
+            color: scheme.outline,
+          ),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
             borderSide: BorderSide(color: scheme.outlineVariant),
