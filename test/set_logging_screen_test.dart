@@ -42,8 +42,13 @@ Workout _squatSession({List<ExerciseLog>? logs}) => Workout(
   logs:
       logs ??
       [
+        // Three sets with one done. Logging the next leaves a third, which is
+        // what these tests are about: a rest only starts while the exercise
+        // still has work on it - the set that finishes one moves the screen on
+        // instead.
         _log('Barbell Back Squat', [
           _set(8, 40, completed: true),
+          _set(11, 72.5),
           _set(11, 72.5),
         ]),
       ],

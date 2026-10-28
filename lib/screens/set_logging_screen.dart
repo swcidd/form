@@ -957,9 +957,19 @@ class _LoggingAction extends StatelessWidget {
                 return;
               }
               provider.toggleSet(workout.id, logIndex, activeSet!);
+
+              // That toggle may have been the exercise's last set. When it was,
+              // the screen moves on to the next exercise - which is what
+              // `_currentIndex` finds on the rebuild - and a rest belongs to
+              // the exercise you are still on, so the countdown only starts
+              // while sets remain.
+              final updated = provider.byId(workout.id)?.logs[logIndex];
+              final exerciseFinished = updated == null || updated.isFinished;
               // No planned rest means no countdown: the screen should not
               // invent one.
-              if (log.restSeconds > 0) onLogged(log.restSeconds);
+              if (!exerciseFinished && log.restSeconds > 0) {
+                onLogged(log.restSeconds);
+              }
             },
             style: FilledButton.styleFrom(
               backgroundColor: scheme.primary,
