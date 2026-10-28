@@ -59,7 +59,7 @@ Future<Workout?> startWorkout(BuildContext context, {DateTime? date}) async {
       draft.copyWith(
         logs: [
           ...draft.logs,
-          for (final exercise in picked) _planned(exercise),
+          for (final exercise in picked) ExerciseLog.planned(exercise),
         ],
       ),
     );
@@ -69,21 +69,4 @@ Future<Workout?> startWorkout(BuildContext context, {DateTime? date}) async {
     SaveWorkoutScreen.routeFor(draft.id),
   );
   return saved ?? provider.byId(draft.id);
-}
-
-/// One catalogue entry as a planned log.
-///
-/// No sets are invented: the exercise lands with nothing filled in, which the
-/// logging screen already handles, rather than opening on numbers nobody chose.
-ExerciseLog _planned(LibraryExercise exercise) {
-  return ExerciseLog(
-    exercise: Exercise(
-      name: exercise.name,
-      // The catalogue allows an empty equipment list on a malformed saved row;
-      // a blank label beats a made-up one.
-      equipment: exercise.equipment.isEmpty ? '' : exercise.equipment.first,
-      muscleGroups: exercise.primaryMuscles,
-    ),
-    sets: const [],
-  );
 }

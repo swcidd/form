@@ -129,29 +129,13 @@ class WorkoutDetailScreen extends StatelessWidget {
     };
     final added = [
       for (final exercise in picked)
-        if (!already.contains(exercise.name.toLowerCase())) _logFrom(exercise),
+        if (!already.contains(exercise.name.toLowerCase()))
+          ExerciseLog.planned(exercise),
     ];
     if (added.isEmpty) return;
 
     provider.updateWorkout(current.copyWith(logs: [...current.logs, ...added]));
   }
-
-  /// One catalogue entry as a planned log, mapped the same way the
-  /// new-workout dialog maps a picked exercise.
-  ///
-  /// No sets are invented: an exercise chosen here lands with everything the
-  /// logging screen already knows how to fill in, rather than opening on
-  /// numbers nobody chose.
-  static ExerciseLog _logFrom(LibraryExercise exercise) => ExerciseLog(
-    exercise: Exercise(
-      name: exercise.name,
-      // The catalogue allows an empty equipment list on a malformed saved row;
-      // a blank label is better than a made-up one.
-      equipment: exercise.equipment.isEmpty ? '' : exercise.equipment.first,
-      muscleGroups: exercise.primaryMuscles,
-    ),
-    sets: const [],
-  );
 
   static String? _idFromPath(String? routeName) {
     if (routeName == null) return null;
