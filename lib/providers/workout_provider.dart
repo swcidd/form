@@ -439,6 +439,24 @@ class WorkoutProvider extends ChangeNotifier {
   /// navigate to it afterwards. The id is assigned here, so the caller has no
   /// way to know it beforehand, and looking the workout up again afterwards
   /// would have to guess at which one is new.
+  /// Sets the rest planned for one exercise, in seconds. Zero means none.
+  ///
+  /// Written to the log rather than held by the screen, because it is a
+  /// property of the exercise's plan: it outlives the set that prompted it, and
+  /// it is what the next session started from this routine will prescribe.
+  /// Changing it while a rest is already counting does not shorten that one -
+  /// the new value applies from the next set, which is what "saved for the next
+  /// set" means.
+  bool setRest(String workoutId, int logIndex, int seconds) {
+    final workout = byId(workoutId);
+    if (workout == null || logIndex < 0 || logIndex >= workout.logs.length) {
+      return false;
+    }
+    final logs = List.of(workout.logs);
+    logs[logIndex] = logs[logIndex].copyWith(restSeconds: seconds);
+    return updateWorkout(workout.copyWith(logs: logs));
+  }
+
   /// Logs [routine] as a session: a copy for the day, sets un-ticked.
   ///
   /// A workout is a template. Starting it must not write onto the template -

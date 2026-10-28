@@ -7,6 +7,7 @@ import '../models/exercise.dart';
 import '../models/workout.dart';
 import '../providers/workout_provider.dart';
 import '../theme/app_typography.dart';
+import '../widgets/rest_picker_sheet.dart';
 import 'workout_summary_screen.dart';
 
 /// Active workout screen: the current exercise, its set table, rest, and the
@@ -135,6 +136,22 @@ class _SetLoggingScreenState extends State<SetLoggingScreen> {
                             total: _restTotal,
                             onExtend: _extendRest,
                             onSkip: _skipRest,
+                            onSetRest: () async {
+                              // The plan's rest, not the running countdown's:
+                              // what changes now is what the next set will rest
+                              // for.
+                              final chosen = await showRestPicker(
+                                context,
+                                exercise: current.exercise.name,
+                                initial: current.restSeconds,
+                              );
+                              if (chosen == null) return;
+                              provider.setRest(
+                                workout.id,
+                                currentIndex,
+                                chosen,
+                              );
+                            },
                           ),
                         ],
                         if (!allDone && activeSet != null) ...[
@@ -635,12 +652,16 @@ class _RestTimer extends StatelessWidget {
     required this.total,
     required this.onExtend,
     required this.onSkip,
+    required this.onSetRest,
   });
 
   final int remaining;
   final int total;
   final VoidCallback onExtend;
   final VoidCallback onSkip;
+
+  /// Opens the wheel that sets what the rest will be from the next set on.
+  final VoidCallback onSetRest;
 
   @override
   Widget build(BuildContext context) {
@@ -662,11 +683,25 @@ class _RestTimer extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'REST / ${_clock(total)}',
-                      style: text.labelCaps.copyWith(
-                        fontSize: 10,
-                        color: scheme.primary,
+                    // The number is the control: tapping it opens the wheel,
+                    // rather than sending somebody to another screen to plan a
+                    // rest. Padded because 10pt type is not a tap target.
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: onSetRest,
+                      child: Semantics(
+                        button: true,
+                        label: 'Change rest',
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: Text(
+                            'REST / ${_clock(total)}',
+                            style: text.labelCaps.copyWith(
+                              fontSize: 10,
+                              color: scheme.primary,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 4),
