@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../models/exercise.dart';
 import '../models/library_exercise.dart';
+import '../models/taxonomy.dart';
 import '../models/workout.dart';
 import '../providers/workout_provider.dart';
 import 'add_exercise_screen.dart';
@@ -43,6 +44,8 @@ Future<Workout?> startWorkout(BuildContext context, {DateTime? date}) async {
       title: draftWorkoutTitle,
       date: date ?? provider.today,
       status: WorkoutStatus.planned,
+      // A template, not a log: what gets lifted is a session made from this.
+      kind: WorkoutKind.routine,
       durationMin: 45,
       estimatedKcal: 0,
       targetMuscleGroups: const [],

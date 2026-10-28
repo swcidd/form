@@ -8,6 +8,7 @@ import '../models/exercise.dart';
 import '../models/metric.dart';
 import '../models/profile_stats.dart';
 import '../models/saved_exercise.dart';
+import '../models/taxonomy.dart';
 import '../models/workout.dart';
 
 /// Single source of truth for workout state.
@@ -438,6 +439,36 @@ class WorkoutProvider extends ChangeNotifier {
   /// navigate to it afterwards. The id is assigned here, so the caller has no
   /// way to know it beforehand, and looking the workout up again afterwards
   /// would have to guess at which one is new.
+  /// Logs [routine] as a session: a copy for the day, sets un-ticked.
+  ///
+  /// A workout is a template. Starting it must not write onto the template -
+  /// otherwise the plan and the log are one record, finishing leaves nothing to
+  /// start again, and the numbers actually lifted overwrite the numbers that
+  /// were prescribed. This keeps both: the copy carries the plan's sets and
+  /// weights so the logging screen opens on what was prescribed, and starts
+  /// every set uncompleted.
+  ///
+  /// Returns the stored session. The routine is left exactly as it was.
+  Workout startSession(Workout routine, {DateTime? date}) {
+    return addWorkout(
+      routine.copyWith(
+        id: '',
+        kind: WorkoutKind.session,
+        date: _dayOnly(date ?? _today),
+        status: WorkoutStatus.inProgress,
+        logs: [
+          for (final log in routine.logs)
+            log.copyWith(
+              sets: [
+                for (final set in log.sets) set.copyWith(completed: false),
+              ],
+            ),
+        ],
+        hasNewPR: false,
+      ),
+    );
+  }
+
   Workout addWorkout(Workout workout) {
     final id = workout.id.isEmpty ? 'w${_nextId++}' : workout.id;
     final stored = workout.id.isEmpty ? workout.copyWith(id: id) : workout;

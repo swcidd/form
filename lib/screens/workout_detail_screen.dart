@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../models/exercise.dart';
 import '../models/library_exercise.dart';
+import '../models/taxonomy.dart';
 import '../models/workout.dart';
 import '../providers/workout_provider.dart';
 import '../theme/app_typography.dart';
@@ -88,9 +89,17 @@ class WorkoutDetailScreen extends StatelessWidget {
           _ActionBand(
             hasExercises: hasExercises,
             onAddExercise: () => _addExercises(context, workout),
-            onStart: () =>
-                Navigator.of(context)
-                    .pushNamed(SetLoggingScreen.routeFor(workout.id)),
+            onStart: () {
+              // A routine is a template, so starting it logs a session of its
+              // own for today rather than consuming the plan. A session is
+              // already the log, so starting one resumes it.
+              final provider = context.read<WorkoutProvider>();
+              final target = workout.kind == WorkoutKind.routine
+                  ? provider.startSession(workout)
+                  : workout;
+              Navigator.of(context)
+                  .pushNamed(SetLoggingScreen.routeFor(target.id));
+            },
           ),
         ],
       ),
