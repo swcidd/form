@@ -6,7 +6,7 @@ import 'package:plus_one/providers/workout_provider.dart';
 import 'package:plus_one/theme/app_colors.dart';
 import 'package:plus_one/theme/app_theme.dart';
 import 'package:plus_one/widgets/app_nav_bar.dart';
-import 'package:plus_one/screens/save_workout_screen.dart';
+import 'package:plus_one/screens/workout_builder_screen.dart';
 import 'package:plus_one/widgets/workout_card.dart';
 
 import 'support/harness.dart';
@@ -128,7 +128,7 @@ void main() {
       // Opening a form on arrival asks the user to create a session before
       // they have seen the calendar they are planning against.
       expect(find.text('Workout Detail'), findsNothing);
-      expect(find.byType(SaveWorkoutScreen), findsNothing);
+      expect(find.byType(WorkoutBuilderScreen), findsNothing);
       expect(find.text('PLAN THE WEEK.'), findsOneWidget);
       expect(find.text('Nothing planned yet'), findsOneWidget);
       expect(find.text('Plan a workout'), findsOneWidget);
@@ -308,10 +308,12 @@ void main() {
       await tester.pump(const Duration(milliseconds: 400));
 
       // The session is written before it is named, so the picker hands off to
-      // the save screen with the draft already in the store.
-      expect(find.byType(SaveWorkoutScreen), findsOneWidget);
-      expect(find.text('Save Workout'), findsOneWidget);
-      expect(find.text('NAME THIS SESSION'), findsOneWidget);
+      // the builder with the draft already in the store.
+      expect(find.byType(WorkoutBuilderScreen), findsOneWidget);
+      // Twice: the toolbar names what is being made, and the name field is
+      // seeded with the draft's title.
+      expect(find.text('New Workout'), findsWidgets);
+      expect(find.text('Add Exercise'), findsOneWidget);
       expect(find.text('Save'), findsOneWidget);
     });
 
@@ -326,7 +328,7 @@ void main() {
 
       // A planned session is a better answer than a form: opening the form
       // would offer to create a second session for a day that already has one.
-      expect(find.byType(SaveWorkoutScreen), findsNothing);
+      expect(find.byType(WorkoutBuilderScreen), findsNothing);
       expect(find.text('1 SESSION'), findsOneWidget);
 
       // The tile is one opaque tap target, so the label inside it is not the
@@ -361,7 +363,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
 
-      await tester.enterText(find.byType(TextFormField), 'Leg Day');
+      await tester.enterText(find.byKey(const Key('workout_name')), 'Leg Day');
       await tester.tap(find.text('Save'));
       await tester.pumpAndSettle();
 
@@ -426,7 +428,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(provider.workouts, isEmpty);
-      expect(find.byType(SaveWorkoutScreen), findsNothing);
+      expect(find.byType(WorkoutBuilderScreen), findsNothing);
       expect(find.text('Workout Detail'), findsNothing);
     });
   });

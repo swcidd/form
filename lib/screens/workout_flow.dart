@@ -6,7 +6,13 @@ import '../models/library_exercise.dart';
 import '../models/workout.dart';
 import '../providers/workout_provider.dart';
 import 'add_exercise_screen.dart';
-import 'save_workout_screen.dart';
+import 'workout_builder_screen.dart';
+
+/// What a new workout is called before anybody names it.
+///
+/// The flow writes it, not the screen: the draft has to exist - and be named
+/// something - before there is anything for the picker to add exercises to.
+const String draftWorkoutTitle = 'New Workout';
 
 /// Makes a workout, from nothing to named.
 ///
@@ -15,12 +21,11 @@ import 'save_workout_screen.dart';
 /// leave the user somewhere identical:
 ///
 ///  1. **Create the draft.** The session is written straight away under
-///     [SaveWorkoutScreen.draftTitle], so there is something to attach
-///     exercises to. A flow that collected a list first and wrote at the end
-///     would have nothing to add exercise *to*.
+///     [draftWorkoutTitle], so there is something to attach exercises to. A
+///     flow that collected a list first and wrote at the end would have nothing
+///     to add exercise *to*.
 ///  2. **Pick the exercises.** [AddExerciseScreen] appends to that draft.
-///  3. **Name and classify it.** [SaveWorkoutScreen] sets the title, modality,
-///     split and goal.
+///  3. **Build it.** [WorkoutBuilderScreen] names it and plans the sets.
 ///
 /// Returns the saved session, or null when the user abandoned the picker.
 ///
@@ -35,7 +40,7 @@ Future<Workout?> startWorkout(BuildContext context, {DateTime? date}) async {
   final draft = provider.addWorkout(
     Workout(
       id: '',
-      title: SaveWorkoutScreen.draftTitle,
+      title: draftWorkoutTitle,
       date: date ?? provider.today,
       status: WorkoutStatus.planned,
       durationMin: 45,
@@ -66,7 +71,7 @@ Future<Workout?> startWorkout(BuildContext context, {DateTime? date}) async {
   }
 
   final saved = await navigator.pushNamed<Workout>(
-    SaveWorkoutScreen.routeFor(draft.id),
+    WorkoutBuilderScreen.routeFor(draft.id),
   );
   return saved ?? provider.byId(draft.id);
 }

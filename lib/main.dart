@@ -17,7 +17,7 @@ import 'screens/add_exercise_screen.dart';
 import 'screens/app_shell.dart';
 import 'screens/edit_workout_screen.dart';
 import 'screens/exercise_detail_screen.dart';
-import 'screens/save_workout_screen.dart';
+import 'screens/workout_builder_screen.dart';
 import 'screens/sign_up_name_screen.dart';
 import 'screens/set_logging_screen.dart';
 import 'screens/sign_in_screen.dart';
@@ -121,10 +121,10 @@ class PlusOneApp extends StatelessWidget {
     final routePrefix = '/${segments.first}';
 
     switch (routePrefix) {
-      case SaveWorkoutScreen.routeName:
-        // Typed: the screen pops the workout it just wrote.
+      case WorkoutBuilderScreen.routeName:
+        // Typed: the builder pops the workout it just wrote.
         return MaterialPageRoute<Workout>(
-          builder: (_) => SaveWorkoutScreen(route: settings),
+          builder: (_) => WorkoutBuilderScreen(route: settings),
           settings: settings,
         );
       case AddExerciseScreen.routeName:
