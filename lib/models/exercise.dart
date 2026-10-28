@@ -106,7 +106,10 @@ class ExerciseLog extends Equatable {
   const ExerciseLog({
     required this.exercise,
     required this.sets,
-    this.restSeconds = 120,
+    // Zero means no rest is planned. It used to default to two minutes, which
+    // put a prescription on every exercise nobody had chosen - the design's own
+    // rest control reads "Rest: OFF" until somebody sets one.
+    this.restSeconds = 0,
   });
 
   final Exercise exercise;
@@ -165,7 +168,9 @@ class ExerciseLog extends Equatable {
       sets: (json['sets'] as List<dynamic>)
           .map((s) => WorkoutSet.fromJson(s as Map<String, dynamic>))
           .toList(),
-      restSeconds: (json['restSeconds'] as num?)?.toInt() ?? 120,
+      // Rows written before rest was blankable carry no value; they read as no
+      // rest planned rather than as two minutes nobody chose.
+      restSeconds: (json['restSeconds'] as num?)?.toInt() ?? 0,
     );
   }
 

@@ -405,7 +405,10 @@ class _CurrentExerciseHeader extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          [if (reps.isNotEmpty) reps, '${log.restSeconds}s rest'].join('  /  '),
+          [
+            if (reps.isNotEmpty) reps,
+            if (log.restSeconds > 0) '${log.restSeconds}s rest',
+          ].join('  /  '),
           style: text.exerciseMeta.copyWith(
             height: 1.5,
             color: scheme.onSurfaceVariant,
@@ -954,7 +957,9 @@ class _LoggingAction extends StatelessWidget {
                 return;
               }
               provider.toggleSet(workout.id, logIndex, activeSet!);
-              onLogged(log.restSeconds);
+              // No planned rest means no countdown: the screen should not
+              // invent one.
+              if (log.restSeconds > 0) onLogged(log.restSeconds);
             },
             style: FilledButton.styleFrom(
               backgroundColor: scheme.primary,

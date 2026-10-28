@@ -72,6 +72,14 @@ void main() {
 
     final provider = seededProvider(today: DateTime(2026, 10, 17));
     final workout = provider.focusWorkout!;
+    // A planned rest is what starts the countdown. Rest is blank by default -
+    // the design's own control reads "Rest: OFF" until somebody sets one - so
+    // this test says out loud that it wants one.
+    provider.updateWorkout(
+      workout.copyWith(
+        logs: [for (final log in workout.logs) log.copyWith(restSeconds: 120)],
+      ),
+    );
     await tester.pumpWidget(
       _screen(
         provider,
