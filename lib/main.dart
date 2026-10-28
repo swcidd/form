@@ -9,6 +9,7 @@ import 'data/app_database.dart';
 import 'data/database_factory.dart';
 import 'data/workout_repository.dart';
 import 'models/library_exercise.dart';
+import 'models/workout.dart';
 import 'navigation/app_tab.dart';
 import 'providers/auth_provider.dart';
 import 'providers/workout_provider.dart';
@@ -16,6 +17,7 @@ import 'screens/add_exercise_screen.dart';
 import 'screens/app_shell.dart';
 import 'screens/edit_workout_screen.dart';
 import 'screens/exercise_detail_screen.dart';
+import 'screens/save_workout_screen.dart';
 import 'screens/sign_up_name_screen.dart';
 import 'screens/set_logging_screen.dart';
 import 'screens/sign_in_screen.dart';
@@ -119,6 +121,12 @@ class PlusOneApp extends StatelessWidget {
     final routePrefix = '/${segments.first}';
 
     switch (routePrefix) {
+      case SaveWorkoutScreen.routeName:
+        // Typed: the screen pops the workout it just wrote.
+        return MaterialPageRoute<Workout>(
+          builder: (_) => SaveWorkoutScreen(route: settings),
+          settings: settings,
+        );
       case AddExerciseScreen.routeName:
         // Typed, because the picker pops the exercises the caller asked for:
         // a `Route<void>` throws at the push site rather than at the pop.
