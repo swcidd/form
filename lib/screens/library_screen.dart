@@ -478,22 +478,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const SizedBox(height: 8),
-        Center(
-          child: Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              color: scheme.surfaceContainer,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Icon(
-              Icons.fitness_center_rounded,
-              size: 32,
-              color: scheme.onSurface,
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
+        // No icon tile here: the headline is the first thing the tab should
+        // say, and a dumbbell above it only delays that.
         Text(
           'MAKE YOUR FIRST MOVE.',
           style: text.programName,
