@@ -111,7 +111,7 @@ void main() {
       // Logging a set starts the rest, which is when the block is on screen.
       await tester.tap(find.text('Log set 02'));
       await tester.pump();
-      await tester.tap(find.textContaining('REST /'));
+      await tester.tap(find.text('REST'));
       await tester.pumpAndSettle();
 
       // The wheel, its title, and the control that commits the choice.

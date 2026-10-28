@@ -96,21 +96,21 @@ void main() {
       await _pumpScreen(tester, provider);
 
       // Nothing to rest from until a set is logged.
-      expect(find.textContaining('REST /'), findsNothing);
+      expect(find.text('REST'), findsNothing);
 
       await tester.tap(find.text('Log set 02'));
       await tester.pump();
 
       // The plan asks for 120s, so the control shows the budget and the clock
       // starts there.
-      expect(find.text('REST / 02:00'), findsOneWidget);
+      expect(find.text('02:00'), findsOneWidget);
       expect(find.text('02:00'), findsOneWidget);
 
       await tester.pump(const Duration(seconds: 1));
       expect(find.text('01:59'), findsOneWidget);
 
       // Stop the periodic clock before the test tears the tree down.
-      await tester.tap(find.text('Skip'));
+      await tester.tap(find.bySemanticsLabel('Skip rest'));
       await tester.pump();
     });
 
@@ -131,9 +131,9 @@ void main() {
       // 119s left plus 30 makes 149s, which is now the session's rest budget
       // rather than the plan's 120.
       expect(find.text('02:29'), findsOneWidget);
-      expect(find.text('REST / 02:29'), findsOneWidget);
+      expect(find.text('02:29'), findsOneWidget);
 
-      await tester.tap(find.text('Skip'));
+      await tester.tap(find.bySemanticsLabel('Skip rest'));
       await tester.pump();
     });
 
@@ -145,10 +145,10 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
 
-      await tester.tap(find.text('Skip'));
+      await tester.tap(find.bySemanticsLabel('Skip rest'));
       await tester.pump();
 
-      expect(find.textContaining('REST /'), findsNothing);
+      expect(find.text('REST'), findsNothing);
       expect(find.text('01:59'), findsNothing);
     });
   });
@@ -190,7 +190,7 @@ void main() {
       expect(logged.weightKg, 77.5); // 72.5 + 2.5 + 2.5
       expect(logged.reps, 12); // 11 + 1
 
-      await tester.tap(find.text('Skip'));
+      await tester.tap(find.bySemanticsLabel('Skip rest'));
       await tester.pump();
     });
   });

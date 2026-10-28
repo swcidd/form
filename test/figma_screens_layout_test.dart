@@ -96,11 +96,11 @@ void main() {
     await tester.pump();
 
     expect(find.text('Log set 04'), findsOneWidget);
-    expect(find.textContaining('REST /'), findsOneWidget);
+    expect(find.text('REST'), findsOneWidget);
 
     // Stop the countdown before the test tears the tree down.
-    await tester.tap(find.text('Skip'));
+    await tester.tap(find.bySemanticsLabel('Skip rest'));
     await tester.pump();
-    expect(find.textContaining('REST /'), findsNothing);
+    expect(find.text('REST'), findsNothing);
   });
 }

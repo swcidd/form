@@ -91,7 +91,7 @@ void main() {
     );
     // ...and the countdown did not start, because there is nothing left to
     // rest between.
-    expect(find.textContaining('REST /'), findsNothing);
+    expect(find.text('REST'), findsNothing);
   });
 
   testWidgets('a set that leaves work still starts the rest', (tester) async {
@@ -119,7 +119,7 @@ void main() {
 
     // One set left on the squat, so this is a rest - not a move to the next
     // exercise.
-    expect(find.textContaining('REST /'), findsOneWidget);
+    expect(find.text('REST'), findsOneWidget);
     expect(
       find.textContaining(RegExp('romanian deadlift', caseSensitive: false)),
       findsNothing,

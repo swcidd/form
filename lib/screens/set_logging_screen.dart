@@ -694,8 +694,12 @@ class _RestTimer extends StatelessWidget {
                         label: 'Change rest',
                         child: Padding(
                           padding: const EdgeInsets.symmetric(vertical: 8),
+                          // Just the label: rest starts blank, so there is no
+                          // prescribed time to print beside it. The countdown
+                          // below is the only number, and tapping this is how
+                          // one gets planned.
                           child: Text(
-                            'REST / ${_clock(total)}',
+                            'REST',
                             style: text.labelCaps.copyWith(
                               fontSize: 10,
                               color: scheme.primary,
@@ -736,17 +740,20 @@ class _RestTimer extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 14),
+              // A play mark rather than the word Skip: it reads as "carry on
+              // with the set" and costs no width the countdown could use.
               GestureDetector(
                 onTap: onSkip,
-                child: SizedBox(
-                  width: 44,
-                  height: 44,
-                  child: Center(
-                    child: Text(
-                      'Skip',
-                      style: text.annotation.copyWith(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
+                child: Semantics(
+                  button: true,
+                  label: 'Skip rest',
+                  child: SizedBox(
+                    width: 44,
+                    height: 44,
+                    child: Center(
+                      child: Icon(
+                        Icons.play_arrow_rounded,
+                        size: 26,
                         color: scheme.primary,
                       ),
                     ),
