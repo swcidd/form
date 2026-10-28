@@ -322,9 +322,11 @@ class _SessionToolbar extends StatelessWidget {
             ),
           ),
           GestureDetector(
-            onTap: () =>
-                Navigator.of(context)
-                    .pushNamed(WorkoutSummaryScreen.routeFor(workout.id)),
+            onTap: () {
+              context.read<WorkoutProvider>().finishSessionClock(workout.id);
+              Navigator.of(context)
+                  .pushNamed(WorkoutSummaryScreen.routeFor(workout.id));
+            },
             child: Text(
               'Finish',
               style: text.exerciseMeta.copyWith(
@@ -981,6 +983,7 @@ class _LoggingAction extends StatelessWidget {
           child: FilledButton(
             onPressed: () {
               if (allDone) {
+                context.read<WorkoutProvider>().finishSessionClock(workout.id);
                 Navigator.of(context)
                     .pushNamed(WorkoutSummaryScreen.routeFor(workout.id));
                 return;

@@ -97,6 +97,9 @@ class WorkoutDetailScreen extends StatelessWidget {
               final target = workout.kind == WorkoutKind.routine
                   ? provider.startSession(workout)
                   : workout;
+              // The clock starts when the session does, not when the logging
+              // screen happens to mount.
+              provider.startClock(target.id);
               Navigator.of(context)
                   .pushNamed(SetLoggingScreen.routeFor(target.id));
             },

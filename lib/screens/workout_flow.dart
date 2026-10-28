@@ -46,7 +46,9 @@ Future<Workout?> startWorkout(BuildContext context, {DateTime? date}) async {
       status: WorkoutStatus.planned,
       // A template, not a log: what gets lifted is a session made from this.
       kind: WorkoutKind.routine,
-      durationMin: 45,
+      // No prescribed length: how long a session takes is measured while it
+      // runs, not decided when it is planned.
+      durationMin: 0,
       estimatedKcal: 0,
       targetMuscleGroups: const [],
       equipment: const [],

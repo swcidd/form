@@ -439,6 +439,34 @@ class WorkoutProvider extends ChangeNotifier {
   /// navigate to it afterwards. The id is assigned here, so the caller has no
   /// way to know it beforehand, and looking the workout up again afterwards
   /// would have to guess at which one is new.
+  /// When each session's clock started, for sessions started in this run.
+  ///
+  /// In memory, because the session table has nowhere to keep it yet - the
+  /// column arrives with the storage split. Until then, closing the app
+  /// mid-session loses the start and the length reads as unmeasured, which is
+  /// the honest failure: no number beats a wrong one.
+  final Map<String, DateTime> _clocks = {};
+
+  /// Starts the clock on [id], if it is not already running.
+  ///
+  /// Idempotent on purpose: reopening a session already being timed must not
+  /// restart it from zero.
+  void startClock(String id) => _clocks.putIfAbsent(id, DateTime.now);
+
+  /// Stops the clock on [id] and records how long the session took.
+  ///
+  /// Returns the measured minutes, or null when there was no clock to stop - in
+  /// which case nothing is written, rather than inventing a length.
+  int? finishSessionClock(String id) {
+    final started = _clocks.remove(id);
+    final workout = byId(id);
+    if (started == null || workout == null) return null;
+
+    final minutes = DateTime.now().difference(started).inMinutes;
+    updateWorkout(workout.copyWith(durationMin: minutes));
+    return minutes;
+  }
+
   /// Sets the rest planned for one exercise, in seconds. Zero means none.
   ///
   /// Written to the log rather than held by the screen, because it is a
