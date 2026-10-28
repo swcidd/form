@@ -46,6 +46,10 @@ class WorkoutProvider extends ChangeNotifier {
        _saved = List.of(saved ?? const []),
        _profile = profile ?? ProfileStats.empty() {
     _sort();
+    // Seeds count too: a provider handed fixtures, or one whose store read
+    // threw after the sessions were already in hand, still has to mint ids
+    // past what it holds.
+    _advanceNextId();
   }
 
   final DateTime _today;
@@ -95,11 +99,13 @@ class WorkoutProvider extends ChangeNotifier {
         ..clear()
         ..addAll(stored);
       _sort();
+      // Before the next await: a throw in the saved-exercise read must not
+      // leave the id counter behind the sessions already in hand.
+      _advanceNextId();
       if (profile != null) _profile = profile;
       _saved
         ..clear()
         ..addAll(await store.loadSavedExercises());
-      _advanceNextId();
     } catch (error) {
       debugPrint('Could not read the store, starting empty: $error');
     }
@@ -440,6 +446,70 @@ class WorkoutProvider extends ChangeNotifier {
     unawaited(_persistWorkout(stored));
     notifyListeners();
     return stored;
+  }
+
+  /// Adds [workout] and writes a weekly repeat of it as real sessions.
+  ///
+  /// A repeat is materialised rather than stored as a rule: the calendar, the
+  /// dashboard and the weekly counts all read the entries on a day, and a rule
+  /// they cannot see would leave the app reporting a week as empty that the
+  /// user has already scheduled.
+  ///
+  /// [repeatWeekdays] are [DateTime.monday]..[DateTime.sunday]. [weeks] is how
+  /// far ahead to write, counted forward from [Workout.date] - the run starts
+  /// at the session, so a repeat never writes a date before it. The base date
+  /// is written once and its own weekday is not repeated back onto it.
+  ///
+  /// A day that already holds a session is left as it is, so repeating into a
+  /// part-filled calendar does not produce duplicates. Rest days do not count
+  /// as a session: they are a marker the calendar writes, and treating one as
+  /// occupied would drop a day the user asked to train on.
+  ///
+  /// The whole run is one change: one notification, whatever it writes.
+  /// Returns everything written, base first and then the repeats in date order.
+  List<Workout> addRepeatingWorkout(
+    Workout workout,
+    Set<int> repeatWeekdays, {
+    int weeks = 8,
+  }) {
+    final base = workout.id.isEmpty
+        ? workout.copyWith(id: 'w${_nextId++}')
+        : workout;
+    final created = <Workout>[base];
+
+    final start = _dayOnly(base.date);
+    final end = start.add(Duration(days: weeks * 7));
+
+    for (
+      var cursor = start;
+      cursor.isBefore(end);
+      cursor = cursor.add(const Duration(days: 1))
+    ) {
+      if (cursor.isAtSameMomentAs(start)) continue;
+      if (!repeatWeekdays.contains(cursor.weekday)) continue;
+      if (workoutsOn(cursor).any((w) => w.status != WorkoutStatus.rest)) {
+        continue;
+      }
+
+      created.add(
+        base.copyWith(
+          id: 'w${_nextId++}',
+          date: cursor,
+          status: WorkoutStatus.planned,
+          logs: const [],
+          hasNewPR: false,
+        ),
+      );
+    }
+
+    _workouts.addAll(created);
+    _sort();
+    for (final session in created) {
+      unawaited(_persistWorkout(session));
+    }
+    notifyListeners();
+
+    return created;
   }
 
   /// Replaces the workout with the same id. Returns false when nothing

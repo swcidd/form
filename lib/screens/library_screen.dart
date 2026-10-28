@@ -13,7 +13,7 @@ import '../models/workout.dart';
 import '../providers/workout_provider.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
-import '../widgets/new_workout_dialog.dart';
+import 'workout_flow.dart';
 import 'exercise_detail_screen.dart';
 import 'workout_detail_screen.dart';
 
@@ -118,13 +118,11 @@ class _LibraryScreenState extends State<LibraryScreen> {
   /// Creates a session and opens it, the same way the Workout destination
   /// does, so both entry points leave the user in the same place.
   Future<void> _createWorkout() async {
-    final provider = context.read<WorkoutProvider>();
     final navigator = Navigator.of(context);
 
-    final created = await NewWorkoutDialog.show(context);
-    if (created == null) return;
+    final stored = await startWorkout(context);
+    if (stored == null || !mounted) return;
 
-    final stored = provider.addWorkout(created);
     navigator.pushNamed(WorkoutDetailScreen.routeFor(stored.id));
   }
 

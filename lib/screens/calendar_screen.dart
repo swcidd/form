@@ -4,14 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
-import '../models/library_exercise.dart';
 import '../models/workout.dart';
 import '../providers/workout_provider.dart';
 import '../theme/app_typography.dart';
 import '../widgets/empty_state.dart';
-import '../widgets/new_workout_dialog.dart';
-import 'add_exercise_screen.dart';
 import 'workout_detail_screen.dart';
+import 'workout_flow.dart';
 
 /// The Workout tab: a range calendar over the stored sessions.
 ///
@@ -175,29 +173,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   /// Plans a session: exercises first, then what to call it.
   ///
-  /// The picker runs before the form because a planned session without
-  /// exercises is not what the button is for - backing out of the picker leaves
-  /// the calendar as it was rather than opening a form for an empty workout.
+  /// The draft is written on the day the calendar is pointed at, so planning
+  /// from the 29th does not quietly put the session on today.
   Future<void> _createWorkout() async {
-    final provider = context.read<WorkoutProvider>();
     final navigator = Navigator.of(context);
 
-    final picked = await navigator.pushNamed<List<LibraryExercise>>(
-      AddExerciseScreen.routeName,
-    );
-    if (picked == null || !mounted) return;
+    final stored = await startWorkout(context, date: _selection);
+    if (stored == null || !mounted) return;
 
-    // The form opens on the day the calendar is pointed at, so planning from
-    // the 29th does not quietly write the session onto today.
-    final created = await NewWorkoutDialog.show(
-      context,
-      initialDate: _selection,
-      exercises: picked,
-    );
-    if (created == null) return;
-
-    final stored = provider.addWorkout(created);
-    if (!mounted) return;
     navigator.pushNamed(WorkoutDetailScreen.routeFor(stored.id));
   }
 

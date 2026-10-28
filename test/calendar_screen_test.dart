@@ -337,7 +337,7 @@ void main() {
       await tester.tap(find.text('Next'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
-      await tester.tap(find.text('Start'));
+      await tester.tap(find.text('Save'));
       await tester.pumpAndSettle();
 
       expect(provider.workouts.single.date, DateTime(2026, 10, 27));

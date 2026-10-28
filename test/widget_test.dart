@@ -6,7 +6,7 @@ import 'package:plus_one/providers/workout_provider.dart';
 import 'package:plus_one/theme/app_colors.dart';
 import 'package:plus_one/theme/app_theme.dart';
 import 'package:plus_one/widgets/app_nav_bar.dart';
-import 'package:plus_one/widgets/new_workout_dialog.dart';
+import 'package:plus_one/screens/save_workout_screen.dart';
 import 'package:plus_one/widgets/workout_card.dart';
 
 import 'support/harness.dart';
@@ -128,7 +128,7 @@ void main() {
       // Opening a form on arrival asks the user to create a session before
       // they have seen the calendar they are planning against.
       expect(find.text('Workout Detail'), findsNothing);
-      expect(find.byType(NewWorkoutDialog), findsNothing);
+      expect(find.byType(SaveWorkoutScreen), findsNothing);
       expect(find.text('PLAN THE WEEK.'), findsOneWidget);
       expect(find.text('Nothing planned yet'), findsOneWidget);
       expect(find.text('Plan a workout'), findsOneWidget);
@@ -307,11 +307,12 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
 
-      expect(find.byType(NewWorkoutDialog), findsOneWidget);
-      expect(find.text('New workout'), findsOneWidget);
+      // The session is written before it is named, so the picker hands off to
+      // the save screen with the draft already in the store.
+      expect(find.byType(SaveWorkoutScreen), findsOneWidget);
+      expect(find.text('Save Workout'), findsOneWidget);
       expect(find.text('NAME THIS SESSION'), findsOneWidget);
-      expect(find.text('DATE'), findsOneWidget);
-      expect(find.text('Start'), findsOneWidget);
+      expect(find.text('Save'), findsOneWidget);
     });
 
     testWidgets('a planned day opens its session from the calendar', (
@@ -325,7 +326,7 @@ void main() {
 
       // A planned session is a better answer than a form: opening the form
       // would offer to create a second session for a day that already has one.
-      expect(find.byType(NewWorkoutDialog), findsNothing);
+      expect(find.byType(SaveWorkoutScreen), findsNothing);
       expect(find.text('1 SESSION'), findsOneWidget);
 
       // The tile is one opaque tap target, so the label inside it is not the
@@ -361,7 +362,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 400));
 
       await tester.enterText(find.byType(TextFormField), 'Leg Day');
-      await tester.tap(find.text('Start'));
+      await tester.tap(find.text('Save'));
       await tester.pumpAndSettle();
 
       // The session has to be in the store before the detail screen can find
@@ -377,7 +378,7 @@ void main() {
       expect(find.textContaining('no exercises yet'), findsOneWidget);
     });
 
-    testWidgets('an empty name falls back to the date', (tester) async {
+    testWidgets('an empty name keeps the draft title', (tester) async {
       final provider = WorkoutProvider();
       await tester.pumpWidget(emptyAppWith(provider));
       await tester.pumpAndSettle();
@@ -394,14 +395,14 @@ void main() {
       await tester.tap(find.text('Next'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
-      await tester.tap(find.text('Start'));
+      await tester.tap(find.text('Save'));
       await tester.pumpAndSettle();
 
-      // Naming a session is not the point of opening the app, so an untitled
-      // one is created rather than rejected.
+      // Naming a session is not the point of opening the app: the draft is
+      // written as "New Workout" before anybody names it, and clearing the
+      // field leaves that rather than inventing a title.
       expect(provider.workouts, hasLength(1));
-      expect(provider.workouts.single.title, isNotEmpty);
-      expect(provider.workouts.single.title, contains('Training'));
+      expect(provider.workouts.single.title, 'New Workout');
     });
 
     testWidgets('cancelling creates nothing', (tester) async {
@@ -418,14 +419,14 @@ void main() {
       // Planning opens the exercise picker first; the form follows the pick.
       // Pumped rather than settled because the catalogue load never settles
       // without a network.
-      await tester.tap(find.text('Next'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 400));
+      // Cancelling the picker abandons the draft it started: leaving a
+      // "New Workout" behind for a session nobody chose exercises for is
+      // litter, so there should be nothing left to find.
       await tester.tap(find.text('Cancel'));
       await tester.pumpAndSettle();
 
       expect(provider.workouts, isEmpty);
-      expect(find.byType(NewWorkoutDialog), findsNothing);
+      expect(find.byType(SaveWorkoutScreen), findsNothing);
       expect(find.text('Workout Detail'), findsNothing);
     });
   });
