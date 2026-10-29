@@ -38,7 +38,7 @@ enum LibraryTab {
 /// pill row, week card, rotation) and its empty-state frame (welcome, first
 /// workout, other ways to start).
 ///
-/// Every figure on it is counted from the sessions in [WorkoutProvider] or
+/// Every figure on it is countedfl from the sessions in [WorkoutProvider] or
 /// from the loaded catalogue. The frame it replaces carried a hardcoded
 /// "FOUNDATION / 08" program at "WEEK 04 OF 08 / 50%" and lists of workouts
 /// nobody had, which read as the user's own training.
@@ -478,8 +478,22 @@ class _LibraryScreenState extends State<LibraryScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const SizedBox(height: 8),
-        // No icon tile here: the headline is the first thing the tab should
-        // say, and a dumbbell above it only delays that.
+        Center(
+          child: Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainer,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(
+              Icons.fitness_center_rounded,
+              size: 32,
+              color: scheme.onSurface,
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
         Text(
           'MAKE YOUR FIRST MOVE.',
           style: text.programName,
@@ -581,7 +595,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
                     children: [
                       Text(
                         'Create a workout',
-                        style: text.labelCaps.copyWith(fontSize: 13),
+                        style: text.labelCaps.copyWith(
+                          fontSize: 13,
+                          color: AppColors.ink,
+                        ),
                       ),
                       const Icon(Icons.arrow_forward_rounded, size: 20),
                     ],
