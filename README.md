@@ -86,7 +86,9 @@ you export it.
 | **CRUD** | Create, rename, reschedule, edit and delete sessions; edit profile and body metrics; save and unsave exercises. Every write goes to SQLite and survives a restart. |
 | **Accounts** | A local account with a PBKDF2-hashed password, or the device account with none. Each account owns its sessions, saved exercises and profile. See **[docs/AUTH.md](docs/AUTH.md)**. |
 | **Catalogue** | `Discover` reads the wger REST API over `http`, shows loading, success and error states, and falls back to a bundled catalogue when the device is offline. |
-| **Progress** | Records, volume with a week-on-week change, and a 30-day consistency figure - all derived from finished sessions, in one file. |
+| **Progress** | Records, volume with a week-on-week change, a four-week estimated one-rep-max trend, and a 30-day consistency figure - all derived from finished sessions, in one file. |
+| **Building** | Create a workout of your own: add exercises from the catalogue, order them, save it to the library, then edit or delete it. |
+| **Rest and clock** | A rest timer that starts off, is chosen in 10-second steps from the set logger, and runs either by hand or after a logged set. A session keeps the moment its clock started, so it survives a restart. |
 | **Empty states** | An empty account gets a first-session panel, not a scoreboard of zeros. |
 
 Everything the app reports can be traced to a session in the database. There is
@@ -173,7 +175,7 @@ fallbacks are MIT and Unlicense).
 lib/
 ├── main.dart                 # gate: splash → welcome/sign-in → app, routes
 ├── auth/                     # AuthRepository seam, local implementation, hasher
-├── data/                     # AppDatabase (schema v8), repositories, session stats
+├── data/                     # AppDatabase (schema v10), repositories, session stats
 ├── models/                   # Workout, ExerciseLog, ExerciseSet, Profile, Account, Session
 ├── providers/                # AuthProvider, WorkoutProvider
 ├── screens/                  # welcome, sign in, sign-up steps, shell, home,
@@ -232,12 +234,21 @@ One line makes git refuse a push that would land a red tree:
 git config core.hooksPath .githooks
 ```
 
-### Build a release APK
+### Build an APK
 
 ```bash
+# debug - what `flutter run` installs; unminified, assert-enabled
+flutter build apk --debug
+# build/app/outputs/flutter-apk/app-debug.apk
+
+# release - what gets submitted; R8-minified, asserts off
 flutter build apk --release --split-per-abi
 # build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
 ```
+
+The debug APK is the one attached to a running `flutter run`; the release APK is
+the one to hand in, and the only one whose size and frame timings mean anything —
+see [docs/BUILD.md](docs/BUILD.md) for the measured difference.
 
 Signing, the one-off `keytool` command and how to verify a build's signature are
 in **[docs/BUILD.md](docs/BUILD.md)**. No signing secret is in this repository:
@@ -256,11 +267,12 @@ the keystore lives in a gitignored `android/key.properties`.
 - **Review**: every PR got inline review comments on the lines that carried a
   decision (identity, schema, lifecycle), not a rubber stamp, and was merged only
   with the suite green on the merged tree.
-- **Tests**: 347 widget, provider and database tests. The dangerous parts are
-  covered directly: the v3 → v8 migration builds an old database by hand, the
-  v5 → v8, v6 → v8 and v7 → v8 migrations leave the date of birth unset and the
+- **Tests**: 434 widget, provider and database tests. The dangerous parts are
+  covered directly: the v3 → v10 migration builds an old database by hand, the
+  v5, v6 and v7 → v10 migrations leave the date of birth unset and the
   units metric, signing in as somebody else asserts the old store is disposed,
-  and the counting rules have their own tests.
+  a running session clock survives a restart, and the counting rules have
+  their own tests.
 
 ---
 
@@ -282,13 +294,15 @@ screenshots side by side rather than by reading either screen's code.
 
 | Requirement | Where |
 | --- | --- |
-| REST API over `http`, JSON, loading/success/error | `lib/exercise_library.dart` + `Discover` |
-| 4+ screens | 13: welcome, sign in, sign-up name, sign-up age, sign-up account, home, progress, workout, library, profile, workout detail, set logger, summary |
+| REST API over `http`, JSON, loading/success/error | `lib/data/exercise_api_client.dart` + `Discover` |
+| 4+ screens | 13 routes: welcome, sign in, create account, home, progress, library, profile, workout detail, workout builder, add exercise, exercise detail, set logger, summary |
 | 3+ reusable widgets | `AuthField`, `AuthAction`, `AppNavBar`, `WorkoutCard`, `SectionHeader`, `EmptyState`… |
 | Provider state management | `AuthProvider`, `WorkoutProvider` |
 | CRUD | Sessions, exercises, sets, profile, saved exercises |
 | Empty / offline / failed API / validation | Empty account panel, bundled catalogue fallback, banners, field errors |
-| Public repository with PRs and review comments | [github.com/swcidd/form](https://github.com/swcidd/form/pulls) |
+| Public repository, feature branches, 3+ reviewed PRs | [github.com/swcidd/form](https://github.com/swcidd/form/pulls) |
+| Issue tracking | [github.com/swcidd/form/issues](https://github.com/swcidd/form/issues) |
+| Debug vs release APK, steps documented | [docs/BUILD.md](docs/BUILD.md) |
 | Icon, splash, app name, release APK | `assets/branding/`, `flutter_launcher_icons`, `flutter_native_splash`, `docs/BUILD.md` |
 | Documentation | README, [AUTH](docs/AUTH.md), [BUILD](docs/BUILD.md), [DEVTOOLS](docs/DEVTOOLS.md), [MOTION](docs/MOTION.md), [ATTRIBUTION](docs/ATTRIBUTION.md) |
 
