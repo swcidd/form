@@ -279,6 +279,17 @@ void main() {
       final mine = WorkoutRepository(nextDb, userId: device);
       final next = await nextDb.open(path: path);
 
+      // The rebuild writes the current shape, so v10's column arrives with it.
+      // A v1-v3 file never reaches the ALTER branch, and this is the assertion
+      // that would catch the staged DDL falling behind the live one.
+      final workoutColumns = await next.rawQuery(
+        'PRAGMA table_info(${AppDatabase.workoutsTable})',
+      );
+      expect(
+        workoutColumns.map((column) => column['name']),
+        contains('startedAt'),
+      );
+
       // Everything is where it was, and it is the device account's: the person
       // who trained before there were accounts is the one "continue offline"
       // signs in as.
@@ -510,6 +521,51 @@ void main() {
       expect(workouts.single.kind, WorkoutKind.session);
       await nextDb.close();
     });
+
+    test('migrating from version 9 adds the session clock', () async {
+      final path = p.join(
+        Directory.systemTemp.path,
+        'form_v9_clock_migration_test.db',
+      );
+      final file = File(path);
+      if (file.existsSync()) file.deleteSync();
+      addTearDown(() {
+        if (file.existsSync()) file.deleteSync();
+      });
+
+      // A v9 file has sessions but no record of when their clock started. The
+      // column arrives empty, so a session written before it existed reads as
+      // never started rather than as started at some invented time.
+      final oldDb = AppDatabase();
+      final db = await oldDb.open(path: path);
+      await db.execute(
+        'ALTER TABLE ${AppDatabase.workoutsTable} DROP COLUMN startedAt',
+      );
+      await db.insert(AppDatabase.workoutsTable, {
+        'userId': device,
+        'id': 'w1',
+        'title': 'Upper body',
+        'date': DateTime(2026, 10, 6).millisecondsSinceEpoch,
+        'status': 'planned',
+      });
+      await db.execute('PRAGMA user_version = 9');
+      await oldDb.close();
+
+      final nextDb = AppDatabase();
+      final next = await nextDb.open(path: path);
+      final columns = await next.rawQuery(
+        'PRAGMA table_info(${AppDatabase.workoutsTable})',
+      );
+      expect(columns.map((column) => column['name']), contains('startedAt'));
+
+      final workouts = await WorkoutRepository(
+        nextDb,
+        userId: device,
+      ).loadWorkouts();
+      expect(workouts, hasLength(1));
+      expect(workouts.single.startedAt, isNull);
+      await nextDb.close();
+    });
   });
 
   group('accounts keep their own rows', () {
@@ -643,6 +699,23 @@ void main() {
       expect(loaded.single.status, WorkoutStatus.planned);
       expect(loaded.single.targetMuscleGroups, ['Chest', 'Triceps']);
       expect(loaded.single.date, DateTime(2026, 10, 6));
+    });
+
+    test('a session remembers when its clock started', () async {
+      final startedAt = DateTime(2026, 10, 6, 7, 15);
+      await repository.replaceWorkout(
+        sampleWorkout().copyWith(startedAt: startedAt),
+      );
+
+      expect((await repository.loadWorkouts()).single.startedAt, startedAt);
+
+      // Finishing clears it, and the cleared state is a real one: a session
+      // carries either a running clock or a measured length, never both. This
+      // is the assertion that would catch a write that dropped the column.
+      await repository.replaceWorkout(
+        (await repository.loadWorkouts()).single.copyWith(startedAt: null),
+      );
+      expect((await repository.loadWorkouts()).single.startedAt, isNull);
     });
 
     test('exercises and sets keep their order and values', () async {

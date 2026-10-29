@@ -131,6 +131,28 @@ void main() {
     expect(restored.status, WorkoutStatus.completed);
   });
 
+  test('a running clock survives the restart', () async {
+    final first = launch();
+    final stored = first.addWorkout(planned());
+
+    first.startClock(stored.id);
+
+    // The start is on the session, not in the run. This is the assertion that
+    // would fail if startClock went back to writing only to memory: a brand new
+    // provider over the same file still sees the session as running.
+    final second = launch();
+    await second.load();
+    expect(second.byId(stored.id)!.startedAt, isNotNull);
+
+    second.finishSessionClock(stored.id);
+
+    // And finishing clears it on disk, so a third launch finds no clock still
+    // running - only the length it produced.
+    final third = launch();
+    await third.load();
+    expect(third.byId(stored.id)!.startedAt, isNull);
+  });
+
   test('the classification axes survive the restart', () async {
     final first = launch();
     final stored = first.addWorkout(

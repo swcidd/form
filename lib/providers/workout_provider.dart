@@ -432,38 +432,49 @@ class WorkoutProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Adds a workout, assigning an id when the caller did not pick one, and
-  /// returns the stored copy.
-  ///
-  /// Returns the workout rather than nothing so a caller that created it can
-  /// navigate to it afterwards. The id is assigned here, so the caller has no
-  /// way to know it beforehand, and looking the workout up again afterwards
-  /// would have to guess at which one is new.
-  /// When each session's clock started, for sessions started in this run.
-  ///
-  /// In memory, because the session table has nowhere to keep it yet - the
-  /// column arrives with the storage split. Until then, closing the app
-  /// mid-session loses the start and the length reads as unmeasured, which is
-  /// the honest failure: no number beats a wrong one.
-  final Map<String, DateTime> _clocks = {};
-
   /// Starts the clock on [id], if it is not already running.
+  ///
+  /// The start is written onto the session rather than held in memory, so a
+  /// session interrupted by the app closing still knows when it began: reopen
+  /// it and the length carries on from where it was, instead of reading as
+  /// unmeasured for the rest of its life.
   ///
   /// Idempotent on purpose: reopening a session already being timed must not
   /// restart it from zero.
-  void startClock(String id) => _clocks.putIfAbsent(id, DateTime.now);
+  void startClock(String id) {
+    final workout = byId(id);
+    if (workout == null || workout.startedAt != null) return;
+    updateWorkout(workout.copyWith(startedAt: DateTime.now()));
+  }
 
   /// Stops the clock on [id] and records how long the session took.
   ///
-  /// Returns the measured minutes, or null when there was no clock to stop - in
-  /// which case nothing is written, rather than inventing a length.
+  /// Returns the measured minutes, or null when there was nothing honest to
+  /// measure - in which case the start is cleared and no length is written,
+  /// rather than inventing one. The start goes with the length it produced, so
+  /// a session carries either a running clock or a measured one, never both: a
+  /// second finish has nothing left to measure.
+  ///
+  /// A start from before today is not a measurement. Now that the start
+  /// survives the app closing, a session left running overnight would otherwise
+  /// come back as a marathon - the hours between closing and reopening are not
+  /// training time - and that length would land in the profile's total hours.
+  /// Such a session finishes unmeasured instead: no number beats a wrong one.
   int? finishSessionClock(String id) {
-    final started = _clocks.remove(id);
     final workout = byId(id);
-    if (started == null || workout == null) return null;
+    if (workout == null) return null;
+    final started = workout.startedAt;
+    if (started == null) return null;
 
-    final minutes = DateTime.now().difference(started).inMinutes;
-    updateWorkout(workout.copyWith(durationMin: minutes));
+    final now = DateTime.now();
+    final startOfToday = DateTime(now.year, now.month, now.day);
+    if (started.isBefore(startOfToday)) {
+      updateWorkout(workout.copyWith(startedAt: null));
+      return null;
+    }
+
+    final minutes = now.difference(started).inMinutes;
+    updateWorkout(workout.copyWith(durationMin: minutes, startedAt: null));
     return minutes;
   }
 
@@ -511,6 +522,13 @@ class WorkoutProvider extends ChangeNotifier {
     );
   }
 
+  /// Adds a workout, assigning an id when the caller did not pick one, and
+  /// returns the stored copy.
+  ///
+  /// Returns the workout rather than nothing so a caller that created it can
+  /// navigate to it afterwards. The id is assigned here, so the caller has no
+  /// way to know it beforehand, and looking the workout up again afterwards
+  /// would have to guess at which one is new.
   Workout addWorkout(Workout workout) {
     final id = workout.id.isEmpty ? 'w${_nextId++}' : workout.id;
     final stored = workout.id.isEmpty ? workout.copyWith(id: id) : workout;

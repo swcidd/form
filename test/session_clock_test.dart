@@ -79,6 +79,24 @@ void main() {
     expect(provider.finishSessionClock('w1'), isNull);
   });
 
+  test('a clock left running overnight is not a measurement', () {
+    // The start is on the session now, so a session abandoned with the app
+    // closed comes back with a start from a previous day. The hours in between
+    // were not training - recording them would inflate the profile's total
+    // hours with a marathon nobody ran.
+    final provider = WorkoutProvider(
+      today: today,
+      workouts: [session().copyWith(startedAt: DateTime(2020, 1, 1, 7))],
+    );
+
+    expect(provider.finishSessionClock('w1'), isNull);
+    expect(provider.byId('w1')!.durationMin, 0);
+
+    // The stale start is cleared rather than kept: a clock that can never be
+    // honestly finished is not a clock.
+    expect(provider.byId('w1')!.startedAt, isNull);
+  });
+
   test('finishing a session that is not there measures nothing', () {
     final provider = build();
 

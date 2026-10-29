@@ -38,6 +38,7 @@ class Workout extends Equatable {
     this.split,
     this.goal,
     this.kind = WorkoutKind.session,
+    this.startedAt,
   });
 
   final String id;
@@ -72,6 +73,16 @@ class Workout extends Equatable {
   /// Routine or logged session. Everything the app writes today is a session;
   /// the axis exists so a template can be stored without pretending it is one.
   final WorkoutKind kind;
+
+  /// When the session's clock started, or null if it never has.
+  ///
+  /// Stored rather than held in memory, so a session that outlives the app still
+  /// knows when it began: reopening it carries the length on rather than
+  /// reading as unmeasured. Null means both "not started" and "already
+  /// measured" - finishing clears it - so a session is never at once running
+  /// and complete. Nullable and clearable, which is why it is the one field on
+  /// [copyWith] that needs the [_unset] sentinel to be set back to null.
+  final DateTime? startedAt;
 
   /// Short / medium / long, derived from the planned minutes.
   DurationBand get durationBand => DurationBand.fromMinutes(durationMin);
@@ -119,6 +130,7 @@ class Workout extends Equatable {
     Object? split = _unset,
     Object? goal = _unset,
     WorkoutKind? kind,
+    Object? startedAt = _unset,
   }) {
     return Workout(
       id: id ?? this.id,
@@ -139,6 +151,9 @@ class Workout extends Equatable {
       split: identical(split, _unset) ? this.split : split as WorkoutSplit?,
       goal: identical(goal, _unset) ? this.goal : goal as TrainingGoal?,
       kind: kind ?? this.kind,
+      startedAt: identical(startedAt, _unset)
+          ? this.startedAt
+          : startedAt as DateTime?,
     );
   }
 
@@ -165,6 +180,7 @@ class Workout extends Equatable {
       goal: TrainingGoal.tryParse(json['goal'] as String?),
       kind:
           WorkoutKind.tryParse(json['kind'] as String?) ?? WorkoutKind.session,
+      startedAt: DateTime.tryParse(json['startedAt'] as String? ?? ''),
     );
   }
 
@@ -185,6 +201,7 @@ class Workout extends Equatable {
     'split': split?.wire,
     'goal': goal?.wire,
     'kind': kind.wire,
+    'startedAt': startedAt?.toIso8601String(),
   };
 
   @override
@@ -205,5 +222,6 @@ class Workout extends Equatable {
     split,
     goal,
     kind,
+    startedAt,
   ];
 }

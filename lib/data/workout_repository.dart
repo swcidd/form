@@ -353,6 +353,7 @@ class WorkoutRepository {
     'split': workout.split?.wire ?? '',
     'goal': workout.goal?.wire ?? '',
     'kind': workout.kind.wire,
+    'startedAt': workout.startedAt?.millisecondsSinceEpoch,
   };
 
   Workout _workoutFromRow(Map<String, Object?> row, List<ExerciseLog> logs) {
@@ -372,6 +373,9 @@ class WorkoutRepository {
       split: WorkoutSplit.tryParse(row['split'] as String?),
       goal: TrainingGoal.tryParse(row['goal'] as String?),
       kind: WorkoutKind.tryParse(row['kind'] as String?) ?? WorkoutKind.session,
+      startedAt: row['startedAt'] == null
+          ? null
+          : DateTime.fromMillisecondsSinceEpoch(row['startedAt']! as int),
     );
   }
 

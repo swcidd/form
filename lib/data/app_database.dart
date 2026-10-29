@@ -20,7 +20,7 @@ class AppDatabase {
   final String fileName;
 
   /// Current schema version. Increment with every migration.
-  static const int version = 9;
+  static const int version = 10;
 
   static const String workoutsTable = 'workouts';
   static const String exerciseLogsTable = 'exercise_logs';
@@ -126,6 +126,7 @@ class AppDatabase {
       split              TEXT    NOT NULL DEFAULT '',
       goal               TEXT    NOT NULL DEFAULT '',
       kind               TEXT    NOT NULL DEFAULT 'session',
+      startedAt          INTEGER,
       PRIMARY KEY (userId, id)
     )
   ''';
@@ -316,6 +317,22 @@ class AppDatabase {
             'ALTER TABLE $workoutsTable ADD COLUMN ${step.$1} ${step.$2}',
           );
         }
+      }
+    }
+
+    // v10 records when a session's clock started, so the length a session is
+    // measured over survives the app being closed mid-session instead of being
+    // lost with the run. Nullable and not defaulted: a session that has never
+    // been started has no honest start time, and one that has been finished has
+    // had its start cleared. Added rather than rebuilt, so this cannot lose a
+    // row it was not asked to touch.
+    if (from >= 4 && from < 10) {
+      // A file rewound from a later build already has the column; adding it
+      // again is a duplicate-column failure. Check rather than assume.
+      if (!await _hasColumn(db, workoutsTable, 'startedAt')) {
+        await db.execute(
+          'ALTER TABLE $workoutsTable ADD COLUMN startedAt INTEGER',
+        );
       }
     }
 
