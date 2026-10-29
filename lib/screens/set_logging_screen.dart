@@ -142,6 +142,13 @@ class _SetLoggingScreenState extends State<SetLoggingScreen> {
                           sessionRest: provider.sessionRest(workout.id),
                           onExtend: _extendRest,
                           onSkip: _skipRest,
+                          // Runs the length the session is set to. Guarded here
+                          // as well as in the widget, so a stale tap on Off can
+                          // never start a zero-second rest.
+                          onStart: () {
+                            final seconds = provider.sessionRest(workout.id);
+                            if (seconds > 0) _startRest(seconds);
+                          },
                           onSetRest: () async {
                             // The session's rest, not the plan's: what changes
                             // is what the next set rests for, and nothing
@@ -664,6 +671,7 @@ class _RestTimer extends StatelessWidget {
     required this.sessionRest,
     required this.onExtend,
     required this.onSkip,
+    required this.onStart,
     required this.onSetRest,
   });
 
@@ -677,6 +685,14 @@ class _RestTimer extends StatelessWidget {
 
   final VoidCallback onExtend;
   final VoidCallback onSkip;
+
+  /// Runs the rest now, for the length the session is set to.
+  ///
+  /// A rest starts by itself when a set is logged, but not every rest follows a
+  /// set - between sets, after a warm-up - and with the length chosen from the
+  /// wheel there has to be something that actually runs it, or setting one is
+  /// all somebody can do.
+  final VoidCallback onStart;
 
   /// Opens the wheel that sets what the rest will be from the next set on.
   final VoidCallback onSetRest;
@@ -747,6 +763,48 @@ class _RestTimer extends StatelessWidget {
                           color: scheme.onSurface,
                         ),
                       )
+                    else if (sessionRest > 0)
+                      // The chosen length is also the control that runs it -
+                      // and it sits on the left, not in the corner that ends a
+                      // running rest. Start and skip share a play mark (skip has
+                      // to, by design), so keeping them in different places is
+                      // what stops an impatient second tap from cancelling the
+                      // rest it only just began.
+                      GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: onStart,
+                        child: Semantics(
+                          button: true,
+                          // Its own node, and the length in the label rather
+                          // than left to the text inside: a screen reader should
+                          // hear "Start rest, 1:30" as one button, not a button
+                          // followed by a loose number.
+                          container: true,
+                          label: 'Start rest, ${restLabel(sessionRest)}',
+                          child: ExcludeSemantics(
+                            child: SizedBox(
+                              height: 44,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.play_arrow_rounded,
+                                    size: 20,
+                                    color: scheme.primary,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    restLabel(sessionRest),
+                                    style: text.exerciseMeta.copyWith(
+                                      color: scheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      )
                     else
                       Text(
                         restLabel(sessionRest),
@@ -759,6 +817,9 @@ class _RestTimer extends StatelessWidget {
               ),
               if (running) ...[
                 GestureDetector(
+                  // Opaque for the same reason as skip below: the target is the
+                  // box, not the label inside it.
+                  behavior: HitTestBehavior.opaque,
                   onTap: onExtend,
                   child: Container(
                     width: 60,
@@ -781,6 +842,10 @@ class _RestTimer extends StatelessWidget {
                 // A play mark rather than the word Skip: it reads as "carry on
                 // with the set" and costs no width the countdown could use.
                 GestureDetector(
+                  // Opaque, because the glyph is smaller than the target it is
+                  // drawn in: deferring to the child would leave the ring around
+                  // the icon dead to a thumb.
+                  behavior: HitTestBehavior.opaque,
                   onTap: onSkip,
                   child: Semantics(
                     button: true,

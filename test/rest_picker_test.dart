@@ -176,5 +176,41 @@ void main() {
       expect(provider.sessionRest('w1'), 0);
       expect(provider.byId('w1')!.logs[0].restSeconds, 120);
     });
+
+    testWidgets('the start control runs the rest without logging a set', (
+      tester,
+    ) async {
+      final provider = WorkoutProvider(today: date, workouts: [session()]);
+      provider.setSessionRest('w1', 90);
+      await pump(tester, provider);
+
+      // Idle with a length chosen: the block offers a start, so a rest can be
+      // taken between sets rather than only as a consequence of logging one.
+      expect(find.text('REST'), findsOneWidget);
+      expect(find.text('1:30'), findsOneWidget);
+
+      // One button, and it names the length it will run.
+      final start = find.bySemanticsLabel(RegExp('^Start rest'));
+      expect(start, findsOneWidget);
+
+      // Tap the visible length rather than the semantics node: same target, no
+      // "missed" warning from tapping a widget whose hit area is the row.
+      await tester.tap(find.text('1:30'));
+      await tester.pump();
+
+      // Running now: the countdown is on screen and the same corner has become
+      // the control that ends it.
+      expect(find.text('01:30'), findsOneWidget);
+      expect(find.bySemanticsLabel(RegExp('^Start rest')), findsNothing);
+      expect(find.bySemanticsLabel('Skip rest'), findsOneWidget);
+
+      // Genuinely ticking, not merely seeded: a second later it has moved.
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.text('01:29'), findsOneWidget);
+
+      // End it, so the periodic timer does not outlive the test.
+      await tester.tap(find.bySemanticsLabel('Skip rest'));
+      await tester.pump();
+    });
   });
 }
