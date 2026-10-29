@@ -38,6 +38,7 @@ class Workout extends Equatable {
     this.split,
     this.goal,
     this.kind = WorkoutKind.session,
+    this.startedAt,
   });
 
   final String id;
@@ -73,6 +74,16 @@ class Workout extends Equatable {
   /// the axis exists so a template can be stored without pretending it is one.
   final WorkoutKind kind;
 
+  /// When the session's clock started, or null if it never has.
+  ///
+  /// Stored rather than held in memory, so a session that outlives the app still
+  /// knows when it began: reopening it carries the length on rather than
+  /// reading as unmeasured. Null means both "not started" and "already
+  /// measured" - finishing clears it - so a session is never at once running
+  /// and complete. Nullable and clearable, which is why it is the one field on
+  /// [copyWith] that needs the [_unset] sentinel to be set back to null.
+  final DateTime? startedAt;
+
   /// Short / medium / long, derived from the planned minutes.
   DurationBand get durationBand => DurationBand.fromMinutes(durationMin);
 
@@ -94,6 +105,14 @@ class Workout extends Equatable {
 
   bool get isDone => completedSets == totalSets && totalSets > 0;
 
+  /// Sentinel for the three classification fields below.
+  ///
+  /// Without it, `null` has to mean "leave this alone" - and then a
+  /// classification can never be *cleared*: tapping a selected pill off would
+  /// quietly keep the old value. Callers omit an argument to keep it and pass
+  /// `null` to clear it.
+  static const Object _unset = Object();
+
   Workout copyWith({
     String? id,
     String? title,
@@ -107,10 +126,11 @@ class Workout extends Equatable {
     List<String>? equipment,
     List<ExerciseLog>? logs,
     bool? hasNewPR,
-    Modality? modality,
-    WorkoutSplit? split,
-    TrainingGoal? goal,
+    Object? modality = _unset,
+    Object? split = _unset,
+    Object? goal = _unset,
     WorkoutKind? kind,
+    Object? startedAt = _unset,
   }) {
     return Workout(
       id: id ?? this.id,
@@ -125,10 +145,15 @@ class Workout extends Equatable {
       equipment: equipment ?? this.equipment,
       logs: logs ?? this.logs,
       hasNewPR: hasNewPR ?? this.hasNewPR,
-      modality: modality ?? this.modality,
-      split: split ?? this.split,
-      goal: goal ?? this.goal,
+      modality: identical(modality, _unset)
+          ? this.modality
+          : modality as Modality?,
+      split: identical(split, _unset) ? this.split : split as WorkoutSplit?,
+      goal: identical(goal, _unset) ? this.goal : goal as TrainingGoal?,
       kind: kind ?? this.kind,
+      startedAt: identical(startedAt, _unset)
+          ? this.startedAt
+          : startedAt as DateTime?,
     );
   }
 
@@ -155,6 +180,7 @@ class Workout extends Equatable {
       goal: TrainingGoal.tryParse(json['goal'] as String?),
       kind:
           WorkoutKind.tryParse(json['kind'] as String?) ?? WorkoutKind.session,
+      startedAt: DateTime.tryParse(json['startedAt'] as String? ?? ''),
     );
   }
 
@@ -175,6 +201,7 @@ class Workout extends Equatable {
     'split': split?.wire,
     'goal': goal?.wire,
     'kind': kind.wire,
+    'startedAt': startedAt?.toIso8601String(),
   };
 
   @override
@@ -195,5 +222,6 @@ class Workout extends Equatable {
     split,
     goal,
     kind,
+    startedAt,
   ];
 }

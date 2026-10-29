@@ -13,7 +13,8 @@ import '../models/workout.dart';
 import '../providers/workout_provider.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
-import '../widgets/new_workout_dialog.dart';
+import 'workout_flow.dart';
+import 'exercise_detail_screen.dart';
 import 'workout_detail_screen.dart';
 
 /// Which list the library is showing.
@@ -117,13 +118,11 @@ class _LibraryScreenState extends State<LibraryScreen> {
   /// Creates a session and opens it, the same way the Workout destination
   /// does, so both entry points leave the user in the same place.
   Future<void> _createWorkout() async {
-    final provider = context.read<WorkoutProvider>();
     final navigator = Navigator.of(context);
 
-    final created = await NewWorkoutDialog.show(context);
-    if (created == null) return;
+    final stored = await startWorkout(context);
+    if (stored == null || !mounted) return;
 
-    final stored = provider.addWorkout(created);
     navigator.pushNamed(WorkoutDetailScreen.routeFor(stored.id));
   }
 
@@ -479,22 +478,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const SizedBox(height: 8),
-        Center(
-          child: Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              color: scheme.surfaceContainer,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Icon(
-              Icons.fitness_center_rounded,
-              size: 32,
-              color: scheme.onSurface,
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
+        // No icon tile here: the headline is the first thing the tab should
+        // say, and a dumbbell above it only delays that.
         Text(
           'MAKE YOUR FIRST MOVE.',
           style: text.programName,
@@ -673,10 +658,18 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 itemCount: exercises.length,
                 itemBuilder: (context, index) {
                   final exercise = exercises[index];
-                  return _ExerciseCard(
-                    exercise: exercise,
-                    saved: provider.isSaved(exercise.id),
-                    onToggleSaved: () => provider.toggleSavedExercise(exercise),
+                  // Wrapped here rather than inside the card so the bookmark,
+                  // which has its own gesture, still wins taps on itself.
+                  return GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => Navigator.of(context)
+                        .pushNamed(ExerciseDetailScreen.routeFor(exercise.id)),
+                    child: _ExerciseCard(
+                      exercise: exercise,
+                      saved: provider.isSaved(exercise.id),
+                      onToggleSaved: () =>
+                          provider.toggleSavedExercise(exercise),
+                    ),
                   );
                 },
               ),

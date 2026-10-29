@@ -8,6 +8,7 @@ import '../models/exercise.dart';
 import '../models/metric.dart';
 import '../models/profile_stats.dart';
 import '../models/saved_exercise.dart';
+import '../models/taxonomy.dart';
 import '../models/workout.dart';
 
 /// Single source of truth for workout state.
@@ -46,6 +47,10 @@ class WorkoutProvider extends ChangeNotifier {
        _saved = List.of(saved ?? const []),
        _profile = profile ?? ProfileStats.empty() {
     _sort();
+    // Seeds count too: a provider handed fixtures, or one whose store read
+    // threw after the sessions were already in hand, still has to mint ids
+    // past what it holds.
+    _advanceNextId();
   }
 
   final DateTime _today;
@@ -95,11 +100,13 @@ class WorkoutProvider extends ChangeNotifier {
         ..clear()
         ..addAll(stored);
       _sort();
+      // Before the next await: a throw in the saved-exercise read must not
+      // leave the id counter behind the sessions already in hand.
+      _advanceNextId();
       if (profile != null) _profile = profile;
       _saved
         ..clear()
         ..addAll(await store.loadSavedExercises());
-      _advanceNextId();
     } catch (error) {
       debugPrint('Could not read the store, starting empty: $error');
     }
@@ -425,6 +432,100 @@ class WorkoutProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Starts the clock on [id], if it is not already running.
+  ///
+  /// The start is written onto the session rather than held in memory, so a
+  /// session interrupted by the app closing still knows when it began: reopen
+  /// it and the length carries on from where it was, instead of reading as
+  /// unmeasured for the rest of its life.
+  ///
+  /// Idempotent on purpose: reopening a session already being timed must not
+  /// restart it from zero.
+  void startClock(String id) {
+    final workout = byId(id);
+    if (workout == null || workout.startedAt != null) return;
+    updateWorkout(workout.copyWith(startedAt: DateTime.now()));
+  }
+
+  /// Stops the clock on [id] and records how long the session took.
+  ///
+  /// Returns the measured minutes, or null when there was nothing honest to
+  /// measure - in which case the start is cleared and no length is written,
+  /// rather than inventing one. The start goes with the length it produced, so
+  /// a session carries either a running clock or a measured one, never both: a
+  /// second finish has nothing left to measure.
+  ///
+  /// A start from before today is not a measurement. Now that the start
+  /// survives the app closing, a session left running overnight would otherwise
+  /// come back as a marathon - the hours between closing and reopening are not
+  /// training time - and that length would land in the profile's total hours.
+  /// Such a session finishes unmeasured instead: no number beats a wrong one.
+  int? finishSessionClock(String id) {
+    final workout = byId(id);
+    if (workout == null) return null;
+    final started = workout.startedAt;
+    if (started == null) return null;
+
+    final now = DateTime.now();
+    final startOfToday = DateTime(now.year, now.month, now.day);
+    if (started.isBefore(startOfToday)) {
+      updateWorkout(workout.copyWith(startedAt: null));
+      return null;
+    }
+
+    final minutes = now.difference(started).inMinutes;
+    updateWorkout(workout.copyWith(durationMin: minutes, startedAt: null));
+    return minutes;
+  }
+
+  /// The rest each session is training with, for sessions running in this run.
+  ///
+  /// Deliberately *not* stored. A rest is a property of how somebody is
+  /// training today, not of the plan, so nothing here reaches the database and
+  /// a rest chosen in one session does not follow you into the next.
+  final Map<String, int> _sessionRest = {};
+
+  /// The rest [id] is training with, or [fallback] when none has been chosen.
+  ///
+  /// Zero by default, so nothing rests until somebody says so. That makes the
+  /// control which sets it the only way a rest can ever start, and that control
+  /// therefore has to be reachable before any rest is running.
+  int sessionRest(String id, {int fallback = 0}) =>
+      _sessionRest[id] ?? fallback;
+
+  /// Chooses the rest for this run only. Nothing is written down.
+  void setSessionRest(String id, int seconds) => _sessionRest[id] = seconds;
+
+  /// Logs [routine] as a session: a copy for the day, sets un-ticked.
+  ///
+  /// A workout is a template. Starting it must not write onto the template -
+  /// otherwise the plan and the log are one record, finishing leaves nothing to
+  /// start again, and the numbers actually lifted overwrite the numbers that
+  /// were prescribed. This keeps both: the copy carries the plan's sets and
+  /// weights so the logging screen opens on what was prescribed, and starts
+  /// every set uncompleted.
+  ///
+  /// Returns the stored session. The routine is left exactly as it was.
+  Workout startSession(Workout routine, {DateTime? date}) {
+    return addWorkout(
+      routine.copyWith(
+        id: '',
+        kind: WorkoutKind.session,
+        date: _dayOnly(date ?? _today),
+        status: WorkoutStatus.inProgress,
+        logs: [
+          for (final log in routine.logs)
+            log.copyWith(
+              sets: [
+                for (final set in log.sets) set.copyWith(completed: false),
+              ],
+            ),
+        ],
+        hasNewPR: false,
+      ),
+    );
+  }
+
   /// Adds a workout, assigning an id when the caller did not pick one, and
   /// returns the stored copy.
   ///
@@ -440,6 +541,70 @@ class WorkoutProvider extends ChangeNotifier {
     unawaited(_persistWorkout(stored));
     notifyListeners();
     return stored;
+  }
+
+  /// Adds [workout] and writes a weekly repeat of it as real sessions.
+  ///
+  /// A repeat is materialised rather than stored as a rule: the calendar, the
+  /// dashboard and the weekly counts all read the entries on a day, and a rule
+  /// they cannot see would leave the app reporting a week as empty that the
+  /// user has already scheduled.
+  ///
+  /// [repeatWeekdays] are [DateTime.monday]..[DateTime.sunday]. [weeks] is how
+  /// far ahead to write, counted forward from [Workout.date] - the run starts
+  /// at the session, so a repeat never writes a date before it. The base date
+  /// is written once and its own weekday is not repeated back onto it.
+  ///
+  /// A day that already holds a session is left as it is, so repeating into a
+  /// part-filled calendar does not produce duplicates. Rest days do not count
+  /// as a session: they are a marker the calendar writes, and treating one as
+  /// occupied would drop a day the user asked to train on.
+  ///
+  /// The whole run is one change: one notification, whatever it writes.
+  /// Returns everything written, base first and then the repeats in date order.
+  List<Workout> addRepeatingWorkout(
+    Workout workout,
+    Set<int> repeatWeekdays, {
+    int weeks = 8,
+  }) {
+    final base = workout.id.isEmpty
+        ? workout.copyWith(id: 'w${_nextId++}')
+        : workout;
+    final created = <Workout>[base];
+
+    final start = _dayOnly(base.date);
+    final end = start.add(Duration(days: weeks * 7));
+
+    for (
+      var cursor = start;
+      cursor.isBefore(end);
+      cursor = cursor.add(const Duration(days: 1))
+    ) {
+      if (cursor.isAtSameMomentAs(start)) continue;
+      if (!repeatWeekdays.contains(cursor.weekday)) continue;
+      if (workoutsOn(cursor).any((w) => w.status != WorkoutStatus.rest)) {
+        continue;
+      }
+
+      created.add(
+        base.copyWith(
+          id: 'w${_nextId++}',
+          date: cursor,
+          status: WorkoutStatus.planned,
+          logs: const [],
+          hasNewPR: false,
+        ),
+      );
+    }
+
+    _workouts.addAll(created);
+    _sort();
+    for (final session in created) {
+      unawaited(_persistWorkout(session));
+    }
+    notifyListeners();
+
+    return created;
   }
 
   /// Replaces the workout with the same id. Returns false when nothing

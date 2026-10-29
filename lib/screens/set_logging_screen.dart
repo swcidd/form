@@ -7,6 +7,7 @@ import '../models/exercise.dart';
 import '../models/workout.dart';
 import '../providers/workout_provider.dart';
 import '../theme/app_typography.dart';
+import '../widgets/rest_picker_sheet.dart';
 import 'workout_summary_screen.dart';
 
 /// Active workout screen: the current exercise, its set table, rest, and the
@@ -128,15 +129,39 @@ class _SetLoggingScreenState extends State<SetLoggingScreen> {
                           activeSet: activeSet,
                           previous: previous,
                         ),
-                        if (_restRemaining > 0) ...[
-                          const SizedBox(height: 14),
-                          _RestTimer(
-                            remaining: _restRemaining,
-                            total: _restTotal,
-                            onExtend: _extendRest,
-                            onSkip: _skipRest,
-                          ),
-                        ],
+                        const SizedBox(height: 14),
+                        // Always on screen, never only while counting. Rest
+                        // defaults to none, so this block is the only control
+                        // that can set one - and a control that vanishes until
+                        // a rest is already running can never start the first
+                        // one. Idle it is the label and what is planned; while
+                        // running it is the countdown.
+                        _RestTimer(
+                          remaining: _restRemaining,
+                          total: _restTotal,
+                          sessionRest: provider.sessionRest(workout.id),
+                          onExtend: _extendRest,
+                          onSkip: _skipRest,
+                          // Runs the length the session is set to. Guarded here
+                          // as well as in the widget, so a stale tap on Off can
+                          // never start a zero-second rest.
+                          onStart: () {
+                            final seconds = provider.sessionRest(workout.id);
+                            if (seconds > 0) _startRest(seconds);
+                          },
+                          onSetRest: () async {
+                            // The session's rest, not the plan's: what changes
+                            // is what the next set rests for, and nothing
+                            // about it is written down.
+                            final chosen = await showRestPicker(
+                              context,
+                              exercise: current.exercise.name,
+                              initial: provider.sessionRest(workout.id),
+                            );
+                            if (chosen == null) return;
+                            provider.setSessionRest(workout.id, chosen);
+                          },
+                        ),
                         if (!allDone && activeSet != null) ...[
                           const SizedBox(height: 18),
                           _NextSetEntry(
@@ -146,8 +171,6 @@ class _SetLoggingScreenState extends State<SetLoggingScreen> {
                             set: current.sets[activeSet],
                           ),
                         ],
-                        const SizedBox(height: 24),
-                        _UpNext(workout: workout, currentIndex: currentIndex),
                       ],
                     ),
                   ),
@@ -307,9 +330,11 @@ class _SessionToolbar extends StatelessWidget {
             ),
           ),
           GestureDetector(
-            onTap: () =>
-                Navigator.of(context)
-                    .pushNamed(WorkoutSummaryScreen.routeFor(workout.id)),
+            onTap: () {
+              context.read<WorkoutProvider>().finishSessionClock(workout.id);
+              Navigator.of(context)
+                  .pushNamed(WorkoutSummaryScreen.routeFor(workout.id));
+            },
             child: Text(
               'Finish',
               style: text.exerciseMeta.copyWith(
@@ -406,8 +431,12 @@ class _CurrentExerciseHeader extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 4),
+        // No rest segment. A rest is chosen while the session runs and is never
+        // stored on the exercise, so a prescribed value here would be a stale
+        // number contradicting the REST block - which is the only place a rest
+        // exists now.
         Text(
-          [if (reps.isNotEmpty) reps, '${log.restSeconds}s rest'].join('  /  '),
+          reps,
           style: text.exerciseMeta.copyWith(
             height: 1.5,
             color: scheme.onSurfaceVariant,
@@ -628,23 +657,51 @@ class _SetRow extends StatelessWidget {
       : value.toStringAsFixed(1);
 }
 
+/// The rest block: idle it names the rest the next set will take; running it
+/// counts one down.
+///
+/// One widget for both so the control that *sets* a rest is the same control
+/// that shows it: a rest defaults to none, leaving nobody a rest to be running
+/// when they first want one, so the label has to be tappable before the clock
+/// ever starts. [remaining] being zero is that idle state.
 class _RestTimer extends StatelessWidget {
   const _RestTimer({
     required this.remaining,
     required this.total,
+    required this.sessionRest,
     required this.onExtend,
     required this.onSkip,
+    required this.onStart,
+    required this.onSetRest,
   });
 
   final int remaining;
   final int total;
+
+  /// The rest this session is training with, shown while idle so the block does
+  /// not read as broken: `Off` when none is chosen, the planned clock when one
+  /// is. Idle is "what the next set rests for", not "nothing here".
+  final int sessionRest;
+
   final VoidCallback onExtend;
   final VoidCallback onSkip;
+
+  /// Runs the rest now, for the length the session is set to.
+  ///
+  /// A rest starts by itself when a set is logged, but not every rest follows a
+  /// set - between sets, after a warm-up - and with the length chosen from the
+  /// wheel there has to be something that actually runs it, or setting one is
+  /// all somebody can do.
+  final VoidCallback onStart;
+
+  /// Opens the wheel that sets what the rest will be from the next set on.
+  final VoidCallback onSetRest;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final text = context.text;
+    final running = remaining > 0;
     final progress = total == 0 ? 0.0 : remaining / total;
 
     return Container(
@@ -661,74 +718,166 @@ class _RestTimer extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'REST / ${_clock(total)}',
-                      style: text.labelCaps.copyWith(
-                        fontSize: 10,
-                        color: scheme.primary,
+                    // The number is the control: tapping it opens the wheel,
+                    // rather than sending somebody to another screen to plan a
+                    // rest. Padded because 10pt type is not a tap target.
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: onSetRest,
+                      child: Semantics(
+                        button: true,
+                        label: 'Change rest',
+                        // A real target, not just the text. With rest defaulting
+                        // to off this label is the *only* way to start one, and
+                        // a 10pt line of type is not something anyone can hit
+                        // reliably on a phone.
+                        child: SizedBox(
+                          height: 44,
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            // Just the label: rest starts blank, so there is no
+                            // prescribed time to print beside it. The line below
+                            // says what is planned, and tapping this is how one
+                            // gets planned.
+                            child: Text(
+                              'REST',
+                              style: text.labelCaps.copyWith(
+                                fontSize: 10,
+                                color: scheme.primary,
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      _clock(remaining),
-                      style: text.dataMetric.copyWith(
-                        fontSize: 32,
-                        height: 1,
-                        color: scheme.onSurface,
+                    // Idle has no clock to show, only what the next set will
+                    // rest for - so a block that is not counting still reads as
+                    // a control rather than as something that failed to load.
+                    if (running)
+                      Text(
+                        _clock(remaining),
+                        style: text.dataMetric.copyWith(
+                          fontSize: 32,
+                          height: 1,
+                          color: scheme.onSurface,
+                        ),
+                      )
+                    else if (sessionRest > 0)
+                      // The chosen length is also the control that runs it -
+                      // and it sits on the left, not in the corner that ends a
+                      // running rest. Start and skip share a play mark (skip has
+                      // to, by design), so keeping them in different places is
+                      // what stops an impatient second tap from cancelling the
+                      // rest it only just began.
+                      GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: onStart,
+                        child: Semantics(
+                          button: true,
+                          // Its own node, and the length in the label rather
+                          // than left to the text inside: a screen reader should
+                          // hear "Start rest, 1:30" as one button, not a button
+                          // followed by a loose number.
+                          container: true,
+                          label: 'Start rest, ${restLabel(sessionRest)}',
+                          child: ExcludeSemantics(
+                            child: SizedBox(
+                              height: 44,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.play_arrow_rounded,
+                                    size: 20,
+                                    color: scheme.primary,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    restLabel(sessionRest),
+                                    style: text.exerciseMeta.copyWith(
+                                      color: scheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      )
+                    else
+                      Text(
+                        restLabel(sessionRest),
+                        style: text.exerciseMeta.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ),
-              GestureDetector(
-                onTap: onExtend,
-                child: Container(
-                  width: 60,
-                  height: 44,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    border: Border.all(color: scheme.outlineVariant),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    '+30s',
-                    style: text.annotation.copyWith(
-                      fontSize: 12,
-                      color: scheme.onSurface,
+              if (running) ...[
+                GestureDetector(
+                  // Opaque for the same reason as skip below: the target is the
+                  // box, not the label inside it.
+                  behavior: HitTestBehavior.opaque,
+                  onTap: onExtend,
+                  child: Container(
+                    width: 60,
+                    height: 44,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: scheme.outlineVariant),
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 14),
-              GestureDetector(
-                onTap: onSkip,
-                child: SizedBox(
-                  width: 44,
-                  height: 44,
-                  child: Center(
                     child: Text(
-                      'Skip',
+                      '+30s',
                       style: text.annotation.copyWith(
                         fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: scheme.primary,
+                        color: scheme.onSurface,
                       ),
                     ),
                   ),
                 ),
-              ),
+                const SizedBox(width: 14),
+                // A play mark rather than the word Skip: it reads as "carry on
+                // with the set" and costs no width the countdown could use.
+                GestureDetector(
+                  // Opaque, because the glyph is smaller than the target it is
+                  // drawn in: deferring to the child would leave the ring around
+                  // the icon dead to a thumb.
+                  behavior: HitTestBehavior.opaque,
+                  onTap: onSkip,
+                  child: Semantics(
+                    button: true,
+                    label: 'Skip rest',
+                    child: SizedBox(
+                      width: 44,
+                      height: 44,
+                      child: Center(
+                        child: Icon(
+                          Icons.play_arrow_rounded,
+                          size: 26,
+                          color: scheme.primary,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
-          const SizedBox(height: 6),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(2),
-            child: LinearProgressIndicator(
-              value: progress.clamp(0, 1),
-              minHeight: 3,
-              backgroundColor: scheme.outlineVariant,
-              valueColor: AlwaysStoppedAnimation(scheme.primary),
+          if (running) ...[
+            const SizedBox(height: 6),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(2),
+              child: LinearProgressIndicator(
+                value: progress.clamp(0, 1),
+                minHeight: 3,
+                backgroundColor: scheme.outlineVariant,
+                valueColor: AlwaysStoppedAnimation(scheme.primary),
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );
@@ -900,77 +1049,6 @@ class _StepButton extends StatelessWidget {
   }
 }
 
-class _UpNext extends StatelessWidget {
-  const _UpNext({required this.workout, required this.currentIndex});
-
-  final Workout workout;
-  final int currentIndex;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final text = context.text;
-    final rest = [
-      for (var index = 0; index < workout.logs.length; index++)
-        if (index != currentIndex) index,
-    ];
-    if (rest.isEmpty) return const SizedBox.shrink();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(
-          'UP NEXT',
-          style: text.labelCaps.copyWith(color: scheme.onSurfaceVariant),
-        ),
-        const SizedBox(height: 10),
-        for (final index in rest)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: scheme.surface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: scheme.outlineVariant),
-              ),
-              child: Row(
-                children: [
-                  Text(
-                    (index + 1).toString().padLeft(2, '0'),
-                    style: text.exerciseMeta.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: scheme.primary,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      workout.logs[index].exercise.name.toUpperCase(),
-                      style: text.exerciseMeta.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: scheme.onSurface,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  Text(
-                    '${workout.logs[index].completedSets} / '
-                    '${workout.logs[index].totalSets}',
-                    style: text.annotation.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-}
-
 class _LoggingAction extends StatelessWidget {
   const _LoggingAction({
     required this.workout,
@@ -1009,6 +1087,7 @@ class _LoggingAction extends StatelessWidget {
           child: FilledButton(
             onPressed: () {
               if (allDone) {
+                context.read<WorkoutProvider>().finishSessionClock(workout.id);
                 Navigator.of(context)
                     .pushNamed(WorkoutSummaryScreen.routeFor(workout.id));
                 return;
@@ -1027,7 +1106,23 @@ class _LoggingAction extends StatelessWidget {
                 return;
               }
               provider.toggleSet(workout.id, logIndex, activeSet!);
-              onLogged(log.restSeconds);
+
+              // That toggle may have been the exercise's last set. When it was,
+              // the screen moves on to the next exercise - which is what
+              // `_currentIndex` finds on the rebuild - and a rest belongs to
+              // the exercise you are still on, so the countdown only starts
+              // while sets remain.
+              final updated = provider.byId(workout.id)?.logs[logIndex];
+              final exerciseFinished = updated == null || updated.isFinished;
+              // No planned rest means no countdown: the screen should not
+              // invent one.
+              // The rest this session is training with. Not the plan's:
+              // nothing about it is stored, so it is whatever was chosen while
+              // this session has been running.
+              final rest = provider.sessionRest(workout.id);
+              if (!exerciseFinished && rest > 0) {
+                onLogged(rest);
+              }
             },
             style: FilledButton.styleFrom(
               backgroundColor: scheme.primary,

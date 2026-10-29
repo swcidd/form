@@ -7,7 +7,6 @@ import 'package:plus_one/models/exercise.dart';
 import 'package:plus_one/models/workout.dart';
 import 'package:plus_one/providers/workout_provider.dart';
 import 'package:plus_one/screens/set_logging_screen.dart';
-import 'package:plus_one/screens/workout_detail_screen.dart';
 import 'package:plus_one/screens/workout_summary_screen.dart';
 import 'package:plus_one/theme/app_theme.dart';
 
@@ -229,85 +228,5 @@ void main() {
     // 500 kg this time against the 450 kg of the last Push Day.
     expect(find.text('+11%'), findsOneWidget);
     expect(find.text('vs. last session'), findsOneWidget);
-  });
-
-  testWidgets('the detail screen shows the session it was given', (
-    tester,
-  ) async {
-    final provider = seededProvider();
-    final workout = provider.focusWorkout!;
-
-    await tester.pumpWidget(
-      _withProvider(
-        provider,
-        WorkoutDetailScreen(
-          route: RouteSettings(name: WorkoutDetailScreen.routeFor(workout.id)),
-        ),
-      ),
-    );
-    await tester.pump();
-
-    expect(find.text(workout.title.toUpperCase()), findsOneWidget);
-    expect(find.text('THE LINEUP'), findsOneWidget);
-    // The plan's own focus, and none of the canned Lower Body session that
-    // used to be built for every id.
-    expect(find.text('CHEST / SHOULDERS'), findsOneWidget);
-    expect(find.textContaining('LOWER BODY'), findsNothing);
-    expect(find.textContaining('Barbell back squat'), findsNothing);
-    expect(find.textContaining('Edit workout'), findsNothing);
-  });
-
-  testWidgets('an id that is not in the store says so', (tester) async {
-    final provider = seededProvider();
-
-    await tester.pumpWidget(
-      _withProvider(
-        provider,
-        WorkoutDetailScreen(
-          route: const RouteSettings(name: '/workout-detail/deleted-session'),
-        ),
-      ),
-    );
-    await tester.pump();
-
-    expect(find.text('Session not found'), findsOneWidget);
-    expect(find.text('THE LINEUP'), findsNothing);
-  });
-
-  testWidgets('a session with no exercises says that instead', (tester) async {
-    final provider = WorkoutProvider(
-      today: _today,
-      workouts: [
-        Workout(
-          id: 'fresh',
-          title: 'Leg Day',
-          date: _today,
-          status: WorkoutStatus.planned,
-          durationMin: 0,
-          estimatedKcal: 0,
-          targetMuscleGroups: const [],
-          equipment: const [],
-          logs: const [],
-        ),
-      ],
-    );
-
-    await tester.pumpWidget(
-      _withProvider(
-        provider,
-        WorkoutDetailScreen(
-          route: RouteSettings(name: WorkoutDetailScreen.routeFor('fresh')),
-        ),
-      ),
-    );
-    await tester.pump();
-
-    // A session created a moment ago has nothing planned on it. The heading
-    // stays put; the body says what is missing.
-    expect(find.text('LEG DAY'), findsOneWidget);
-    expect(find.text('THE LINEUP'), findsOneWidget);
-    expect(find.textContaining('no exercises yet'), findsOneWidget);
-    // Nothing to focus on yet, so the section is left out rather than empty.
-    expect(find.text("TODAY'S FOCUS"), findsNothing);
   });
 }

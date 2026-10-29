@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
 import 'package:plus_one/providers/workout_provider.dart';
+import 'package:plus_one/screens/calendar_screen.dart';
 import 'package:plus_one/screens/progress_screen.dart';
 import 'package:plus_one/screens/set_logging_screen.dart';
 import 'package:plus_one/screens/workout_detail_screen.dart';
@@ -47,6 +48,7 @@ void main() {
           route: RouteSettings(name: WorkoutDetailScreen.routeFor(workout.id)),
         ),
         const ProgressScreen(),
+        const CalendarScreen(),
       ];
 
       for (final screen in screens) {
@@ -70,6 +72,10 @@ void main() {
 
     final provider = seededProvider(today: DateTime(2026, 10, 17));
     final workout = provider.focusWorkout!;
+    // A chosen rest is what starts the countdown. Rest is blank by default -
+    // the design's own control reads "Off" until somebody sets one - so this
+    // test says out loud that it wants one.
+    provider.setSessionRest(workout.id, 120);
     await tester.pumpWidget(
       _screen(
         provider,
@@ -86,11 +92,14 @@ void main() {
     await tester.pump();
 
     expect(find.text('Log set 04'), findsOneWidget);
-    expect(find.textContaining('REST /'), findsOneWidget);
+    expect(find.text('REST'), findsOneWidget);
+    expect(find.text('02:00'), findsOneWidget);
 
-    // Stop the countdown before the test tears the tree down.
-    await tester.tap(find.text('Skip'));
+    // Stop the countdown before the test tears the tree down. The block stays,
+    // idle, ready to set the next rest.
+    await tester.tap(find.bySemanticsLabel('Skip rest'));
     await tester.pump();
-    expect(find.textContaining('REST /'), findsNothing);
+    expect(find.bySemanticsLabel('Skip rest'), findsNothing);
+    expect(find.text('REST'), findsOneWidget);
   });
 }
