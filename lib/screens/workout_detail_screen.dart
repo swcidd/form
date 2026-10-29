@@ -576,11 +576,6 @@ class _EmptyExercises extends StatelessWidget {
     return Container(
       height: 336,
       padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: scheme.outlineVariant),
-      ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
