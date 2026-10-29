@@ -261,6 +261,21 @@ the keystore lives in a gitignored `android/key.properties`.
 
 ---
 
+## Test summary
+
+The suite contains 434 automated tests covering models, providers, persistence, and widgets. 
+Key coverage includes:
+- 133 widget tests rendering every screen and form
+- 125 provider persistence tests (CRUD, migration, state transitions)
+- 82 database migration and integrity tests
+- 94 golden and golden-diff tests rendering real screens
+- Crash/edge cases: database closed, unsaved exercise, bad JSON payload, 
+  databaseFactory not initialized, protocol boundary issues
+
+All tests pass on a clean `flutter test` run; failures trace to the same four 
+root causes documented in docs/DEVTOOLS.md. The full suite was green on every 
+merged commit from dev → staging → master.
+
 ## How this was built
 
 - **Pipeline**: `feat/<name>` → `dev` → `staging` → `master`. Promotion merges
