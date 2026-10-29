@@ -478,22 +478,12 @@ class _LibraryScreenState extends State<LibraryScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const SizedBox(height: 8),
-        Center(
-          child: Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              color: scheme.surfaceContainer,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Icon(
-              Icons.fitness_center_rounded,
-              size: 32,
-              color: scheme.onSurface,
-            ),
-          ),
+        Text(
+          'MAKE YOUR FIRST MOVE.',
+          style: text.programName,
+          textAlign: TextAlign.center,
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         Text(
           'MAKE YOUR FIRST MOVE.',
           style: text.programName,
