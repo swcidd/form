@@ -485,12 +485,6 @@ class _LibraryScreenState extends State<LibraryScreen> {
         ),
         const SizedBox(height: 8),
         Text(
-          'MAKE YOUR FIRST MOVE.',
-          style: text.programName,
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 8),
-        Text(
           'No workouts yet. Start with the basics,\n'
           "then build a library that's yours.",
           style: text.exerciseMeta.copyWith(
