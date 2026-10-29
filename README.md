@@ -39,11 +39,16 @@
 <tr>
 <td><img src="docs/screenshots/11-empty-account.png" alt="Empty account"><br><sub><b>Empty account</b> — what a fresh install actually shows</sub></td>
 <td><img src="docs/screenshots/12-discover.png" alt="Discover"><br><sub><b>Discover</b> — the wger catalogue, with the offline fallback called out</sub></td>
-<td></td>
+<td><img src="docs/screenshots/13-add-exercise.png" alt="Add exercise"><br><sub><b>Add exercise</b> — search, filter, or open a movement's details first</sub></td>
+</tr>
+<tr>
+<td><img src="docs/screenshots/14-workout-builder.png" alt="Workout builder"><br><sub><b>Workout builder</b> — a template takes shape, saved as you go</sub></td>
+<td><img src="docs/screenshots/15-workout-builder-sets.png" alt="Workout builder, sets"><br><sub><b>Builder, sets</b> — kilos and reps per set, in place</sub></td>
+<td><img src="docs/screenshots/16-exercise-detail.png" alt="Exercise detail"><br><sub><b>Exercise detail</b> — muscles, technique, and where the data came from</sub></td>
 </tr>
 </table>
 
-The screenshots are the app's own widgets, rendered against a **sample account**
+Most screenshots are the app's own widgets, rendered against a **sample account**
 by `tool/screenshot_test.dart` and written to `docs/screenshots/`:
 
 ```bash
