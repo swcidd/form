@@ -305,7 +305,7 @@ screenshots side by side rather than by reading either screen's code.
 | Provider state management | `AuthProvider`, `WorkoutProvider` |
 | CRUD | Sessions, exercises, sets, profile, saved exercises |
 | Empty / offline / failed API / validation | Empty account panel, bundled catalogue fallback, banners, field errors |
-| Public repository, feature branches, 3+ reviewed PRs | [github.com/swcidd/form](https://github.com/swcidd/form/pulls) |
+| Public repository, feature branches, reviewed PRs | [github.com/swcidd/form](https://github.com/swcidd/form/pulls) |
 | Issue tracking | [github.com/swcidd/form/issues](https://github.com/swcidd/form/issues) |
 | Debug vs release APK, steps documented | [docs/BUILD.md](docs/BUILD.md) |
 | Icon, splash, app name, release APK | `assets/branding/`, `flutter_launcher_icons`, `flutter_native_splash`, `docs/BUILD.md` |
