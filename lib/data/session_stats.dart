@@ -179,6 +179,63 @@ class SessionStats {
     return session == null ? null : _volumeOf([session]);
   }
 
+  /// Finished sessions, newest first, optionally windowed to the last [days].
+  List<Workout> recentSessions({int? days, int? limit}) {
+    final sessions = [
+      for (final workout in _finished)
+        if (days == null || !workout.date.isBefore(_windowStart(days))) workout,
+    ]..sort((a, b) => b.date.compareTo(a.date));
+    return limit == null || sessions.length <= limit
+        ? sessions
+        : sessions.sublist(0, limit);
+  }
+
+  /// An exercise's best set in each finished session, oldest first.
+  ///
+  /// One point per session rather than per set, so the trend line answers
+  /// "what did this exercise move?" instead of being dominated by whichever
+  /// session happened to log the most sets.
+  List<SetRecord> bestSeriesFor(String exercise, {int? days}) {
+    final points = <SetRecord>[];
+    final start = days == null ? null : _windowStart(days);
+
+    for (final workout in _finished) {
+      if (start != null && workout.date.isBefore(start)) continue;
+
+      SetRecord? best;
+      for (final log in workout.logs) {
+        if (log.exercise.name != exercise) continue;
+        for (final set in log.sets) {
+          if (!set.completed || set.weightKg <= 0) continue;
+          final candidate = SetRecord(
+            exercise: exercise,
+            weightKg: set.weightKg,
+            reps: set.reps,
+            date: workout.date,
+          );
+          if (best == null ||
+              candidate.estimatedOneRepMax > best.estimatedOneRepMax) {
+            best = candidate;
+          }
+        }
+      }
+      if (best != null) points.add(best);
+    }
+
+    points.sort((a, b) => a.date.compareTo(b.date));
+    return points;
+  }
+
+  /// How many of the exercise records were set inside the last [days], or all
+  /// time when [days] is null.
+  int recordCountIn(int? days) {
+    if (days == null) return records.length;
+    final start = _windowStart(days);
+    return records.where((record) => !record.date.isBefore(start)).length;
+  }
+
+  DateTime _windowStart(int days) => _today.subtract(Duration(days: days - 1));
+
   /// Volume of the completed sets in the [days] days ending today.
   double volumeIn(int days) => _volumeOf(_inWindow(days));
 

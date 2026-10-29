@@ -1,10 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:plus_one/data/app_database.dart';
 import 'package:plus_one/data/workout_repository.dart';
-import 'package:plus_one/exercise_library.dart';
+import 'package:plus_one/models/library_exercise.dart';
 import 'package:plus_one/models/exercise.dart';
 import 'package:plus_one/models/profile_stats.dart';
 import 'package:plus_one/models/session.dart';
+import 'package:plus_one/models/taxonomy.dart';
 import 'package:plus_one/models/workout.dart';
 import 'package:plus_one/providers/workout_provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -130,6 +131,54 @@ void main() {
     expect(restored.status, WorkoutStatus.completed);
   });
 
+  test('a running clock survives the restart', () async {
+    final first = launch();
+    final stored = first.addWorkout(planned());
+
+    first.startClock(stored.id);
+
+    // The start is on the session, not in the run. This is the assertion that
+    // would fail if startClock went back to writing only to memory: a brand new
+    // provider over the same file still sees the session as running.
+    final second = launch();
+    await second.load();
+    expect(second.byId(stored.id)!.startedAt, isNotNull);
+
+    second.finishSessionClock(stored.id);
+
+    // And finishing clears it on disk, so a third launch finds no clock still
+    // running - only the length it produced.
+    final third = launch();
+    await third.load();
+    expect(third.byId(stored.id)!.startedAt, isNull);
+  });
+
+  test('the classification axes survive the restart', () async {
+    final first = launch();
+    final stored = first.addWorkout(
+      planned().copyWith(
+        modality: Modality.calisthenics,
+        split: WorkoutSplit.pull,
+        goal: TrainingGoal.strength,
+        kind: WorkoutKind.routine,
+      ),
+    );
+
+    final second = launch();
+    await second.load();
+
+    final restored = second.byId(stored.id)!;
+    expect(restored.modality, Modality.calisthenics);
+    expect(restored.split, WorkoutSplit.pull);
+    expect(restored.goal, TrainingGoal.strength);
+    expect(restored.kind, WorkoutKind.routine);
+    // The band is derived on read, so it cannot drift from the minutes.
+    expect(
+      restored.durationBand,
+      DurationBand.fromMinutes(restored.durationMin),
+    );
+  });
+
   test('a workout deleted before the restart stays deleted', () async {
     final first = launch();
     final stored = first.addWorkout(planned());
@@ -144,7 +193,13 @@ void main() {
   test('the profile comes back with the account', () async {
     final first = launch();
     first.updateProfile(
-      ProfileStats.empty().copyWith(name: 'Sherwin', weightKg: 78),
+      ProfileStats.empty().copyWith(
+        name: 'Sherwin',
+        weightKg: 78,
+        heightCm: 180,
+        heightImperial: true,
+        weightImperial: true,
+      ),
     );
 
     final second = launch();
@@ -152,6 +207,9 @@ void main() {
 
     expect(second.profile.name, 'Sherwin');
     expect(second.profile.weightKg, 78);
+    expect(second.profile.heightCm, 180);
+    expect(second.profile.heightImperial, isTrue);
+    expect(second.profile.weightImperial, isTrue);
   });
 
   test('a new id cannot collide with one the store already used', () async {

@@ -44,6 +44,8 @@ dependencies:
   path: ^1.9.1
   http: ^1.6.0
   crypto: ^3.0.7
+  # The same store on desktop, where the sqflite plugin has no implementation.
+  sqflite_common_ffi: ^2.4.3
 
 dev_dependencies:
   flutter_test:
@@ -55,7 +57,6 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
-  sqflite_common_ffi: ^2.4.3
 
   # Both generate platform resources from the checked-in artwork in
   # assets/branding. Build-time tools, never shipped:

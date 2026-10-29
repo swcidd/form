@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+#
+# Refuse to push a tree the suite would reject.
+#
+# Enable once per clone:
+#
+#   git config core.hooksPath .githooks
+#
+# The work is in tool/check.sh so it can be run by hand too.
+
+set -euo pipefail
+
+exec "$(git rev-parse --show-toplevel)/tool/check.sh"

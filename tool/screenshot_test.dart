@@ -41,10 +41,16 @@ void main() {
   });
 
   /// A phone-shaped surface at 2x, large enough to print.
+  ///
+  /// Dark, because that is the design and what the app opens in on a phone
+  /// that follows the system: a light render documents a theme nobody sees in
+  /// the paper's own screenshots.
   void phone(WidgetTester tester) {
     tester.view.physicalSize = const Size(804, 1748);
     tester.view.devicePixelRatio = 2;
+    tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
     addTearDown(tester.view.reset);
+    addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
   }
 
   /// Pumps, and gives the asset photographs time to decode: without the real
@@ -155,9 +161,9 @@ void main() {
     await settle(tester);
     await tap(tester, 'Push Day');
     await settle(tester);
-    await tester.ensureVisible(find.text('Start Push Day'));
+    await tester.ensureVisible(find.text('Start workout'));
     await settle(tester);
-    await tap(tester, 'Start Push Day');
+    await tap(tester, 'Start workout');
     await settle(tester);
     await shot(tester, '09-logging');
   });
@@ -168,11 +174,11 @@ void main() {
     await settle(tester);
     await tap(tester, 'Push Day');
     await settle(tester);
-    await tester.ensureVisible(find.text('Start Push Day'));
+    await tester.ensureVisible(find.text('Start workout'));
     await settle(tester);
-    await tap(tester, 'Start Push Day');
+    await tap(tester, 'Start workout');
     await settle(tester);
-    await tap(tester, 'Finish Workout');
+    await tap(tester, 'Finish');
     await settle(tester);
     await shot(tester, '10-summary');
   });

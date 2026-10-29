@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:plus_one/data/app_database.dart';
 import 'package:plus_one/data/workout_repository.dart';
-import 'package:plus_one/exercise_library.dart';
+import 'package:plus_one/models/library_exercise.dart';
 import 'package:plus_one/models/exercise.dart';
 import 'package:plus_one/models/metric.dart';
 import 'package:plus_one/models/saved_exercise.dart';

@@ -6,7 +6,7 @@ import 'package:http/testing.dart';
 
 import 'package:plus_one/data/exercise_api_client.dart';
 import 'package:plus_one/data/exercise_catalog.dart';
-import 'package:plus_one/exercise_library.dart';
+import 'package:plus_one/models/library_exercise.dart';
 
 const _bundledSeed = LibraryExercise(
   name: 'Bundled Curl',

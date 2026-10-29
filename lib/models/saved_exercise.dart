@@ -1,4 +1,4 @@
-import '../exercise_library.dart';
+import 'library_exercise.dart';
 
 /// An exercise the user kept, and when they kept it.
 ///

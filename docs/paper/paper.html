@@ -214,7 +214,7 @@
       <tr><td class="k">Submitted by</td><td>Sherwin Sid S. Sañol</td></tr>
       <tr><td class="k">Course · Section</td><td>SE2142 · BSSE-2</td></tr>
       <tr><td class="k">Repository</td><td><a href="https://github.com/swcidd/form">github.com/swcidd/form</a></td></tr>
-      <tr><td class="k">Date</td><td>19 October 2026</td></tr>
+      <tr><td class="k">Date</td><td>29 October 2026</td></tr>
     </table>
   </div>
 </section>
@@ -237,7 +237,7 @@
   </tr>
   <tr>
     <td><strong>Design and interface</strong></td>
-    <td>Translated the Figma design system into a Flutter theme (colour, type scale, control shapes), laid out eleven screens, and built the reusable widgets they share. Kept motion to one token file — page and sheet timing, and a press scale on the four surfaces where the whole card is the target — rather than per-screen animation. Kept one voice for empty, loading and error states.</td>
+    <td>Translated the Figma design system into a Flutter theme (colour, type scale, control shapes), laid out thirteen screens, and built the reusable widgets they share. Kept motion to one token file — page and sheet timing, and a press scale on the four surfaces where the whole card is the target — rather than per-screen animation. Kept one voice for empty, loading and error states.</td>
     <td><code>lib/screens/</code>, <code>lib/widgets/</code>, <code>lib/theme/</code>, <code>docs/MOTION.md</code></td>
   </tr>
   <tr>
@@ -247,7 +247,7 @@
   </tr>
   <tr>
     <td><strong>Data layer and schema</strong></td>
-    <td>The SQLite schema (version 4), the migration that gave every row an owner, the repository that scopes reads and writes to one account, and the statistics file that derives progress.</td>
+    <td>The SQLite schema (version 10, migrated forward from version 4), the migration that gave every row an owner, the later additive migrations that added the body metrics and the session clock, the repository that scopes reads and writes to one account, and the statistics file that derives progress.</td>
     <td><code>lib/data/</code></td>
   </tr>
   <tr>
@@ -262,7 +262,7 @@
   </tr>
   <tr>
     <td><strong>Quality assurance</strong></td>
-    <td>301 automated tests across models, providers, persistence and widgets; a hand-built v3 database for the migration test; screenshots rendered as golden files; <code>dart format</code> and <code>flutter analyze</code> kept clean at every commit.</td>
+    <td>434 automated tests across models, providers, persistence and widgets; a hand-built v3 database for the migration test; screenshots rendered as golden files; <code>dart format</code> and <code>flutter analyze</code> kept clean at every commit.</td>
     <td><code>test/</code>, <code>tool/screenshot_test.dart</code></td>
   </tr>
   <tr>
@@ -378,11 +378,12 @@
 
 <h2>What it is</h2>
 <p>
-  The app has eleven screens. A first launch offers a welcome with three ways in:
+  The app has thirteen screens. A first launch offers a welcome with three ways in:
   create an account, sign in, or continue offline as the device account. Behind
   that front door is a shell with five destinations — Home, Progress, Workout,
-  Library and Profile — plus three screens reached from a session: the workout
-  detail, the set logger and the summary.
+  Library and Profile — plus the screens reached from a session or the
+  catalogue: the workout detail, the workout builder, the exercise picker, the
+  exercise detail, the set logger and the summary.
 </p>
 <p>
   A session is a plan: exercises, each with sets of reps and weight. The user
@@ -451,6 +452,14 @@
   <tr>
     <td><img src="img/10-summary.jpg" alt="Summary"><div class="cap"><b>Summary</b>What the session was worth, and a record only if it beat one.</div></td>
     <td><img src="img/12-discover.jpg" alt="Discover"><div class="cap"><b>Discover</b>The network failing on purpose: banner, then the bundled catalogue.</div></td>
+  </tr>
+  <tr>
+    <td><img src="img/13-add-exercise.jpg" alt="Add exercise"><div class="cap"><b>Add exercise</b>Search, filter, or open a movement's details first.</div></td>
+    <td><img src="img/14-workout-builder.jpg" alt="Workout builder"><div class="cap"><b>Workout builder</b>A template takes shape, saved as you go.</div></td>
+  </tr>
+  <tr>
+    <td><img src="img/15-workout-builder-sets.jpg" alt="Workout builder, sets"><div class="cap"><b>Builder, sets</b>Kilos and reps per set, in place.</div></td>
+    <td><img src="img/16-exercise-detail.jpg" alt="Exercise detail"><div class="cap"><b>Exercise detail</b>Muscles, technique, and where the data came from.</div></td>
   </tr>
 </table>
 
@@ -567,7 +576,7 @@
   <tr>
     <td class="n">4</td>
     <td><strong>Support accounts without a server.</strong> Two people can use one device with separate training, and no credential ships in the app.</td>
-    <td>Schema v4 gives every row an owner; switching accounts opens a different store and disposes the previous one; passwords are hashed, salted and iterated.</td>
+    <td>Schema v10 gives every row an owner; switching accounts opens a different store and disposes the previous one; passwords are hashed, salted and iterated.</td>
   </tr>
   <tr>
     <td class="n">5</td>
@@ -577,7 +586,7 @@
   <tr>
     <td class="n">6</td>
     <td><strong>Practise the engineering, not only the programming.</strong> Branches, reviewed pull requests, issues, tests, a DevTools case, and documentation a stranger can follow.</td>
-    <td>More than thirty merged pull requests with inline review comments, ten issues closed, 301 tests, <code>docs/DEVTOOLS.md</code>.</td>
+    <td>More than fifty merged pull requests with inline review comments, ten issues closed, 434 tests, <code>docs/DEVTOOLS.md</code>.</td>
   </tr>
 </table>
 
@@ -609,7 +618,10 @@
   <tr><td><strong>Last time's numbers</strong></td><td>The logger shows the best set from the most recent finished session containing that exercise, and each row shows the matching set.</td><td><code>previousSetsFor</code></td></tr>
   <tr><td><strong>Weekly goal and streak</strong></td><td>Finished sessions against a target the user can raise or lower; consecutive days with a finished session.</td><td><code>sessionsDoneThisWeek</code>, <code>streakDays</code></td></tr>
   <tr><td><strong>Exercise catalogue</strong></td><td>Live wger data over <code>http</code> with search, muscle filters and a saved list; bundled fallback offline.</td><td><code>exercise_catalog.dart</code>, <code>library_screen.dart</code></td></tr>
-  <tr><td><strong>Accounts</strong></td><td>A local account with a hashed password or the device account; per-account training; change the password; sign out; delete with confirmation.</td><td><code>lib/auth/</code>, schema v4</td></tr>
+  <tr><td><strong>Workout builder</strong></td><td>Create a workout from the catalogue: pick exercises, order them, save it to the library, then edit or delete it. A saved workout is a template; starting it logs a session for that day.</td><td><code>workout_builder_screen.dart</code>, <code>add_exercise_screen.dart</code>, <code>workout_provider.dart</code></td></tr>
+  <tr><td><strong>Rest timer</strong></td><td>Off by default; chosen in ten-second steps from the logger; starts by hand or after a logged set, extends by thirty seconds, and keeps nothing.</td><td><code>set_logging_screen.dart</code>, <code>WorkoutProvider.sessionRest</code></td></tr>
+  <tr><td><strong>Session clock</strong></td><td>The moment a session's clock started is stored with the session (schema v10), so a restart mid-workout does not lose the elapsed time; finishing writes the measured duration.</td><td><code>Workout.startedAt</code>, <code>startClock</code>, <code>finishSessionClock</code></td></tr>
+  <tr><td><strong>Accounts</strong></td><td>A local account with a hashed password or the device account; per-account training; change the password; sign out; delete with confirmation.</td><td><code>lib/auth/</code>, schema v10</td></tr>
 </table>
 
 <h2>Supporting behaviour</h2>
@@ -897,7 +909,7 @@ timeout: 8 s</pre>
 
 <h2>7.4 Tests and verification</h2>
 <p>
-  The suite holds <strong>301 tests</strong>. Three of them are worth naming
+  The suite holds <strong>434 tests</strong>. Three of them are worth naming
   because they test the parts that would be expensive to get wrong:
 </p>
 <ul>

@@ -186,6 +186,18 @@ class _StatusChip extends StatelessWidget {
         scheme.surfaceContainerHigh,
         scheme.onSurface,
       ),
+      WorkoutStatus.inProgress => (
+        'IN PROGRESS',
+        Icons.timelapse_rounded,
+        scheme.secondaryContainer,
+        scheme.onSecondaryContainer,
+      ),
+      WorkoutStatus.skipped => (
+        'SKIPPED',
+        Icons.skip_next_rounded,
+        scheme.surfaceContainer,
+        scheme.onSurfaceVariant,
+      ),
       WorkoutStatus.rest => (
         'REST',
         Icons.self_improvement_rounded,

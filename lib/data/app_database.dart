@@ -20,7 +20,7 @@ class AppDatabase {
   final String fileName;
 
   /// Current schema version. Increment with every migration.
-  static const int version = 4;
+  static const int version = 10;
 
   static const String workoutsTable = 'workouts';
   static const String exerciseLogsTable = 'exercise_logs';
@@ -122,6 +122,11 @@ class AppDatabase {
       estimatedKcal      INTEGER NOT NULL DEFAULT 0,
       targetMuscleGroups TEXT    NOT NULL DEFAULT '[]',
       equipment          TEXT    NOT NULL DEFAULT '[]',
+      modality           TEXT    NOT NULL DEFAULT '',
+      split              TEXT    NOT NULL DEFAULT '',
+      goal               TEXT    NOT NULL DEFAULT '',
+      kind               TEXT    NOT NULL DEFAULT 'session',
+      startedAt          INTEGER,
       PRIMARY KEY (userId, id)
     )
   ''';
@@ -177,8 +182,11 @@ class AppDatabase {
       role          TEXT    NOT NULL DEFAULT '',
       memberSince   TEXT    NOT NULL DEFAULT '',
       isPro         INTEGER NOT NULL DEFAULT 0,
+      dateOfBirth   TEXT,
       weightKg      REAL    NOT NULL DEFAULT 0,
       heightCm      REAL    NOT NULL DEFAULT 0,
+      heightImperial INTEGER NOT NULL DEFAULT 0,
+      weightImperial INTEGER NOT NULL DEFAULT 0,
       bodyFatPct    REAL    NOT NULL DEFAULT 0,
       restingHrBpm  INTEGER NOT NULL DEFAULT 0,
       totalWorkouts INTEGER NOT NULL DEFAULT 0,
@@ -280,6 +288,78 @@ class AppDatabase {
     if (from < 4) {
       await _ownEverything(db);
     }
+
+    // v7 adds the date of birth the sign-up asks for. Nullable, not defaulted:
+    // an account made before the question has no answer, and a made-up one
+    // would be worse than the gap. Files below v4 rebuild the table above in
+    // its current shape, so only files that already have a profile need the
+    // column added. v6 wrote an integer age instead; it is left in place and
+    // ignored, because dropping a column is not worth the risk in a migration.
+    if (from >= 4 && from < 7) {
+      await db.execute('ALTER TABLE $profileTable ADD COLUMN dateOfBirth TEXT');
+    }
+
+    // v9 adds the session's classification axes: what modality it is, the
+    // split it follows, its goal, and whether it is a routine or a logged
+    // session. Empty strings mean "not classified", which is the honest state
+    // of every session created before these questions existed.
+    if (from >= 4 && from < 9) {
+      // A file rewound from a later build already has these columns; adding
+      // them again is a duplicate-column failure. Check rather than assume.
+      for (final step in const [
+        ("modality", "TEXT NOT NULL DEFAULT ''"),
+        ("split", "TEXT NOT NULL DEFAULT ''"),
+        ("goal", "TEXT NOT NULL DEFAULT ''"),
+        ("kind", "TEXT NOT NULL DEFAULT 'session'"),
+      ]) {
+        if (!await _hasColumn(db, workoutsTable, step.$1)) {
+          await db.execute(
+            'ALTER TABLE $workoutsTable ADD COLUMN ${step.$1} ${step.$2}',
+          );
+        }
+      }
+    }
+
+    // v10 records when a session's clock started, so the length a session is
+    // measured over survives the app being closed mid-session instead of being
+    // lost with the run. Nullable and not defaulted: a session that has never
+    // been started has no honest start time, and one that has been finished has
+    // had its start cleared. Added rather than rebuilt, so this cannot lose a
+    // row it was not asked to touch.
+    if (from >= 4 && from < 10) {
+      // A file rewound from a later build already has the column; adding it
+      // again is a duplicate-column failure. Check rather than assume.
+      if (!await _hasColumn(db, workoutsTable, 'startedAt')) {
+        await db.execute(
+          'ALTER TABLE $workoutsTable ADD COLUMN startedAt INTEGER',
+        );
+      }
+    }
+
+    // v8 remembers which unit each measurement was entered in, so the profile
+    // can keep writing it the same way. Both default to metric for rows that
+    // predate the choice.
+    if (from >= 4 && from < 8) {
+      await db.execute(
+        'ALTER TABLE $profileTable '
+        'ADD COLUMN heightImperial INTEGER NOT NULL DEFAULT 0',
+      );
+      await db.execute(
+        'ALTER TABLE $profileTable '
+        'ADD COLUMN weightImperial INTEGER NOT NULL DEFAULT 0',
+      );
+    }
+  }
+
+  /// Whether [table] already has [column], for migrations that add columns a
+  /// later build's file may already carry.
+  static Future<bool> _hasColumn(
+    Database db,
+    String table,
+    String column,
+  ) async {
+    final rows = await db.rawQuery('PRAGMA table_info($table)');
+    return rows.any((row) => row['name'] == column);
   }
 
   /// Fills in the `userId` column of everything written before there were

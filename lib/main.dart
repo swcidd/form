@@ -6,12 +6,19 @@ import 'package:provider/provider.dart';
 
 import 'auth/local_auth_repository.dart';
 import 'data/app_database.dart';
+import 'data/database_factory.dart';
 import 'data/workout_repository.dart';
+import 'models/library_exercise.dart';
+import 'models/workout.dart';
 import 'navigation/app_tab.dart';
 import 'providers/auth_provider.dart';
 import 'providers/workout_provider.dart';
+import 'screens/add_exercise_screen.dart';
 import 'screens/app_shell.dart';
-import 'screens/create_account_screen.dart';
+import 'screens/edit_workout_screen.dart';
+import 'screens/exercise_detail_screen.dart';
+import 'screens/workout_builder_screen.dart';
+import 'screens/sign_up_name_screen.dart';
 import 'screens/set_logging_screen.dart';
 import 'screens/sign_in_screen.dart';
 import 'screens/welcome_screen.dart';
@@ -29,6 +36,10 @@ Future<void> main() async {
   // every launch, and a font that fails to arrive renders the app in the wrong
   // face. See pubspec.yaml for the files and their weights.
   GoogleFonts.config.allowRuntimeFetching = false;
+
+  // Android and iOS have this through the sqflite plugin; a desktop run does
+  // not, and would otherwise fail to read the session at all.
+  usePlatformDatabaseFactory();
 
   // Whoever is signed in is read first, and on purpose: it decides which
   // account's training the app opens on, and a launch that showed the sign-in
@@ -94,7 +105,7 @@ class PlusOneApp extends StatelessWidget {
   /// session, and the flow is a navigator of its own — see [_Gate].
   static Map<String, WidgetBuilder> get signInRoutes => {
     SignInScreen.routeName: (_) => const SignInScreen(),
-    CreateAccountScreen.routeName: (_) => const CreateAccountScreen(),
+    SignUpNameScreen.routeName: (_) => const SignUpNameScreen(),
   };
 
   /// Resolves the parameterised workout routes. Null for anything unrecognised,
@@ -110,6 +121,29 @@ class PlusOneApp extends StatelessWidget {
     final routePrefix = '/${segments.first}';
 
     switch (routePrefix) {
+      case WorkoutBuilderScreen.routeName:
+        // Typed: the builder pops the workout it just wrote.
+        return MaterialPageRoute<Workout>(
+          builder: (_) => WorkoutBuilderScreen(route: settings),
+          settings: settings,
+        );
+      case AddExerciseScreen.routeName:
+        // Typed, because the picker pops the exercises the caller asked for:
+        // a `Route<void>` throws at the push site rather than at the pop.
+        return MaterialPageRoute<List<LibraryExercise>>(
+          builder: (_) => const AddExerciseScreen(),
+          settings: settings,
+        );
+      case ExerciseDetailScreen.routeName:
+        return MaterialPageRoute<void>(
+          builder: (_) => ExerciseDetailScreen(route: settings),
+          settings: settings,
+        );
+      case EditWorkoutScreen.routeName:
+        return MaterialPageRoute<void>(
+          builder: (_) => EditWorkoutScreen(route: settings),
+          settings: settings,
+        );
       case WorkoutDetailScreen.routeName:
         return MaterialPageRoute<void>(
           builder: (_) => WorkoutDetailScreen(route: settings),

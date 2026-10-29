@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../auth/auth_messages.dart';
 import '../auth/auth_repository.dart';
 import '../auth/credentials.dart';
+import '../models/sign_up_draft.dart';
 import '../providers/auth_provider.dart';
 import '../theme/app_typography.dart';
 import '../widgets/auth_action.dart';
@@ -12,31 +13,27 @@ import '../widgets/auth_field.dart';
 import '../widgets/auth_form_area.dart';
 import '../widgets/auth_hero.dart';
 import '../widgets/auth_intro.dart';
-import '../widgets/auth_link.dart';
+import '../widgets/sign_up_steps.dart';
 import 'sign_in_screen.dart';
+import 'sign_up_footer.dart';
 
-/// Makes an account and signs it in.
+/// Sign-up, step four: the address and the password.
 ///
-/// The design splits this over three steps — name, date of birth, then the
-/// credentials — and this screen is the third one with the first one's field at
-/// the top. The step in between asked for a date of birth to put in an athlete
-/// profile, and this app keeps no date of birth anywhere: there is no column
-/// for it and nothing that would read one, so a screen collecting it would be
-/// collecting it for nobody. Name is here because the account does use it —
-/// every greeting in the app goes through it — and it is optional because an
-/// account works without one, falling back to the part of the address in front
-/// of the `@`.
-class CreateAccountScreen extends StatefulWidget {
-  const CreateAccountScreen({super.key});
+/// The name, age and measurements have already been collected, so this step is
+/// only what the identity store needs. When the store signs the new account in,
+/// the gate swaps the whole window and there is nothing here left to navigate
+/// to; when it wants the address confirmed first, this screen turns into the
+/// answer.
+class SignUpAccountScreen extends StatefulWidget {
+  const SignUpAccountScreen({super.key, required this.draft});
 
-  static const String routeName = '/create-account';
+  final SignUpDraft draft;
 
   @override
-  State<CreateAccountScreen> createState() => _CreateAccountScreenState();
+  State<SignUpAccountScreen> createState() => _SignUpAccountScreenState();
 }
 
-class _CreateAccountScreenState extends State<CreateAccountScreen> {
-  final _name = TextEditingController();
+class _SignUpAccountScreenState extends State<SignUpAccountScreen> {
   final _email = TextEditingController();
   final _password = TextEditingController();
 
@@ -54,14 +51,12 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
 
   @override
   void dispose() {
-    _name.dispose();
     _email.dispose();
     _password.dispose();
     super.dispose();
   }
 
   Future<void> _submit() async {
-    final name = _name.text;
     final email = _email.text;
     final password = _password.text;
 
@@ -81,7 +76,12 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
       final outcome = await auth.createAccount(
         email: email,
         password: password,
-        displayName: name,
+        displayName: widget.draft.fullName,
+        dateOfBirth: widget.draft.dateOfBirth,
+        heightCm: widget.draft.heightCm,
+        weightKg: widget.draft.weightKg,
+        heightImperial: widget.draft.heightImperial,
+        weightImperial: widget.draft.weightImperial,
       );
       if (!mounted) return;
       switch (outcome) {
@@ -148,9 +148,10 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
             ),
             bottom: AuthAction(
               label: 'Back to log in',
-              onPressed: () =>
-                  Navigator.of(context)
-                      .pushReplacementNamed(SignInScreen.routeName),
+              onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil(
+                SignInScreen.routeName,
+                (route) => route.isFirst,
+              ),
             ),
           ),
         ],
@@ -173,29 +174,19 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
         children: [
           AuthHero(
             kicker: 'YOUR TRAINING / STARTS HERE',
-            headline: 'YOUR STRONG.\nSTARTS HERE.',
+            headline: 'MAKE IT\nYOUR STRONG.',
             onBack: () => Navigator.of(context).maybePop(),
-            height: 240,
+            height: 260,
           ),
           AuthFormArea(
             top: AutofillGroup(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const AuthIntro(
-                    title: 'CREATE YOUR ACCOUNT.',
-                    subtitle: 'Your training. Your progress. All in one place.',
-                  ),
+                  const SignUpSteps(current: 3),
                   const SizedBox(height: 24),
-                  AuthField(
-                    label: 'NAME',
-                    controller: _name,
-                    hint: 'What should we call you?',
-                    textInputAction: TextInputAction.next,
-                    autofillHints: const [AutofillHints.name],
-                    enabled: !busy,
-                  ),
-                  const SizedBox(height: 16),
+                  const AuthIntro(title: 'CREATE YOUR ACCOUNT.'),
+                  const SizedBox(height: 24),
                   AuthField(
                     label: 'EMAIL ADDRESS',
                     controller: _email,
@@ -220,8 +211,8 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    'Use a password you do not use anywhere else, and at '
-                    'least ${Credentials.minPasswordLength} characters.',
+                    'Use a password you don’t use elsewhere, and at least '
+                    '${Credentials.minPasswordLength} characters.',
                     style: text.annotation.copyWith(
                       color: scheme.onSurfaceVariant,
                     ),
@@ -242,16 +233,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                   onPressed: _submit,
                 ),
                 const SizedBox(height: 12),
-                Divider(color: scheme.outlineVariant, height: 24),
-                AuthLink(
-                  prompt: 'Already training?',
-                  action: 'Log in',
-                  onPressed: busy
-                      ? null
-                      : () =>
-                            Navigator.of(context)
-                                .pushReplacementNamed(SignInScreen.routeName),
-                ),
+                SignUpFooter(enabled: !busy),
               ],
             ),
           ),

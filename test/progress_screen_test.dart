@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import 'package:plus_one/models/exercise.dart';
@@ -11,8 +10,7 @@ import 'package:plus_one/theme/app_theme.dart';
 
 import 'support/harness.dart';
 
-/// A fixed "today" for the same reason the fixtures take one: the screen
-/// windows its figures by date, so the assertions need a fixed calendar.
+/// A fixed "today" so the screen's period windows and history are stable.
 final _today = DateTime(2026, 10, 17);
 
 DateTime _daysAgo(int days) => _today.subtract(Duration(days: days));
@@ -56,16 +54,13 @@ Workout _session({
 WorkoutProvider _provider(List<Workout> workouts) =>
     WorkoutProvider(today: _today, workouts: workouts);
 
-/// The records list sits below three cards, which a phone-sized surface never
-/// gets to: a `ListView` only builds what fits. A tall surface lays the whole
-/// screen out so the lower sections can be asserted on.
+/// A tall surface lays the whole screen out so lower sections can be reached.
 void _useTallSurface(WidgetTester tester) {
-  tester.view.physicalSize = const Size(1100, 2400);
+  tester.view.physicalSize = const Size(1100, 2600);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
 }
 
-/// One finished session of bench press: 5 reps at 100 kg.
 WorkoutProvider _oneSession() => _provider([
   _session(
     id: 'a',
@@ -85,9 +80,9 @@ void main() {
     await tester.pumpWidget(_app(WorkoutProvider(today: _today)));
     await tester.pumpAndSettle();
 
-    expect(find.text('No progress to show yet'), findsOneWidget);
-    expect(find.text('Estimated 1RM'), findsNothing);
-    expect(find.text('Frequency'), findsNothing);
+    expect(find.text('NO PROGRESS TO SHOW YET.'), findsOneWidget);
+    expect(find.text('ESTIMATED 1-REP MAX'), findsNothing);
+    expect(find.text('SESSIONS'), findsNothing);
 
     // The figures the screen used to print for every account regardless of
     // what was in the log.
@@ -102,7 +97,7 @@ void main() {
     }
   });
 
-  testWidgets('a finished session shows up in the headline numbers', (
+  testWidgets('a finished session shows up in the strength card', (
     tester,
   ) async {
     _useTallSurface(tester);
@@ -110,35 +105,31 @@ void main() {
     await tester.pumpAndSettle();
 
     // 100 kg for 5 reps is an estimated 117 kg single.
-    expect(find.text('Estimated 1RM'), findsOneWidget);
-    expect(find.text('117 kg'), findsOneWidget);
-    // Once as the exercise the estimate belongs to, once in the record list.
-    expect(find.text('Bench Press'), findsNWidgets(2));
+    expect(find.text('ESTIMATED 1-REP MAX'), findsOneWidget);
+    expect(find.text('117'), findsOneWidget);
+    expect(find.text('Bench Press'), findsOneWidget);
 
-    expect(find.text('Volume (30 days)'), findsOneWidget);
-    expect(find.text('500 kg'), findsOneWidget);
+    expect(find.text('SESSIONS'), findsOneWidget);
+    expect(find.text('KG LIFTED'), findsOneWidget);
+    expect(find.text('NEW RECORDS'), findsOneWidget);
+    expect(find.text('500'), findsOneWidget);
 
-    expect(find.text('Frequency'), findsOneWidget);
-    expect(find.text('0.3'), findsOneWidget);
-    expect(find.textContaining('Target:'), findsOneWidget);
-
-    // The set that earned the record, on the day it was logged.
-    expect(find.text('100 kg × 5'), findsOneWidget);
-    expect(find.text(DateFormat('MMM d').format(_daysAgo(10))), findsOneWidget);
+    // The finished session is in the history, with its own volume.
+    expect(find.text('Push Day'), findsOneWidget);
+    expect(find.textContaining('45 min'), findsOneWidget);
+    expect(find.textContaining('500 kg'), findsOneWidget);
   });
 
-  testWidgets('no comparison is printed without an earlier window', (
-    tester,
-  ) async {
+  testWidgets('one session has no trend arrow yet', (tester) async {
     await tester.pumpWidget(_app(_oneSession()));
     await tester.pumpAndSettle();
 
-    // Nothing was lifted in the 30 days before this one, so there is no
-    // baseline - the card says the volume and stops.
     expect(find.textContaining('%'), findsNothing);
   });
 
-  testWidgets('volume is compared with the window before it', (tester) async {
+  testWidgets('two sessions produce a direction, not a fake comparison', (
+    tester,
+  ) async {
     final provider = _provider([
       _session(
         id: 'recent',
@@ -149,7 +140,7 @@ void main() {
       ),
       _session(
         id: 'older',
-        date: _daysAgo(40),
+        date: _daysAgo(20),
         logs: [
           _log('Bench Press', [_set(5, 90)]),
         ],
@@ -159,8 +150,9 @@ void main() {
     await tester.pumpWidget(_app(provider));
     await tester.pumpAndSettle();
 
-    expect(find.text('+11%'), findsOneWidget);
-    expect(find.text('500 kg'), findsOneWidget);
+    // 117 kg against 105 kg is +11.1% on the estimated single.
+    expect(find.text('+11.1% ↗'), findsOneWidget);
+    expect(find.text('2'), findsWidgets);
   });
 
   testWidgets('a plan that was never finished does not count', (tester) async {
@@ -178,7 +170,7 @@ void main() {
     await tester.pumpWidget(_app(provider));
     await tester.pumpAndSettle();
 
-    expect(find.text('No progress to show yet'), findsOneWidget);
+    expect(find.text('NO PROGRESS TO SHOW YET.'), findsOneWidget);
     expect(find.textContaining('200'), findsNothing);
   });
 
@@ -199,7 +191,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // The bodyweight set is not offered as a record; the weighted one is.
-    expect(find.text('Bench Press'), findsNWidgets(2));
+    expect(find.text('Bench Press'), findsOneWidget);
     expect(find.text('Pull Up'), findsNothing);
   });
 }
