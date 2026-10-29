@@ -547,20 +547,6 @@ class _ExerciseRow extends StatelessWidget {
               ],
             ),
           ),
-          // Blank when no rest is planned, rather than "0s rest".
-          if (log.restSeconds > 0)
-            SizedBox(
-              width: 72,
-              child: Text(
-                '${log.restSeconds}s rest',
-                textAlign: TextAlign.end,
-                style: text.annotation.copyWith(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  color: scheme.onSurface,
-                ),
-              ),
-            ),
           const SizedBox(width: 8),
           Icon(
             Icons.chevron_right_rounded,

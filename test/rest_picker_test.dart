@@ -65,10 +65,12 @@ void main() {
   });
 
   group('the session rest', () {
-    test('starts at two minutes and is never written to the plan', () {
+    test('starts at none and is never written to the plan', () {
       final provider = WorkoutProvider(today: date, workouts: [session()]);
 
-      expect(provider.sessionRest('w1'), 120);
+      // Nothing rests until somebody says so, and the choice lives only in
+      // this run.
+      expect(provider.sessionRest('w1'), 0);
       provider.setSessionRest('w1', 30);
       expect(provider.sessionRest('w1'), 30);
 
@@ -90,7 +92,9 @@ void main() {
       provider.setSessionRest('w1', 30);
 
       expect(provider.sessionRest('w1'), 30);
-      expect(provider.sessionRest('w2'), 120);
+      // w2 was never chosen for, so it still rests at none: the choice belongs
+      // to the session it was made in.
+      expect(provider.sessionRest('w2'), 0);
     });
 
     test('zero is a real choice, and means no rest', () {
@@ -101,8 +105,7 @@ void main() {
       expect(provider.sessionRest('w1'), 0);
     });
 
-    testWidgets('the wheel changes the session, not the plan', (tester) async {
-      final provider = WorkoutProvider(today: date, workouts: [session()]);
+    Future<void> pump(WidgetTester tester, WorkoutProvider provider) async {
       tester.view.physicalSize = const Size(402, 874);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
@@ -119,8 +122,16 @@ void main() {
         ),
       );
       await tester.pump();
+    }
 
-      // Logging a set starts the rest, which is when the control is on screen.
+    testWidgets('the wheel changes the session, not the plan', (tester) async {
+      final provider = WorkoutProvider(today: date, workouts: [session()]);
+      // Chosen, so the wheel opens on it rather than on "Off".
+      provider.setSessionRest('w1', 120);
+      await pump(tester, provider);
+
+      // Logging a set starts the countdown; the control is on screen either
+      // way, so tapping its label opens the wheel.
       await tester.tap(find.text('Log set 02'));
       await tester.pump();
       await tester.tap(find.text('REST'));
@@ -133,6 +144,36 @@ void main() {
 
       // Committed, and the plan still holds what it always held.
       expect(provider.sessionRest('w1'), 120);
+      expect(provider.byId('w1')!.logs[0].restSeconds, 120);
+    });
+
+    testWidgets('the label opens the wheel before any rest has run', (
+      tester,
+    ) async {
+      final provider = WorkoutProvider(today: date, workouts: [session()]);
+      await pump(tester, provider);
+
+      // No set logged, so nothing is resting - but the block is on screen and
+      // its label opens the wheel, which is the only way a first rest can ever
+      // be planned.
+      expect(find.text('REST'), findsOneWidget);
+      expect(find.text('Off'), findsOneWidget);
+      expect(find.bySemanticsLabel('Skip rest'), findsNothing);
+
+      await tester.tap(find.text('REST'));
+      await tester.pumpAndSettle();
+
+      // The wheel is open, on Off because nothing has been chosen for this
+      // session yet.
+      expect(find.text('Rest'), findsOneWidget);
+      expect(find.text('No rest'), findsOneWidget);
+
+      await tester.tap(find.text('No rest'));
+      await tester.pumpAndSettle();
+
+      // Off is the default, so committing it leaves the session resting at
+      // none, and the plan is untouched either way.
+      expect(provider.sessionRest('w1'), 0);
       expect(provider.byId('w1')!.logs[0].restSeconds, 120);
     });
   });

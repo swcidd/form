@@ -74,6 +74,9 @@ void main() {
     tester,
   ) async {
     final provider = WorkoutProvider(today: date, workouts: [twoExercises()]);
+    // A rest is chosen, so "no rest started" is the exercise-finish rule and
+    // not merely the default of none.
+    provider.setSessionRest('w1', 120);
     await pump(tester, provider);
 
     expect(
@@ -89,9 +92,10 @@ void main() {
       find.textContaining(RegExp('romanian deadlift', caseSensitive: false)),
       findsWidgets,
     );
-    // ...and the countdown did not start, because there is nothing left to
-    // rest between.
-    expect(find.text('REST'), findsNothing);
+    // ...and no countdown started, because there is nothing left to rest
+    // between. The control stays on screen, idle.
+    expect(find.bySemanticsLabel('Skip rest'), findsNothing);
+    expect(find.text('REST'), findsOneWidget);
   });
 
   testWidgets('a set that leaves work still starts the rest', (tester) async {
@@ -112,14 +116,20 @@ void main() {
         ),
       ],
     );
+    // The rest the session is training with: without it no countdown would
+    // start whatever the exercise state, and this test would pass vacuously.
+    provider.setSessionRest('w1', 120);
     await pump(tester, provider);
 
     await tester.tap(find.text('Log set 02'));
     await tester.pump();
 
     // One set left on the squat, so this is a rest - not a move to the next
-    // exercise.
+    // exercise. The clock is running, so it shows the countdown, not the idle
+    // planned label.
     expect(find.text('REST'), findsOneWidget);
+    expect(find.text('02:00'), findsOneWidget);
+    expect(find.bySemanticsLabel('Skip rest'), findsOneWidget);
     expect(
       find.textContaining(RegExp('romanian deadlift', caseSensitive: false)),
       findsNothing,

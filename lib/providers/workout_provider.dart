@@ -486,7 +486,11 @@ class WorkoutProvider extends ChangeNotifier {
   final Map<String, int> _sessionRest = {};
 
   /// The rest [id] is training with, or [fallback] when none has been chosen.
-  int sessionRest(String id, {int fallback = 120}) =>
+  ///
+  /// Zero by default, so nothing rests until somebody says so. That makes the
+  /// control which sets it the only way a rest can ever start, and that control
+  /// therefore has to be reachable before any rest is running.
+  int sessionRest(String id, {int fallback = 0}) =>
       _sessionRest[id] ?? fallback;
 
   /// Chooses the rest for this run only. Nothing is written down.

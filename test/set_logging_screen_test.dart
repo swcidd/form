@@ -93,15 +93,21 @@ void main() {
       tester,
     ) async {
       final provider = _provider();
+      // Two minutes is chosen, not planned: the rest a logged set starts is
+      // the session's, and it defaults to none.
+      provider.setSessionRest('w1', 120);
       await _pumpScreen(tester, provider);
 
-      // Nothing to rest from until a set is logged.
-      expect(find.text('REST'), findsNothing);
+      // The block is on screen before any set is logged - idle, naming what
+      // the next set will rest for, because it is the only control that can
+      // set one and it must be reachable while none is running.
+      expect(find.text('REST'), findsOneWidget);
+      expect(find.text('2:00'), findsOneWidget);
 
       await tester.tap(find.text('Log set 02'));
       await tester.pump();
 
-      // The plan asks for 120s, so the control shows the budget and the clock
+      // The session rests 120s, so the control shows the budget and the clock
       // starts there.
       expect(find.text('02:00'), findsOneWidget);
       expect(find.text('02:00'), findsOneWidget);
@@ -118,6 +124,7 @@ void main() {
       tester,
     ) async {
       final provider = _provider();
+      provider.setSessionRest('w1', 120);
       await _pumpScreen(tester, provider);
 
       await tester.tap(find.text('Log set 02'));
@@ -129,7 +136,7 @@ void main() {
       await tester.pump();
 
       // 119s left plus 30 makes 149s, which is now the session's rest budget
-      // rather than the plan's 120.
+      // rather than the 120 it was chosen at.
       expect(find.text('02:29'), findsOneWidget);
       expect(find.text('02:29'), findsOneWidget);
 
@@ -137,19 +144,26 @@ void main() {
       await tester.pump();
     });
 
-    testWidgets('Skip ends the rest and hides the control', (tester) async {
+    testWidgets('Skip ends the rest and returns the block to idle', (
+      tester,
+    ) async {
       final provider = _provider();
+      provider.setSessionRest('w1', 120);
       await _pumpScreen(tester, provider);
 
       await tester.tap(find.text('Log set 02'));
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
+      expect(find.text('01:59'), findsOneWidget);
 
       await tester.tap(find.bySemanticsLabel('Skip rest'));
       await tester.pump();
 
-      expect(find.text('REST'), findsNothing);
+      // The countdown is gone. The block is not: it goes back to naming the
+      // rest, because it is the only control that can start the next one.
       expect(find.text('01:59'), findsNothing);
+      expect(find.text('REST'), findsOneWidget);
+      expect(find.text('2:00'), findsOneWidget);
     });
   });
 
@@ -172,6 +186,9 @@ void main() {
     testWidgets('logging writes the edited weight and reps through the '
         'provider', (tester) async {
       final provider = _provider();
+      // A chosen rest, so logging the set starts the countdown this test stops
+      // at the end; nothing else here is about the rest.
+      provider.setSessionRest('w1', 120);
       await _pumpScreen(tester, provider);
 
       // The weight stepper sits left of the reps stepper, matching the frame.

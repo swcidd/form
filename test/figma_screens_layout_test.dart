@@ -72,14 +72,10 @@ void main() {
 
     final provider = seededProvider(today: DateTime(2026, 10, 17));
     final workout = provider.focusWorkout!;
-    // A planned rest is what starts the countdown. Rest is blank by default -
-    // the design's own control reads "Rest: OFF" until somebody sets one - so
-    // this test says out loud that it wants one.
-    provider.updateWorkout(
-      workout.copyWith(
-        logs: [for (final log in workout.logs) log.copyWith(restSeconds: 120)],
-      ),
-    );
+    // A chosen rest is what starts the countdown. Rest is blank by default -
+    // the design's own control reads "Off" until somebody sets one - so this
+    // test says out loud that it wants one.
+    provider.setSessionRest(workout.id, 120);
     await tester.pumpWidget(
       _screen(
         provider,
@@ -97,10 +93,13 @@ void main() {
 
     expect(find.text('Log set 04'), findsOneWidget);
     expect(find.text('REST'), findsOneWidget);
+    expect(find.text('02:00'), findsOneWidget);
 
-    // Stop the countdown before the test tears the tree down.
+    // Stop the countdown before the test tears the tree down. The block stays,
+    // idle, ready to set the next rest.
     await tester.tap(find.bySemanticsLabel('Skip rest'));
     await tester.pump();
-    expect(find.text('REST'), findsNothing);
+    expect(find.bySemanticsLabel('Skip rest'), findsNothing);
+    expect(find.text('REST'), findsOneWidget);
   });
 }
