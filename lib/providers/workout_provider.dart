@@ -467,23 +467,19 @@ class WorkoutProvider extends ChangeNotifier {
     return minutes;
   }
 
-  /// Sets the rest planned for one exercise, in seconds. Zero means none.
+  /// The rest each session is training with, for sessions running in this run.
   ///
-  /// Written to the log rather than held by the screen, because it is a
-  /// property of the exercise's plan: it outlives the set that prompted it, and
-  /// it is what the next session started from this routine will prescribe.
-  /// Changing it while a rest is already counting does not shorten that one -
-  /// the new value applies from the next set, which is what "saved for the next
-  /// set" means.
-  bool setRest(String workoutId, int logIndex, int seconds) {
-    final workout = byId(workoutId);
-    if (workout == null || logIndex < 0 || logIndex >= workout.logs.length) {
-      return false;
-    }
-    final logs = List.of(workout.logs);
-    logs[logIndex] = logs[logIndex].copyWith(restSeconds: seconds);
-    return updateWorkout(workout.copyWith(logs: logs));
-  }
+  /// Deliberately *not* stored. A rest is a property of how somebody is
+  /// training today, not of the plan, so nothing here reaches the database and
+  /// a rest chosen in one session does not follow you into the next.
+  final Map<String, int> _sessionRest = {};
+
+  /// The rest [id] is training with, or [fallback] when none has been chosen.
+  int sessionRest(String id, {int fallback = 120}) =>
+      _sessionRest[id] ?? fallback;
+
+  /// Chooses the rest for this run only. Nothing is written down.
+  void setSessionRest(String id, int seconds) => _sessionRest[id] = seconds;
 
   /// Logs [routine] as a session: a copy for the day, sets un-ticked.
   ///

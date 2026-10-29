@@ -11,8 +11,9 @@ import 'package:plus_one/widgets/rest_picker_sheet.dart';
 
 import 'support/harness.dart';
 
-/// Rest is planned per exercise and set from the logging screen, so the value
-/// has to outlive the set that prompted it.
+/// The rest a session trains with is chosen while it runs and is **not stored**:
+/// it belongs to how somebody is training today, not to the plan. The session's
+/// *length*, by contrast, is recorded - see session_clock_test.dart.
 void main() {
   setUpAll(useOfflineFonts);
 
@@ -35,12 +36,12 @@ void main() {
     restSeconds: restSeconds,
   );
 
-  Workout session() => Workout(
-    id: 'w1',
+  Workout session({String id = 'w1'}) => Workout(
+    id: id,
     title: 'Lower Body A',
     date: date,
     status: WorkoutStatus.planned,
-    durationMin: 45,
+    durationMin: 0,
     estimatedKcal: 300,
     targetMuscleGroups: const ['Legs'],
     equipment: const ['Barbell'],
@@ -63,33 +64,44 @@ void main() {
     });
   });
 
-  group('planning a rest', () {
-    test('writes it to the exercise and leaves the others alone', () {
+  group('the session rest', () {
+    test('starts at two minutes and is never written to the plan', () {
       final provider = WorkoutProvider(today: date, workouts: [session()]);
 
-      expect(provider.setRest('w1', 0, 30), isTrue);
+      expect(provider.sessionRest('w1'), 120);
+      provider.setSessionRest('w1', 30);
+      expect(provider.sessionRest('w1'), 30);
 
-      expect(provider.byId('w1')!.logs[0].restSeconds, 30);
-      // The second exercise planned its own rest and must keep it.
+      // The plan is untouched. This is the whole point: choosing a rest does
+      // not edit the exercise, so nothing about it reaches the database.
+      expect(provider.byId('w1')!.logs[0].restSeconds, 120);
       expect(provider.byId('w1')!.logs[1].restSeconds, 90);
     });
 
-    test('refuses an exercise that is not there', () {
-      final provider = WorkoutProvider(today: date, workouts: [session()]);
+    test('belongs to one session and does not leak into another', () {
+      final provider = WorkoutProvider(
+        today: date,
+        workouts: [
+          session(),
+          session(id: 'w2'),
+        ],
+      );
 
-      expect(provider.setRest('w1', 9, 30), isFalse);
-      expect(provider.setRest('nope', 0, 30), isFalse);
+      provider.setSessionRest('w1', 30);
+
+      expect(provider.sessionRest('w1'), 30);
+      expect(provider.sessionRest('w2'), 120);
     });
 
-    test('zero means no rest, which is a real choice', () {
+    test('zero is a real choice, and means no rest', () {
       final provider = WorkoutProvider(today: date, workouts: [session()]);
 
-      provider.setRest('w1', 0, 0);
+      provider.setSessionRest('w1', 0);
 
-      expect(provider.byId('w1')!.logs[0].restSeconds, 0);
+      expect(provider.sessionRest('w1'), 0);
     });
 
-    testWidgets('the number on the rest block opens the wheel', (tester) async {
+    testWidgets('the wheel changes the session, not the plan', (tester) async {
       final provider = WorkoutProvider(today: date, workouts: [session()]);
       tester.view.physicalSize = const Size(402, 874);
       tester.view.devicePixelRatio = 1;
@@ -108,22 +120,19 @@ void main() {
       );
       await tester.pump();
 
-      // Logging a set starts the rest, which is when the block is on screen.
+      // Logging a set starts the rest, which is when the control is on screen.
       await tester.tap(find.text('Log set 02'));
       await tester.pump();
       await tester.tap(find.text('REST'));
       await tester.pumpAndSettle();
 
-      // The wheel, its title, and the control that commits the choice.
       expect(find.text('Rest'), findsOneWidget);
-      expect(find.text('Barbell Back Squat'), findsOneWidget);
       expect(find.text('Set 2:00'), findsOneWidget);
-
       await tester.tap(find.text('Set 2:00'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Rest'), findsNothing);
-      // Committing the value it opened on leaves the plan exactly as it was.
+      // Committed, and the plan still holds what it always held.
+      expect(provider.sessionRest('w1'), 120);
       expect(provider.byId('w1')!.logs[0].restSeconds, 120);
     });
   });

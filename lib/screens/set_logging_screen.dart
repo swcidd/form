@@ -137,20 +137,16 @@ class _SetLoggingScreenState extends State<SetLoggingScreen> {
                             onExtend: _extendRest,
                             onSkip: _skipRest,
                             onSetRest: () async {
-                              // The plan's rest, not the running countdown's:
-                              // what changes now is what the next set will rest
-                              // for.
+                              // The session's rest, not the plan's: what
+                              // changes is what the next set rests for, and
+                              // nothing about it is written down.
                               final chosen = await showRestPicker(
                                 context,
                                 exercise: current.exercise.name,
-                                initial: current.restSeconds,
+                                initial: provider.sessionRest(workout.id),
                               );
                               if (chosen == null) return;
-                              provider.setRest(
-                                workout.id,
-                                currentIndex,
-                                chosen,
-                              );
+                              provider.setSessionRest(workout.id, chosen);
                             },
                           ),
                         ],
@@ -1012,8 +1008,12 @@ class _LoggingAction extends StatelessWidget {
               final exerciseFinished = updated == null || updated.isFinished;
               // No planned rest means no countdown: the screen should not
               // invent one.
-              if (!exerciseFinished && log.restSeconds > 0) {
-                onLogged(log.restSeconds);
+              // The rest this session is training with. Not the plan's:
+              // nothing about it is stored, so it is whatever was chosen while
+              // this session has been running.
+              final rest = provider.sessionRest(workout.id);
+              if (!exerciseFinished && rest > 0) {
+                onLogged(rest);
               }
             },
             style: FilledButton.styleFrom(
