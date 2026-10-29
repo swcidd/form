@@ -33,7 +33,7 @@ canonical file is generated from the two open data sets below.
 | Source | How the app gets it | Licence | Notes |
 | --- | --- | --- | --- |
 | **[wger.de](https://wger.de)** | `GET https://wger.de/api/v2/exerciseinfo/` — public, no API key | CC BY-SA 3.0 or 4.0 **per entry**, author per entry | Every exercise the API returns carries its own `license` and `license_author` fields. |
-| **[exercemus/exercises](https://github.com/exercemus/exercises)** | `tool/exercise_sources/exercemus.json`, source for the bundled catalogue | MIT, © 2022 exercemus | See [`docs/licenses/exercemus-MIT.txt`](licenses/exercemus-MIT.txt). The data set is itself curated from wger.de and wrkout/exercises.json. |
+| **[exercemus/exercises](https://github.com/exercemus/exercises)** | `tool/exercise_sources/exercemus.json`, source for the bundled catalogue | Proprietary license, © 2022 exercemus | See [`docs/licenses/exercemus-proprietary.txt`](licenses/exercemus-proprietary.txt). The data set is itself curated from wger.de and wrkout/exercises.json. |
 | **[free-exercise-db](https://github.com/yuhonas/free-exercise-db)** | `tool/exercise_sources/free-exercise-db.json`, source for the bundled catalogue | The Unlicense (public domain) | No conditions; recorded here for completeness. |
 
 `tool/build_exercises.dart` merges the two offline sources into

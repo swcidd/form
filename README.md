@@ -152,7 +152,7 @@ ExerciseApiClient  ──►  ExerciseCatalog  ──►  ExerciseLibrary.loadAl
 
 Attribution for the data is shown in the app and collected in
 **[docs/ATTRIBUTION.md](docs/ATTRIBUTION.md)** (wger is CC BY-SA; the bundled
-fallbacks are MIT and Unlicense).
+fallbacks are proprietary license and Unlicense).
 
 ---
 
@@ -334,7 +334,7 @@ texts and the two font licences.
 | Source | Licence |
 | --- | --- |
 | [wger.de](https://wger.de) REST API — the live catalogue | CC BY-SA 3.0/4.0, per entry |
-| [exercemus/exercises](https://github.com/exercemus/exercises) — source for the bundled catalogue | MIT, © 2022 exercemus |
+| [exercemus/exercises](https://github.com/exercemus/exercises) — source for the bundled catalogue | Proprietary license, © 2022 exercemus |
 | [free-exercise-db](https://github.com/yuhonas/free-exercise-db) — source for the bundled catalogue | The Unlicense (public domain) |
 
 The app ships one file, `assets/data/exercises.json`, built by
