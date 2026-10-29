@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
-import 'package:plus_one/exercise_library.dart';
+import 'package:plus_one/models/library_exercise.dart';
 import 'package:plus_one/auth/auth_repository.dart';
 import 'package:plus_one/models/exercise.dart';
+import 'package:plus_one/models/profile_stats.dart';
 import 'package:plus_one/models/saved_exercise.dart';
 import 'package:plus_one/models/session.dart';
 import 'package:plus_one/models/workout.dart';
@@ -92,6 +93,11 @@ void main() {
   /// matches what is rendered rather than what the caller passes.
   String tileValue(WidgetTester tester, String label) =>
       tester.widget<StatTile>(find.widgetWithText(StatTile, label)).value;
+
+  Finder fieldFor(String label) => find.descendant(
+    of: find.ancestor(of: find.text(label), matching: find.byType(AuthField)),
+    matching: find.byType(TextField),
+  );
 
   testWidgets('an account with nothing says so rather than showing a history', (
     tester,
@@ -218,6 +224,117 @@ void main() {
     expect(find.text('140 kg'), findsOneWidget);
     expect(find.textContaining('No personal records yet'), findsNothing);
     expect(find.textContaining('No badges yet'), findsNothing);
+  });
+
+  testWidgets('an imperial profile reads height and weight in its units', (
+    tester,
+  ) async {
+    final provider = WorkoutProvider(
+      today: today,
+      profile: ProfileStats.empty().copyWith(
+        heightCm: 182,
+        weightKg: 74.5,
+        heightImperial: true,
+        weightImperial: true,
+      ),
+    );
+    await pumpProfile(tester, provider);
+
+    expect(tileValue(tester, 'WEIGHT (LB)'), '164.2');
+    expect(tileValue(tester, 'HEIGHT (FT)'), '6\'0"');
+  });
+
+  testWidgets('the body can be edited from the profile', (tester) async {
+    final now = DateTime.now();
+    final born = DateTime(now.year - 30, 1, 1);
+    final provider = WorkoutProvider(
+      today: today,
+      profile: ProfileStats.empty().copyWith(
+        dateOfBirth: born,
+        heightCm: 180,
+        weightKg: 80,
+      ),
+    );
+    await pumpProfile(tester, provider);
+
+    expect(tileValue(tester, 'AGE'), '30');
+
+    await tester.tap(find.text('Edit'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('EDIT BODY.'), findsOneWidget);
+
+    Future<void> choose(int list, String value) async {
+      final button = find.byType(DropdownButton<int>).at(list);
+      await tester.ensureVisible(button);
+      await tester.pumpAndSettle();
+      await tester.tap(button, warnIfMissed: false);
+      await tester.pumpAndSettle();
+      final items = find.widgetWithText(DropdownMenuItem<int>, value);
+      if (list == 2) {
+        await tester.scrollUntilVisible(
+          items,
+          200,
+          scrollable: find.byType(Scrollable).last,
+        );
+      }
+      final item = items.last;
+      await tester.ensureVisible(item);
+      await tester.pumpAndSettle();
+      await tester.tap(item, warnIfMissed: false);
+      await tester.pumpAndSettle();
+    }
+
+    await choose(0, '1');
+    await choose(1, 'January');
+    await choose(2, '${now.year - 31}');
+    await tester.enterText(fieldFor('CENTIMETRES'), '182');
+    await tester.enterText(fieldFor('KILOGRAMMES'), '82');
+    await tester.tap(find.text('Save changes'));
+    await tester.pumpAndSettle();
+
+    expect(provider.profile.dateOfBirth, DateTime(now.year - 31, 1, 1));
+    expect(provider.profile.age, 31);
+    expect(provider.profile.heightCm, 182);
+    expect(provider.profile.weightKg, 82);
+    expect(tileValue(tester, 'AGE'), '31');
+    expect(tileValue(tester, 'HEIGHT (CM)'), '182');
+  });
+
+  testWidgets('editing in imperial saves the units the profile shows', (
+    tester,
+  ) async {
+    final now = DateTime.now();
+    final provider = WorkoutProvider(
+      today: today,
+      profile: ProfileStats.empty().copyWith(
+        dateOfBirth: DateTime(now.year - 30, 1, 1),
+        heightCm: 180,
+        weightKg: 80,
+      ),
+    );
+    await pumpProfile(tester, provider);
+
+    await tester.tap(find.text('Edit'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('FEET').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('POUNDS').last);
+    await tester.pumpAndSettle();
+
+    await tester.enterText(fieldFor('FEET'), '5');
+    await tester.enterText(fieldFor('INCHES'), '10');
+    await tester.enterText(fieldFor('POUNDS'), '165');
+    await tester.tap(find.text('Save changes'));
+    await tester.pumpAndSettle();
+
+    expect(provider.profile.heightImperial, isTrue);
+    expect(provider.profile.weightImperial, isTrue);
+    expect(provider.profile.heightCm, closeTo(177.8, 0.01));
+    expect(provider.profile.weightKg, closeTo(74.84, 0.01));
+    expect(tileValue(tester, 'HEIGHT (FT)'), '5\'10"');
+    expect(tileValue(tester, 'WEIGHT (LB)'), '165.0');
   });
 
   group('the account behind the profile', () {

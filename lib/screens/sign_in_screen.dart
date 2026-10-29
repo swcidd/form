@@ -12,7 +12,7 @@ import '../widgets/auth_form_area.dart';
 import '../widgets/auth_hero.dart';
 import '../widgets/auth_intro.dart';
 import '../widgets/auth_link.dart';
-import 'create_account_screen.dart';
+import 'sign_up_name_screen.dart';
 
 /// Signs an existing account in.
 ///
@@ -97,7 +97,7 @@ class _SignInScreenState extends State<SignInScreen> {
             kicker: 'WELCOME BACK / KEEP BUILDING',
             headline: 'BACK TO\nYOUR STRONG.',
             onBack: () => Navigator.of(context).maybePop(),
-            height: 300,
+            height: 318,
           ),
           AuthFormArea(
             top: AutofillGroup(
@@ -151,7 +151,7 @@ class _SignInScreenState extends State<SignInScreen> {
                       ? null
                       : () =>
                             Navigator.of(context)
-                                .pushNamed(CreateAccountScreen.routeName),
+                                .pushNamed(SignUpNameScreen.routeName),
                 ),
               ],
             ),

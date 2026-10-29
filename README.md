@@ -39,11 +39,16 @@
 <tr>
 <td><img src="docs/screenshots/11-empty-account.png" alt="Empty account"><br><sub><b>Empty account</b> — what a fresh install actually shows</sub></td>
 <td><img src="docs/screenshots/12-discover.png" alt="Discover"><br><sub><b>Discover</b> — the wger catalogue, with the offline fallback called out</sub></td>
-<td></td>
+<td><img src="docs/screenshots/13-add-exercise.png" alt="Add exercise"><br><sub><b>Add exercise</b> — search, filter, or open a movement's details first</sub></td>
+</tr>
+<tr>
+<td><img src="docs/screenshots/14-workout-builder.png" alt="Workout builder"><br><sub><b>Workout builder</b> — a template takes shape, saved as you go</sub></td>
+<td><img src="docs/screenshots/15-workout-builder-sets.png" alt="Workout builder, sets"><br><sub><b>Builder, sets</b> — kilos and reps per set, in place</sub></td>
+<td><img src="docs/screenshots/16-exercise-detail.png" alt="Exercise detail"><br><sub><b>Exercise detail</b> — muscles, technique, and where the data came from</sub></td>
 </tr>
 </table>
 
-The screenshots are the app's own widgets, rendered against a **sample account**
+Most screenshots are the app's own widgets, rendered against a **sample account**
 by `tool/screenshot_test.dart` and written to `docs/screenshots/`:
 
 ```bash
@@ -86,7 +91,9 @@ you export it.
 | **CRUD** | Create, rename, reschedule, edit and delete sessions; edit profile and body metrics; save and unsave exercises. Every write goes to SQLite and survives a restart. |
 | **Accounts** | A local account with a PBKDF2-hashed password, or the device account with none. Each account owns its sessions, saved exercises and profile. See **[docs/AUTH.md](docs/AUTH.md)**. |
 | **Catalogue** | `Discover` reads the wger REST API over `http`, shows loading, success and error states, and falls back to a bundled catalogue when the device is offline. |
-| **Progress** | Records, volume with a week-on-week change, and a 30-day consistency figure - all derived from finished sessions, in one file. |
+| **Progress** | Records, volume with a week-on-week change, a four-week estimated one-rep-max trend, and a 30-day consistency figure - all derived from finished sessions, in one file. |
+| **Building** | Create a workout of your own: add exercises from the catalogue, order them, save it to the library, then edit or delete it. |
+| **Rest and clock** | A rest timer that starts off, is chosen in 10-second steps from the set logger, and runs either by hand or after a logged set. A session keeps the moment its clock started, so it survives a restart. |
 | **Empty states** | An empty account gets a first-session panel, not a scoreboard of zeros. |
 
 Everything the app reports can be traced to a session in the database. There is
@@ -104,8 +111,13 @@ are checked against Supabase Auth's API: a sign-up can answer "signed in" or
 refusals.
 
 - **Continue offline** → the device account: no password, everything works.
-- **Create account** → its own user id, its own empty store. The sign-up answers
-  in the shape a verifying backend uses: signed in, or "check your inbox".
+- **Create account** → four steps in the design's order: name, age,
+  measurements, then the credentials. Age is entered as a date of birth in
+  day, month and year lists. Height and weight use FEET | CENTIMETERS and
+  POUNDS | KILOGRAMS toggles; the chosen unit is saved and the profile keeps
+  showing it. Both land in the athlete profile and stay editable there. The
+  sign-up answers in
+  the shape a verifying backend uses: signed in, or "check your inbox".
 - **Change password** → from the account card in the profile, with the current
   password checked by the store.
 - **Sign out** → back to the welcome screen; your data stays.
@@ -150,14 +162,14 @@ fallbacks are MIT and Unlicense).
 | --- | --- | --- |
 | Framework | Flutter 3.47 / Dart 3.13 | One codebase, first-class animation, good tooling. |
 | State | `provider` 6.1 (`ChangeNotifier`) | Small enough to read in one sitting; no code generation. |
-| Storage | `sqflite` 2.4 + `path` | Real SQL: the app queries by day, by week and by exercise. |
+| Storage | `sqflite` 2.4 + `sqflite_common_ffi` + `path` | Real SQL: the app queries by day, by week and by exercise. The FFI factory makes the same store run on desktop, where the plugin has no implementation. |
 | Network | `http` 1.6 | The assignment's requirement, and enough for one JSON API. |
 | Crypto | `crypto` 3.0 | HMAC-SHA256 for PBKDF2, no platform channel required. |
 | Dates | `intl` 0.20 | Weekday and month formatting without a locale bundle. |
 | Type | `google_fonts` 9.0 | Inter + Barlow Condensed, **bundled** so nothing is fetched at runtime. |
 | Equality | `equatable` 2.1 | Value equality on models, so `==` in tests means what it looks like. |
 | Vectors | `flutter_svg` 2.3 | Lucide icons without shipping a bitmap per size. |
-| Tests | `flutter_test`, `sqflite_common_ffi` | The real schema runs against a real SQLite file in tests. |
+| Tests | `flutter_test`, `sqflite_common_ffi` | The real schema runs against a real SQLite file in tests, on the same factory. |
 | Build tools | `flutter_launcher_icons`, `flutter_native_splash` | Icon and splash generated from checked-in artwork. |
 
 ---
@@ -168,10 +180,10 @@ fallbacks are MIT and Unlicense).
 lib/
 ├── main.dart                 # gate: splash → welcome/sign-in → app, routes
 ├── auth/                     # AuthRepository seam, local implementation, hasher
-├── data/                     # AppDatabase (schema v4), repositories, session stats
+├── data/                     # AppDatabase (schema v10), repositories, session stats
 ├── models/                   # Workout, ExerciseLog, ExerciseSet, Profile, Account, Session
 ├── providers/                # AuthProvider, WorkoutProvider
-├── screens/                  # welcome, sign in, create account, shell, home,
+├── screens/                  # welcome, sign in, sign-up steps, shell, home,
 │                             # progress, workout, library, profile
 ├── theme/                    # colours, typography, motion tokens, page transitions
 └── widgets/                  # nav bar, section header, cards, auth fields…
@@ -212,17 +224,36 @@ flutter run
 ### Check it
 
 ```bash
-dart format --output=none --set-exit-if-changed lib test tool
-flutter analyze
-flutter test
+./tool/check.sh
 ```
 
-### Build a release APK
+That runs `dart format --output=none --set-exit-if-changed lib test tool`,
+`flutter analyze` and `flutter test`, in that order, stopping at the first one
+that fails. It is a script rather than a hosted workflow on purpose: it needs no
+account, no runner and no network, so it behaves the same on a fresh clone and on
+a machine that cannot reach a CI service.
+
+One line makes git refuse a push that would land a red tree:
 
 ```bash
+git config core.hooksPath .githooks
+```
+
+### Build an APK
+
+```bash
+# debug - what `flutter run` installs; unminified, assert-enabled
+flutter build apk --debug
+# build/app/outputs/flutter-apk/app-debug.apk
+
+# release - what gets submitted; R8-minified, asserts off
 flutter build apk --release --split-per-abi
 # build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
 ```
+
+The debug APK is the one attached to a running `flutter run`; the release APK is
+the one to hand in, and the only one whose size and frame timings mean anything —
+see [docs/BUILD.md](docs/BUILD.md) for the measured difference.
 
 Signing, the one-off `keytool` command and how to verify a build's signature are
 in **[docs/BUILD.md](docs/BUILD.md)**. No signing secret is in this repository:
@@ -241,10 +272,12 @@ the keystore lives in a gitignored `android/key.properties`.
 - **Review**: every PR got inline review comments on the lines that carried a
   decision (identity, schema, lifecycle), not a rubber stamp, and was merged only
   with the suite green on the merged tree.
-- **Tests**: 301 widget, provider and database tests. The dangerous parts are
-  covered directly: the v3 → v4 migration builds an old database by hand, signing
-  in as somebody else asserts the old store is disposed, and the counting rules
-  have their own tests.
+- **Tests**: 434 widget, provider and database tests. The dangerous parts are
+  covered directly: the v3 → v10 migration builds an old database by hand, the
+  v5, v6 and v7 → v10 migrations leave the date of birth unset and the
+  units metric, signing in as somebody else asserts the old store is disposed,
+  a running session clock survives a restart, and the counting rules have
+  their own tests.
 
 ---
 
@@ -266,13 +299,15 @@ screenshots side by side rather than by reading either screen's code.
 
 | Requirement | Where |
 | --- | --- |
-| REST API over `http`, JSON, loading/success/error | `lib/exercise_library.dart` + `Discover` |
-| 4+ screens | 11: welcome, sign in, create account, home, progress, workout, library, profile, workout detail, set logger, summary |
+| REST API over `http`, JSON, loading/success/error | `lib/data/exercise_api_client.dart` + `Discover` |
+| 4+ screens | 13 routes: welcome, sign in, create account, home, progress, library, profile, workout detail, workout builder, add exercise, exercise detail, set logger, summary |
 | 3+ reusable widgets | `AuthField`, `AuthAction`, `AppNavBar`, `WorkoutCard`, `SectionHeader`, `EmptyState`… |
 | Provider state management | `AuthProvider`, `WorkoutProvider` |
 | CRUD | Sessions, exercises, sets, profile, saved exercises |
 | Empty / offline / failed API / validation | Empty account panel, bundled catalogue fallback, banners, field errors |
-| Public repository with PRs and review comments | [github.com/swcidd/form](https://github.com/swcidd/form/pulls) |
+| Public repository, feature branches, 3+ reviewed PRs | [github.com/swcidd/form](https://github.com/swcidd/form/pulls) |
+| Issue tracking | [github.com/swcidd/form/issues](https://github.com/swcidd/form/issues) |
+| Debug vs release APK, steps documented | [docs/BUILD.md](docs/BUILD.md) |
 | Icon, splash, app name, release APK | `assets/branding/`, `flutter_launcher_icons`, `flutter_native_splash`, `docs/BUILD.md` |
 | Documentation | README, [AUTH](docs/AUTH.md), [BUILD](docs/BUILD.md), [DEVTOOLS](docs/DEVTOOLS.md), [MOTION](docs/MOTION.md), [ATTRIBUTION](docs/ATTRIBUTION.md) |
 

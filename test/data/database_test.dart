@@ -6,10 +6,11 @@ import 'package:plus_one/auth/local_auth_repository.dart';
 import 'package:plus_one/auth/password_hasher.dart';
 import 'package:plus_one/data/app_database.dart';
 import 'package:plus_one/data/workout_repository.dart';
-import 'package:plus_one/exercise_library.dart';
+import 'package:plus_one/models/library_exercise.dart';
 import 'package:plus_one/models/exercise.dart';
 import 'package:plus_one/models/profile_stats.dart';
 import 'package:plus_one/models/saved_exercise.dart';
+import 'package:plus_one/models/taxonomy.dart';
 import 'package:plus_one/models/session.dart';
 import 'package:plus_one/models/workout.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -230,6 +231,15 @@ void main() {
         await db.execute(ddl);
       }
 
+      // The account tables were not rebuilt by v4, so this file keeps the
+      // shape v3 gave them. That is what makes the v5 step add a column
+      // instead of finding one the current code already made.
+      await db.execute('DROP TABLE ${AppDatabase.accountsTable}');
+      await db.execute('DROP TABLE ${AppDatabase.sessionTable}');
+      for (final ddl in _v3IdentityTables) {
+        await db.execute(ddl);
+      }
+
       await db.insert(AppDatabase.workoutsTable, {
         'id': 'w1',
         'title': 'Upper Body',
@@ -267,7 +277,18 @@ void main() {
       // The next launch: same file, current version.
       final nextDb = AppDatabase();
       final mine = WorkoutRepository(nextDb, userId: device);
-      await nextDb.open(path: path);
+      final next = await nextDb.open(path: path);
+
+      // The rebuild writes the current shape, so v10's column arrives with it.
+      // A v1-v3 file never reaches the ALTER branch, and this is the assertion
+      // that would catch the staged DDL falling behind the live one.
+      final workoutColumns = await next.rawQuery(
+        'PRAGMA table_info(${AppDatabase.workoutsTable})',
+      );
+      expect(
+        workoutColumns.map((column) => column['name']),
+        contains('startedAt'),
+      );
 
       // Everything is where it was, and it is the device account's: the person
       // who trained before there were accounts is the one "continue offline"
@@ -290,6 +311,259 @@ void main() {
       expect(await someoneElse.loadWorkouts(), isEmpty);
       expect(await someoneElse.loadSavedExercises(), isEmpty);
       expect(await someoneElse.loadProfile(), isNull);
+
+      // v7 added the date of birth the sign-up fills; rows from before it
+      // have no answer and are not asked to invent one.
+      final columns = await next.rawQuery(
+        'PRAGMA table_info(${AppDatabase.profileTable})',
+      );
+      expect(columns.map((column) => column['name']), contains('dateOfBirth'));
+      expect((await mine.loadProfile())?.dateOfBirth, isNull);
+      await nextDb.close();
+    });
+
+    test('migrating from version 5 adds the profile date of birth', () async {
+      final path = p.join(
+        Directory.systemTemp.path,
+        'form_dob_migration_test.db',
+      );
+      final file = File(path);
+      if (file.existsSync()) file.deleteSync();
+      addTearDown(() {
+        if (file.existsSync()) file.deleteSync();
+      });
+
+      // Start from the current file, then put the profile back to its v5
+      // shape — no date of birth and no remembered unit choices.
+      final oldDb = AppDatabase();
+      final db = await oldDb.open(path: path);
+      for (final column in [
+        'dateOfBirth',
+        'heightImperial',
+        'weightImperial',
+      ]) {
+        await db.execute(
+          'ALTER TABLE ${AppDatabase.profileTable} DROP COLUMN $column',
+        );
+      }
+      await db.insert(AppDatabase.profileTable, {
+        'userId': device,
+        'name': 'Sam',
+      });
+      await db.execute('PRAGMA user_version = 5');
+      await oldDb.close();
+
+      final nextDb = AppDatabase();
+      final next = await nextDb.open(path: path);
+
+      final columns = await next.rawQuery(
+        'PRAGMA table_info(${AppDatabase.profileTable})',
+      );
+      expect(
+        columns.map((column) => column['name']),
+        containsAll(['dateOfBirth', 'heightImperial', 'weightImperial']),
+      );
+      final profile = await WorkoutRepository(
+        nextDb,
+        userId: device,
+      ).loadProfile();
+      expect(profile?.dateOfBirth, isNull);
+      expect(profile?.heightImperial, isFalse);
+      expect(profile?.weightImperial, isFalse);
+      await nextDb.close();
+    });
+
+    test('migrating from the v6 age column adds the date of birth', () async {
+      final path = p.join(
+        Directory.systemTemp.path,
+        'form_v6_age_migration_test.db',
+      );
+      final file = File(path);
+      if (file.existsSync()) file.deleteSync();
+      addTearDown(() {
+        if (file.existsSync()) file.deleteSync();
+      });
+
+      // v6 wrote an integer age. The v7 profile no longer uses it, but a file
+      // that ran that build must still open.
+      final oldDb = AppDatabase();
+      final db = await oldDb.open(path: path);
+      for (final column in [
+        'dateOfBirth',
+        'heightImperial',
+        'weightImperial',
+      ]) {
+        await db.execute(
+          'ALTER TABLE ${AppDatabase.profileTable} DROP COLUMN $column',
+        );
+      }
+      await db.execute(
+        'ALTER TABLE ${AppDatabase.profileTable} '
+        'ADD COLUMN age INTEGER NOT NULL DEFAULT 0',
+      );
+      await db.insert(AppDatabase.profileTable, {
+        'userId': device,
+        'name': 'Sam',
+      });
+      await db.execute('PRAGMA user_version = 6');
+      await oldDb.close();
+
+      final nextDb = AppDatabase();
+      final next = await nextDb.open(path: path);
+
+      final columns = await next.rawQuery(
+        'PRAGMA table_info(${AppDatabase.profileTable})',
+      );
+      expect(
+        columns.map((column) => column['name']),
+        containsAll(['dateOfBirth', 'heightImperial', 'weightImperial']),
+      );
+      final profile = await WorkoutRepository(
+        nextDb,
+        userId: device,
+      ).loadProfile();
+      expect(profile?.dateOfBirth, isNull);
+      expect(profile?.heightImperial, isFalse);
+      expect(profile?.weightImperial, isFalse);
+      await nextDb.close();
+    });
+
+    test('migrating from version 7 remembers metric units', () async {
+      final path = p.join(
+        Directory.systemTemp.path,
+        'form_v7_units_migration_test.db',
+      );
+      final file = File(path);
+      if (file.existsSync()) file.deleteSync();
+      addTearDown(() {
+        if (file.existsSync()) file.deleteSync();
+      });
+
+      // v7 had the date of birth but no unit choice. A file from that build
+      // should open as metric without losing the date.
+      final oldDb = AppDatabase();
+      final db = await oldDb.open(path: path);
+      for (final column in ['heightImperial', 'weightImperial']) {
+        await db.execute(
+          'ALTER TABLE ${AppDatabase.profileTable} DROP COLUMN $column',
+        );
+      }
+      await db.insert(AppDatabase.profileTable, {
+        'userId': device,
+        'name': 'Sam',
+        'dateOfBirth': DateTime(1996, 6, 15).toIso8601String(),
+      });
+      await db.execute('PRAGMA user_version = 7');
+      await oldDb.close();
+
+      final nextDb = AppDatabase();
+      await nextDb.open(path: path);
+
+      final profile = await WorkoutRepository(
+        nextDb,
+        userId: device,
+      ).loadProfile();
+      expect(profile?.dateOfBirth, DateTime(1996, 6, 15));
+      expect(profile?.heightImperial, isFalse);
+      expect(profile?.weightImperial, isFalse);
+      await nextDb.close();
+    });
+
+    test('migrating from version 8 adds the classification axes', () async {
+      final path = p.join(
+        Directory.systemTemp.path,
+        'form_v8_taxonomy_migration_test.db',
+      );
+      final file = File(path);
+      if (file.existsSync()) file.deleteSync();
+      addTearDown(() {
+        if (file.existsSync()) file.deleteSync();
+      });
+
+      // A v8 file has sessions but no modality/split/goal/kind. The columns
+      // are added empty, and the session still opens as an unclassified
+      // session rather than being coerced into Strength.
+      final oldDb = AppDatabase();
+      final db = await oldDb.open(path: path);
+      for (final column in ['modality', 'split', 'goal', 'kind']) {
+        await db.execute(
+          'ALTER TABLE ${AppDatabase.workoutsTable} DROP COLUMN $column',
+        );
+      }
+      await db.insert(AppDatabase.workoutsTable, {
+        'userId': device,
+        'id': 'w1',
+        'title': 'Upper body',
+        'date': DateTime(2026, 10, 6).millisecondsSinceEpoch,
+        'status': 'planned',
+      });
+      await db.execute('PRAGMA user_version = 8');
+      await oldDb.close();
+
+      final nextDb = AppDatabase();
+      final next = await nextDb.open(path: path);
+      final columns = await next.rawQuery(
+        'PRAGMA table_info(${AppDatabase.workoutsTable})',
+      );
+      expect(
+        columns.map((column) => column['name']),
+        containsAll(['modality', 'split', 'goal', 'kind']),
+      );
+
+      final workouts = await WorkoutRepository(
+        nextDb,
+        userId: device,
+      ).loadWorkouts();
+      expect(workouts, hasLength(1));
+      expect(workouts.single.modality, isNull);
+      expect(workouts.single.split, isNull);
+      expect(workouts.single.goal, isNull);
+      expect(workouts.single.kind, WorkoutKind.session);
+      await nextDb.close();
+    });
+
+    test('migrating from version 9 adds the session clock', () async {
+      final path = p.join(
+        Directory.systemTemp.path,
+        'form_v9_clock_migration_test.db',
+      );
+      final file = File(path);
+      if (file.existsSync()) file.deleteSync();
+      addTearDown(() {
+        if (file.existsSync()) file.deleteSync();
+      });
+
+      // A v9 file has sessions but no record of when their clock started. The
+      // column arrives empty, so a session written before it existed reads as
+      // never started rather than as started at some invented time.
+      final oldDb = AppDatabase();
+      final db = await oldDb.open(path: path);
+      await db.execute(
+        'ALTER TABLE ${AppDatabase.workoutsTable} DROP COLUMN startedAt',
+      );
+      await db.insert(AppDatabase.workoutsTable, {
+        'userId': device,
+        'id': 'w1',
+        'title': 'Upper body',
+        'date': DateTime(2026, 10, 6).millisecondsSinceEpoch,
+        'status': 'planned',
+      });
+      await db.execute('PRAGMA user_version = 9');
+      await oldDb.close();
+
+      final nextDb = AppDatabase();
+      final next = await nextDb.open(path: path);
+      final columns = await next.rawQuery(
+        'PRAGMA table_info(${AppDatabase.workoutsTable})',
+      );
+      expect(columns.map((column) => column['name']), contains('startedAt'));
+
+      final workouts = await WorkoutRepository(
+        nextDb,
+        userId: device,
+      ).loadWorkouts();
+      expect(workouts, hasLength(1));
+      expect(workouts.single.startedAt, isNull);
       await nextDb.close();
     });
   });
@@ -425,6 +699,23 @@ void main() {
       expect(loaded.single.status, WorkoutStatus.planned);
       expect(loaded.single.targetMuscleGroups, ['Chest', 'Triceps']);
       expect(loaded.single.date, DateTime(2026, 10, 6));
+    });
+
+    test('a session remembers when its clock started', () async {
+      final startedAt = DateTime(2026, 10, 6, 7, 15);
+      await repository.replaceWorkout(
+        sampleWorkout().copyWith(startedAt: startedAt),
+      );
+
+      expect((await repository.loadWorkouts()).single.startedAt, startedAt);
+
+      // Finishing clears it, and the cleared state is a real one: a session
+      // carries either a running clock or a measured length, never both. This
+      // is the assertion that would catch a write that dropped the column.
+      await repository.replaceWorkout(
+        (await repository.loadWorkouts()).single.copyWith(startedAt: null),
+      );
+      expect((await repository.loadWorkouts()).single.startedAt, isNull);
     });
 
     test('exercises and sets keep their order and values', () async {
@@ -764,6 +1055,27 @@ void main() {
 /// shape is the v4 migration's whole job. A fixture produced by the current code
 /// would be the new shape wearing an old version number, and the rebuild would
 /// pass whether or not it worked.
+const List<String> _v3IdentityTables = [
+  '''
+  CREATE TABLE accounts (
+    id           TEXT    PRIMARY KEY,
+    email        TEXT    NOT NULL UNIQUE,
+    displayName  TEXT    NOT NULL DEFAULT '',
+    passwordHash TEXT    NOT NULL,
+    createdAt    INTEGER NOT NULL
+  )
+  ''',
+  '''
+  CREATE TABLE session (
+    id          INTEGER PRIMARY KEY CHECK (id = 1),
+    userId      TEXT    NOT NULL,
+    email       TEXT,
+    displayName TEXT,
+    issuedAt    INTEGER NOT NULL
+  )
+  ''',
+];
+
 const List<String> _v3TrainingTables = [
   '''
   CREATE TABLE workouts (

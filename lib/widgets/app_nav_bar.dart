@@ -16,30 +16,34 @@ class AppNavBar extends StatelessWidget {
     super.key,
     required this.selected,
     required this.onSelected,
-    required this.onWorkoutPressed,
     this.iconSize = 22,
   });
 
   final AppTab selected;
   final ValueChanged<AppTab> onSelected;
-  final VoidCallback onWorkoutPressed;
   final double iconSize;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    return NavigationBar(
-      selectedIndex: _slots.indexOf(selected),
-      onDestinationSelected: (index) {
-        onSelected(_slots[index]);
-      },
-      destinations: [for (final tab in _slots) _destination(context, tab)],
-      height: 72,
-      backgroundColor: scheme.surface,
-      indicatorColor: Colors.transparent,
-      elevation: 0,
-      labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLowest,
+        border: Border(top: BorderSide(color: scheme.outlineVariant)),
+      ),
+      child: NavigationBar(
+        selectedIndex: _slots.indexOf(selected),
+        onDestinationSelected: (index) {
+          onSelected(_slots[index]);
+        },
+        destinations: [for (final tab in _slots) _destination(context, tab)],
+        height: 72,
+        backgroundColor: Colors.transparent,
+        indicatorColor: Colors.transparent,
+        elevation: 0,
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+      ),
     );
   }
 

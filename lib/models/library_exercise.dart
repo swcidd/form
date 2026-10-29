@@ -1,6 +1,4 @@
-import 'dart:convert';
-
-import 'package:flutter/services.dart' show rootBundle;
+import 'taxonomy.dart' as taxonomy;
 
 /// One entry in the bundled exercise catalogue.
 ///
@@ -53,7 +51,10 @@ class LibraryExercise {
   /// catalogue entry.
   final List<String> equipment;
 
-  /// strength | stretching | plyometrics | strongman | powerlifting.
+  /// One of [ExerciseCategory]'s wire names: strength, cardio, stretching
+  /// (Mobility), plyometrics, calisthenics, calisthenic_skills, strongman or
+  /// powerlifting. Kept as text so a catalogue row written by an older build
+  /// still parses; [type] is the typed view.
   final String category;
 
   /// beginner | intermediate | expert, or null when the source had no level.
@@ -80,6 +81,15 @@ class LibraryExercise {
   /// Stable identity. The build script's id wins; a payload written before the
   /// canonical catalogue keeps working through the name-derived fallback.
   String get id => catalogueId ?? keyFor(name);
+
+  /// The typed category, or null when the row carries a value this build does
+  /// not know. Unknown stays visible rather than being coerced to Strength.
+  taxonomy.ExerciseCategory? get type =>
+      taxonomy.ExerciseCategory.tryParse(category);
+
+  /// Display label for [category], falling back to a title-cased version of
+  /// the raw value for rows this build has no enum for.
+  String get categoryLabel => taxonomy.categoryLabel(category);
 
   /// Convenience for cards and older callers: the first primary muscle.
   String get primaryMuscle =>
@@ -214,34 +224,4 @@ class LibraryExercise {
 
   @override
   String toString() => 'LibraryExercise($name)';
-}
-
-/// Loads the bundled catalogue.
-///
-/// One asset, one parse. The merge and the source adapters live in
-/// `tool/build_exercises.dart`, so there is no second shape to reconcile at
-/// runtime and nothing here can silently drop a field the build script kept.
-class ExerciseLibrary {
-  const ExerciseLibrary._();
-
-  /// The canonical catalogue, generated from the two upstream data sets.
-  static const String catalogAsset = 'assets/data/exercises.json';
-
-  /// The full bundled catalogue, in the build script's deterministic order.
-  static Future<List<LibraryExercise>> loadAll() async {
-    final raw = await rootBundle.loadString(catalogAsset);
-    final decoded = jsonDecode(raw);
-    final entries = decoded is Map<String, dynamic>
-        ? decoded['exercises']
-        : decoded;
-
-    if (entries is! List) {
-      throw const FormatException('exercise catalogue has no exercises list');
-    }
-
-    return [
-      for (final entry in entries)
-        if (entry is Map<String, dynamic>) LibraryExercise.fromJson(entry),
-    ].where((exercise) => exercise.name.isNotEmpty).toList(growable: false);
-  }
 }

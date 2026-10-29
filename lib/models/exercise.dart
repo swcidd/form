@@ -1,5 +1,7 @@
 import 'package:equatable/equatable.dart';
 
+import 'library_exercise.dart';
+
 /// One logged set: reps performed at a given weight.
 class WorkoutSet extends Equatable {
   const WorkoutSet({
@@ -79,10 +81,35 @@ class Exercise extends Equatable {
 
 /// An exercise together with the sets performed in one workout.
 class ExerciseLog extends Equatable {
+  /// A planned entry for an exercise picked from the catalogue.
+  ///
+  /// One definition, because the workout flow and the session screen both turn
+  /// a catalogue entry into a log, and two hand-written copies of this are two
+  /// places to drift apart.
+  ///
+  /// No sets are invented: the exercise lands with everything the logging
+  /// screen already knows how to fill in, rather than opening on numbers
+  /// nobody chose.
+  factory ExerciseLog.planned(LibraryExercise library) {
+    return ExerciseLog(
+      exercise: Exercise(
+        name: library.name,
+        // The catalogue allows an empty equipment list on a malformed saved
+        // row; a blank label beats a made-up one.
+        equipment: library.equipment.isEmpty ? '' : library.equipment.first,
+        muscleGroups: library.primaryMuscles,
+      ),
+      sets: const [],
+    );
+  }
+
   const ExerciseLog({
     required this.exercise,
     required this.sets,
-    this.restSeconds = 120,
+    // Zero means no rest is planned. It used to default to two minutes, which
+    // put a prescription on every exercise nobody had chosen - the design's own
+    // rest control reads "Rest: OFF" until somebody sets one.
+    this.restSeconds = 0,
   });
 
   final Exercise exercise;
@@ -141,7 +168,9 @@ class ExerciseLog extends Equatable {
       sets: (json['sets'] as List<dynamic>)
           .map((s) => WorkoutSet.fromJson(s as Map<String, dynamic>))
           .toList(),
-      restSeconds: (json['restSeconds'] as num?)?.toInt() ?? 120,
+      // Rows written before rest was blankable carry no value; they read as no
+      // rest planned rather than as two minutes nobody chose.
+      restSeconds: (json['restSeconds'] as num?)?.toInt() ?? 0,
     );
   }
 

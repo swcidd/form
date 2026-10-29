@@ -1,9 +1,23 @@
 import 'package:equatable/equatable.dart';
 
 import 'exercise.dart';
+import 'taxonomy.dart';
 
 /// Lifecycle of a workout once it exists on the calendar.
-enum WorkoutStatus { planned, completed, rest }
+///
+/// `rest` stays for the rest days the calendar writes; `inProgress` and
+/// `skipped` are the two later states a scheduled session can end in.
+enum WorkoutStatus { planned, inProgress, completed, skipped, rest }
+
+extension WorkoutStatusLabel on WorkoutStatus {
+  String get label => switch (this) {
+    WorkoutStatus.planned => 'Planned',
+    WorkoutStatus.inProgress => 'In progress',
+    WorkoutStatus.completed => 'Completed',
+    WorkoutStatus.skipped => 'Skipped',
+    WorkoutStatus.rest => 'Rest',
+  };
+}
 
 /// A single training session.
 class Workout extends Equatable {
@@ -20,6 +34,11 @@ class Workout extends Equatable {
     this.startTime = '',
     this.place = '',
     this.hasNewPR = false,
+    this.modality,
+    this.split,
+    this.goal,
+    this.kind = WorkoutKind.session,
+    this.startedAt,
   });
 
   final String id;
@@ -42,6 +61,32 @@ class Workout extends Equatable {
   final List<ExerciseLog> logs;
   final bool hasNewPR;
 
+  /// What the session is, what it is organised around, and what it is for.
+  ///
+  /// Nullable rather than defaulted: sessions created before these questions
+  /// existed have no honest answer, and inventing "General" would put a value
+  /// in the UI the user never chose.
+  final Modality? modality;
+  final WorkoutSplit? split;
+  final TrainingGoal? goal;
+
+  /// Routine or logged session. Everything the app writes today is a session;
+  /// the axis exists so a template can be stored without pretending it is one.
+  final WorkoutKind kind;
+
+  /// When the session's clock started, or null if it never has.
+  ///
+  /// Stored rather than held in memory, so a session that outlives the app still
+  /// knows when it began: reopening it carries the length on rather than
+  /// reading as unmeasured. Null means both "not started" and "already
+  /// measured" - finishing clears it - so a session is never at once running
+  /// and complete. Nullable and clearable, which is why it is the one field on
+  /// [copyWith] that needs the [_unset] sentinel to be set back to null.
+  final DateTime? startedAt;
+
+  /// Short / medium / long, derived from the planned minutes.
+  DurationBand get durationBand => DurationBand.fromMinutes(durationMin);
+
   int get totalSets => logs.fold(0, (sum, log) => sum + log.totalSets);
 
   int get totalReps => logs.fold(
@@ -60,6 +105,14 @@ class Workout extends Equatable {
 
   bool get isDone => completedSets == totalSets && totalSets > 0;
 
+  /// Sentinel for the three classification fields below.
+  ///
+  /// Without it, `null` has to mean "leave this alone" - and then a
+  /// classification can never be *cleared*: tapping a selected pill off would
+  /// quietly keep the old value. Callers omit an argument to keep it and pass
+  /// `null` to clear it.
+  static const Object _unset = Object();
+
   Workout copyWith({
     String? id,
     String? title,
@@ -73,6 +126,11 @@ class Workout extends Equatable {
     List<String>? equipment,
     List<ExerciseLog>? logs,
     bool? hasNewPR,
+    Object? modality = _unset,
+    Object? split = _unset,
+    Object? goal = _unset,
+    WorkoutKind? kind,
+    Object? startedAt = _unset,
   }) {
     return Workout(
       id: id ?? this.id,
@@ -87,6 +145,15 @@ class Workout extends Equatable {
       equipment: equipment ?? this.equipment,
       logs: logs ?? this.logs,
       hasNewPR: hasNewPR ?? this.hasNewPR,
+      modality: identical(modality, _unset)
+          ? this.modality
+          : modality as Modality?,
+      split: identical(split, _unset) ? this.split : split as WorkoutSplit?,
+      goal: identical(goal, _unset) ? this.goal : goal as TrainingGoal?,
+      kind: kind ?? this.kind,
+      startedAt: identical(startedAt, _unset)
+          ? this.startedAt
+          : startedAt as DateTime?,
     );
   }
 
@@ -108,6 +175,12 @@ class Workout extends Equatable {
           .map((l) => ExerciseLog.fromJson(l as Map<String, dynamic>))
           .toList(),
       hasNewPR: json['hasNewPR'] as bool? ?? false,
+      modality: Modality.tryParse(json['modality'] as String?),
+      split: WorkoutSplit.tryParse(json['split'] as String?),
+      goal: TrainingGoal.tryParse(json['goal'] as String?),
+      kind:
+          WorkoutKind.tryParse(json['kind'] as String?) ?? WorkoutKind.session,
+      startedAt: DateTime.tryParse(json['startedAt'] as String? ?? ''),
     );
   }
 
@@ -124,6 +197,11 @@ class Workout extends Equatable {
     'equipment': equipment,
     'logs': logs.map((l) => l.toJson()).toList(),
     'hasNewPR': hasNewPR,
+    'modality': modality?.wire,
+    'split': split?.wire,
+    'goal': goal?.wire,
+    'kind': kind.wire,
+    'startedAt': startedAt?.toIso8601String(),
   };
 
   @override
@@ -140,5 +218,10 @@ class Workout extends Equatable {
     equipment,
     logs,
     hasNewPR,
+    modality,
+    split,
+    goal,
+    kind,
+    startedAt,
   ];
 }

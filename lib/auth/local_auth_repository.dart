@@ -4,7 +4,9 @@ import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 
 import '../data/app_database.dart';
+import '../data/workout_repository.dart';
 import '../models/account.dart';
+import '../models/profile_stats.dart';
 import '../models/session.dart';
 import 'auth_repository.dart';
 import 'credentials.dart';
@@ -65,6 +67,11 @@ class LocalAuthRepository implements AuthRepository {
     required String email,
     required String password,
     String? displayName,
+    DateTime? dateOfBirth,
+    double? heightCm,
+    double? weightKg,
+    bool heightImperial = false,
+    bool weightImperial = false,
   }) async {
     _requireUsableEmail(email);
     _requireUsablePassword(password);
@@ -84,7 +91,23 @@ class LocalAuthRepository implements AuthRepository {
     );
 
     try {
-      await db.insert(AppDatabase.accountsTable, _accountToRow(account));
+      await db.transaction((txn) async {
+        await txn.insert(AppDatabase.accountsTable, _accountToRow(account));
+        await txn.insert(
+          AppDatabase.profileTable,
+          WorkoutRepository.profileToRow(
+            account.id,
+            ProfileStats.empty().copyWith(
+              name: account.displayName,
+              dateOfBirth: dateOfBirth,
+              heightCm: heightCm ?? 0,
+              weightKg: weightKg ?? 0,
+              heightImperial: heightImperial,
+              weightImperial: weightImperial,
+            ),
+          ),
+        );
+      });
     } on DatabaseException catch (error) {
       // The check above is there to give a good error in the ordinary case;
       // the UNIQUE index is what actually guarantees it. Two taps on "create

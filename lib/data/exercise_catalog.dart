@@ -1,4 +1,5 @@
-import '../exercise_library.dart';
+import '../models/library_exercise.dart';
+import 'exercise_library.dart';
 import 'exercise_api_client.dart';
 
 /// Where the catalogue on screen came from.
